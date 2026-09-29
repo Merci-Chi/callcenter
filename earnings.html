@@ -1,1 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>Earnings</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar"><div class="topbar-row"><h1>Earnings</h1><button class="mini-select" style="background:#163754;color:#dce9f4;border-color:#3f607d">This Month⌄</button></div></header>
+  <main class="content">
+    <section class="earn-hero">
+      <div class="label">Total Earnings</div>
+      <div class="earn-row">
+        <div><span class="earn-total">$4,850</span><span class="growth">↑ 38%</span></div>
+        <div class="spark" aria-hidden="true"><span style="height:10px"></span><span style="height:17px"></span><span style="height:24px"></span><span style="height:31px"></span><span style="height:39px"></span><span style="height:45px"></span></div>
+      </div>
+    </section>
 
+    <div class="two-grid">
+      <section class="card metric-card"><div class="metric-label"><i class="green-icon" data-lucide="circle-dollar-sign"></i> Commission</div><strong>$4,200</strong></section>
+      <section class="card metric-card"><div class="metric-label"><i class="orange-icon" data-lucide="clock-3"></i> Pending Payouts</div><strong>$650</strong></section>
+    </div>
+
+    <section class="card chart-card">
+      <div class="chart-top"><h3>Monthly Sales</h3><button class="mini-select">This Month⌄</button></div>
+      <div class="sales-grid">
+        <div class="sales-stat"><div class="iconbox"><i data-lucide="badge-check"></i></div><div><strong>12</strong><span>Closed Deals</span></div></div>
+        <div class="sales-stat"><div class="iconbox blue"><i data-lucide="chart-no-axes-column-increasing"></i></div><div><strong>$28,400</strong><span>Pipeline Value</span></div></div>
+      </div>
+      <div class="section-title" style="margin-top:16px">Weekly Earnings</div>
+      <div class="bar-chart">
+        <div class="bar-wrap"><div class="bar" style="height:27px"><b>$320</b></div>Mon</div>
+        <div class="bar-wrap"><div class="bar" style="height:54px"><b>$680</b></div>Tue</div>
+        <div class="bar-wrap"><div class="bar" style="height:88px"><b>$1.1K</b></div>Wed</div>
+        <div class="bar-wrap"><div class="bar" style="height:74px"><b>$920</b></div>Thu</div>
+        <div class="bar-wrap"><div class="bar" style="height:69px"><b>$860</b></div>Fri</div>
+      </div>
+    </section>
+
+    <div class="section-title">Recent Payouts</div>
+    <section class="card light-card">
+      <div class="payout-row"><div class="payout-dot"><i data-lucide="check"></i></div><div class="payout-main"><strong>Apr 12, 2024</strong><small>Commission Payout</small></div><div class="payout-side"><strong>$1,240</strong><span class="badge paid">Paid</span></div></div>
+      <div class="payout-row"><div class="payout-dot"><i data-lucide="check"></i></div><div class="payout-main"><strong>Mar 29, 2024</strong><small>Commission Payout</small></div><div class="payout-side"><strong>$980</strong><span class="badge paid">Paid</span></div></div>
+      <div class="payout-row"><div class="payout-dot pending"><i data-lucide="clock-3"></i></div><div class="payout-main"><strong>Mar 15, 2024</strong><small>Commission Payout</small></div><div class="payout-side"><strong>$650</strong><span class="badge pending">Pending</span></div></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-item" href="index.html"><i data-lucide="phone"></i><span>Outreach</span></a>
+    <a class="nav-item" href="skills.html"><i data-lucide="chart-no-axes-column-increasing"></i><span>Skills</span></a>
+    <a class="nav-item active" href="earnings.html"><i data-lucide="circle-dollar-sign"></i><span>Earnings</span></a>
+    <a class="nav-item" href="referrals.html"><i data-lucide="users"></i><span>Referrals</span></a>
+    <a class="nav-item" href="account.html"><i data-lucide="ellipsis"></i><span>More</span></a>
+  </nav>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
