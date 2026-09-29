@@ -1,1 +1,509 @@
+:root {
+  --navy: #102945;
+  --navy-2: #173653;
+  --navy-3: #0c1f34;
+  --page: #f3f5f8;
+  --card: #ffffff;
+  --text: #122033;
+  --muted: #738196;
+  --line: #e5eaf0;
+  --blue: #1688ff;
+  --blue-soft: #e7f2ff;
+  --green: #24c875;
+  --green-soft: #e7f8ef;
+  --orange: #ff9d32;
+  --orange-soft: #fff2e4;
+  --purple: #796cff;
+  --purple-soft: #efecff;
+  --shadow: 0 10px 28px rgba(15, 33, 54, .10);
+  --radius-xl: 22px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
 
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--page); color: var(--text); font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { min-height: 100vh; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; }
+
+.app {
+  min-height: 100vh;
+  max-width: 430px;
+  margin: 0 auto;
+  background: var(--page);
+  padding-bottom: calc(86px + env(safe-area-inset-bottom));
+}
+
+.topbar {
+  background: linear-gradient(180deg, var(--navy) 0%, #14314f 100%);
+  color: #fff;
+  padding: calc(18px + env(safe-area-inset-top)) 18px 22px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  box-shadow: 0 6px 20px rgba(14, 36, 60, .18);
+}
+.topbar-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.topbar h1 { margin:0; font-size:29px; line-height:1; letter-spacing:-.7px; }
+.status-pill {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--green); color:#fff; border-radius:999px;
+  padding:8px 11px; font-size:12px; font-weight:800;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2);
+}
+.status-pill i { width:14px; height:14px; }
+
+.content { padding: 14px 14px 24px; }
+.section-title { font-size:16px; margin: 18px 2px 10px; font-weight:800; letter-spacing:-.2px; }
+
+.card {
+  background:var(--card);
+  border-radius:var(--radius-lg);
+  border:1px solid rgba(20,43,69,.07);
+  box-shadow:var(--shadow);
+}
+
+.stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:-8px; }
+.stat-card { background:#1b3a5b; color:#fff; border-radius:16px; padding:14px 8px 12px; text-align:center; min-height:92px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; border:1px solid rgba(255,255,255,.04); }
+.stat-card i { width:21px; height:21px; }
+.stat-card .num { font-weight:900; font-size:22px; line-height:1; }
+.stat-card .label { font-size:11px; color:#d8e5f2; font-weight:700; }
+.stat-card.purple i { color:#c6a8ff; }
+.stat-card.orange i { color:#ffb26b; }
+.stat-card.green i { color:#38d786; }
+
+.filter-row { display:flex; gap:8px; overflow-x:auto; padding:14px 0 12px; scrollbar-width:none; }
+.filter-row::-webkit-scrollbar { display:none; }
+.pill { white-space:nowrap; padding:9px 13px; border-radius:999px; background:#fff; border:1px solid var(--line); font-size:12px; font-weight:800; color:#647185; }
+.pill.active { background:#163f72; color:#fff; border-color:#163f72; box-shadow:0 5px 13px rgba(22,63,114,.18); }
+
+.lead-card { padding:15px; margin-bottom:14px; }
+.lead-head { display:flex; gap:12px; align-items:flex-start; }
+.company-icon { width:46px; height:46px; border-radius:14px; background:#e8f2ff; display:grid; place-items:center; color:#247be1; flex:0 0 auto; }
+.company-icon i { width:24px; height:24px; }
+.lead-title { flex:1; min-width:0; }
+.lead-title h2 { margin:1px 0 3px; font-size:16px; line-height:1.2; }
+.lead-title .name { font-size:13px; font-weight:800; color:#30425a; }
+.lead-title .role { font-size:11px; color:var(--muted); margin-top:2px; }
+.star { color:#ffb61d; }
+.contact-line { margin-top:12px; display:flex; align-items:center; gap:8px; color:#55667d; font-size:14px; font-weight:700; }
+.contact-line i { width:17px; height:17px; }
+.copy-btn { margin-left:auto; border:0; background:transparent; color:#7f90a6; padding:4px; }
+.tag-row { display:flex; gap:7px; flex-wrap:wrap; margin:11px 0; }
+.tag { border-radius:999px; padding:6px 10px; font-size:11px; font-weight:800; }
+.tag.blue { background:#e6f1ff; color:#2c7ddd; }
+.tag.purple { background:#eeeaff; color:#715ee9; }
+.tag.orange { background:#fff0e3; color:#dc7c1d; }
+.time-row { display:flex; flex-wrap:wrap; gap:14px; color:#647389; font-size:12px; font-weight:700; padding:4px 0 12px; }
+.time-row span { display:flex; align-items:center; gap:5px; }
+.time-row i { width:15px; height:15px; }
+.notes { border-top:1px solid var(--line); padding-top:12px; }
+.notes-title { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:900; margin-bottom:6px; }
+.notes-title i { width:15px; height:15px; }
+.notes p { margin:0; font-size:12px; line-height:1.55; color:#637187; }
+.call-btn { width:100%; border:0; margin-top:14px; background:linear-gradient(180deg,#2dd17e,#17b765); color:#fff; border-radius:12px; padding:13px 14px; font-weight:900; font-size:17px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 8px 18px rgba(31,193,112,.24); }
+.call-btn i { width:20px; height:20px; }
+.quick-actions { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+.quick-btn { background:#f7f9fc; border:1px solid var(--line); border-radius:12px; padding:11px 7px; display:flex; flex-direction:column; align-items:center; gap:5px; color:#31445b; font-size:11px; font-weight:800; }
+.quick-btn i { width:18px; height:18px; }
+
+.tabs { display:flex; background:#183957; border-radius:12px; padding:4px; gap:4px; margin-top:10px; }
+.tabs a { flex:1; text-align:center; color:#dce8f3; font-size:11px; font-weight:800; padding:8px 6px; border-radius:9px; }
+.tabs a.active { background:#fff; color:#1576dd; box-shadow:0 3px 10px rgba(0,0,0,.08); }
+
+.light-card { padding:14px; margin-top:12px; }
+.card-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.card-head h3 { margin:0; font-size:15px; }
+.mini-select { border:1px solid var(--line); border-radius:999px; padding:7px 10px; background:#fff; font-size:11px; color:#66758b; font-weight:800; }
+.insight-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+.insight { background:#f8fbff; border:1px solid #edf1f5; border-radius:12px; padding:12px 6px; text-align:center; }
+.insight strong { display:block; font-size:20px; margin-bottom:3px; }
+.insight span { display:block; font-size:10px; color:#718096; font-weight:700; line-height:1.25; }
+.insight em { display:block; font-style:normal; font-size:10px; color:#22a962; margin-top:6px; font-weight:900; }
+.feedback-list { margin-top:8px; }
+.feedback { display:grid; grid-template-columns:40px 1fr auto; gap:10px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); }
+.feedback:last-child { border-bottom:0; }
+.feedback-icon { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; }
+.feedback-icon i { width:20px; height:20px; }
+.feedback-icon.green { background:#e8faef; color:#20b766; }
+.feedback-icon.blue { background:#e8f3ff; color:#2381e3; }
+.feedback-icon.orange { background:#fff1e6; color:#ef861d; }
+.feedback strong { display:block; font-size:12px; }
+.feedback p { margin:2px 0 0; color:#7c899b; font-size:10px; line-height:1.35; }
+.feedback time { color:#94a0b0; font-size:9px; white-space:nowrap; }
+.transcript { margin-top:10px; border-top:1px solid var(--line); padding-top:10px; }
+.transcript-head { display:flex; justify-content:space-between; align-items:center; }
+.transcript-head strong { font-size:13px; }
+.transcript-head a { font-size:11px; color:#187ee4; font-weight:800; }
+.bubble-row { display:grid; grid-template-columns:34px 1fr; gap:8px; margin-top:10px; }
+.avatar { width:34px; height:34px; border-radius:50%; background:#1175df; color:#fff; display:grid; place-items:center; font-size:10px; font-weight:900; }
+.avatar.purple { background:#6656e8; }
+.bubble { background:#f7f9fc; border:1px solid #eef1f5; border-radius:12px; padding:9px 10px; font-size:11px; color:#506178; line-height:1.4; }
+.bubble .speaker { color:#25374d; font-weight:900; }
+.bubble small { color:#99a4b2; margin-left:5px; }
+
+.earn-hero { margin-top:12px; background:linear-gradient(135deg,#174368,#0e2d4c); color:#fff; padding:17px; border-radius:18px; box-shadow:var(--shadow); }
+.earn-hero .label { color:#9ed0ff; font-size:12px; font-weight:700; }
+.earn-row { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-top:4px; }
+.earn-total { font-size:34px; font-weight:900; letter-spacing:-1px; }
+.growth { display:inline-flex; align-items:center; gap:4px; background:#1c9f61; color:#d9ffeb; border-radius:999px; padding:5px 7px; font-size:10px; font-weight:900; margin-left:4px; vertical-align:middle; }
+.spark { display:flex; align-items:flex-end; gap:3px; height:45px; }
+.spark span { width:6px; background:#41a9ff; border-radius:2px 2px 0 0; opacity:.95; }
+.two-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+.metric-card { padding:13px; text-align:center; }
+.metric-card .metric-label { display:flex; align-items:center; justify-content:center; gap:6px; color:#738196; font-size:11px; font-weight:800; }
+.metric-card strong { display:block; margin-top:5px; font-size:19px; }
+.metric-card i { width:16px; height:16px; }
+.green-icon { color:#20b86b; }
+.orange-icon { color:#f79a30; }
+.chart-card { padding:14px; margin-top:12px; }
+.chart-top { display:flex; align-items:center; justify-content:space-between; }
+.chart-top h3 { margin:0; font-size:15px; }
+.sales-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.sales-stat { display:flex; align-items:center; gap:8px; background:#f8fbff; border:1px solid #eef1f5; border-radius:12px; padding:10px; }
+.sales-stat .iconbox { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; background:#e7f7ee; color:#23ad67; }
+.sales-stat .iconbox.blue { background:#e8f2ff; color:#2682df; }
+.sales-stat strong { display:block; font-size:16px; }
+.sales-stat span { font-size:9px; color:#8190a3; font-weight:700; }
+.bar-chart { display:flex; align-items:flex-end; gap:11px; height:125px; padding:15px 6px 0; border-bottom:1px solid #dfe6ee; margin-top:10px; }
+.bar-wrap { flex:1; text-align:center; font-size:9px; color:#7f8da0; }
+.bar { width:100%; max-width:28px; margin:0 auto 6px; border-radius:5px 5px 0 0; background:linear-gradient(#2f9df7,#1d7ed9); position:relative; }
+.bar b { position:absolute; top:-16px; left:50%; transform:translateX(-50%); color:#53657c; font-size:9px; white-space:nowrap; }
+.payout-row { display:grid; grid-template-columns:28px 1fr auto; gap:9px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); }
+.payout-row:last-child{ border-bottom:0; }
+.payout-dot { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:#e5f8ed; color:#19b466; }
+.payout-dot.pending { background:#eef2f6; color:#6f8195; }
+.payout-dot i { width:14px; height:14px; }
+.payout-main strong { font-size:11px; }
+.payout-main small { display:block; color:#8a97a8; margin-top:2px; font-size:9px; }
+.payout-side { text-align:right; }
+.payout-side strong { display:block; font-size:11px; }
+.badge { display:inline-flex; padding:5px 8px; border-radius:999px; font-size:9px; font-weight:900; margin-top:3px; }
+.badge.paid, .badge.active { background:#e3f8eb; color:#20aa62; }
+.badge.pending { background:#fff0df; color:#e3821f; }
+
+.ref-card { padding:14px; margin-top:12px; }
+.invite-head { display:flex; gap:10px; align-items:flex-start; }
+.giftbox { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; background:#fff3df; color:#f5a01c; }
+.invite-head strong { font-size:14px; display:block; }
+.invite-head p { margin:2px 0 0; color:#7f8da0; font-size:10px; line-height:1.35; }
+.code-row { display:grid; grid-template-columns:1fr 42px; gap:8px; margin-top:12px; }
+.code { background:#f7f9fc; border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-weight:900; color:#33485f; font-size:12px; letter-spacing:.4px; }
+.icon-btn { border:1px solid var(--line); background:#fff; border-radius:10px; display:grid; place-items:center; color:#6f7f92; }
+.share-btn { margin-top:8px; width:100%; border:0; background:#0f7ff2; color:#fff; border-radius:10px; padding:11px 12px; font-weight:900; display:flex; gap:7px; align-items:center; justify-content:center; }
+.ref-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+.ref-stat { text-align:center; background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 5px; }
+.ref-stat i { width:20px; height:20px; margin-bottom:4px; }
+.ref-stat strong { display:block; font-size:17px; }
+.ref-stat span { display:block; font-size:9px; color:#8290a3; line-height:1.2; margin-top:3px; }
+.user-row { display:grid; grid-template-columns:38px 1fr auto; gap:9px; align-items:center; padding:11px 0; border-bottom:1px solid var(--line); }
+.user-row:last-child { border-bottom:0; }
+.user-avatar { width:36px; height:36px; border-radius:50%; background:#e8f1ff; color:#2d6ed3; display:grid; place-items:center; font-size:11px; font-weight:900; }
+.user-info strong { display:block; font-size:11px; }
+.user-info small { display:block; color:#8a97a8; margin-top:2px; font-size:9px; }
+.user-side { text-align:right; }
+.user-side small { display:block; color:#7f8da0; font-size:9px; margin-top:4px; }
+
+.profile-card { display:grid; grid-template-columns:46px 1fr auto; gap:12px; align-items:center; padding:14px; margin-top:12px; }
+.profile-avatar { width:46px; height:46px; border-radius:50%; background:#1772d3; color:#fff; display:grid; place-items:center; font-size:15px; font-weight:900; }
+.profile-info strong { display:block; font-size:13px; }
+.profile-info small { display:block; color:#7d8a9d; margin-top:2px; font-size:10px; }
+.settings-group { margin-top:12px; overflow:hidden; }
+.group-title { padding:12px 14px 8px; font-size:11px; color:#32465f; font-weight:900; }
+.setting-row { display:grid; grid-template-columns:26px 1fr auto; gap:8px; align-items:center; padding:13px 14px; border-top:1px solid var(--line); background:#fff; }
+.setting-row i { width:18px; height:18px; color:#425872; }
+.setting-row.logout i { color:#ff5d4d; }
+.setting-row span { font-size:12px; font-weight:700; }
+.chev { color:#9aa6b4; }
+.toggle { width:40px; height:22px; border-radius:999px; background:#1d8cff; padding:2px; display:flex; justify-content:flex-end; }
+.toggle::after { content:""; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+
+.bottom-nav {
+  position:fixed;
+  left:50%; bottom:0;
+  transform:translateX(-50%);
+  width:min(430px,100%);
+  background:#10253b;
+  border-top:1px solid rgba(255,255,255,.05);
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  z-index:10;
+  padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+  box-shadow:0 -10px 30px rgba(10,25,40,.18);
+}
+.nav-item { color:#b7c5d4; display:flex; flex-direction:column; align-items:center; gap:4px; font-size:9px; font-weight:800; padding:2px 0; }
+.nav-item i { width:20px; height:20px; }
+.nav-item.active { color:#19a0ff; }
+.nav-item.active .nav-dot { background:#168cff; }
+
+.icon-circle { width:34px; height:34px; border-radius:10px; background:#163754; display:grid; place-items:center; color:#a6d8ff; }
+
+@media (min-width: 700px) {
+  body { padding:24px 0; }
+  .app { min-height:calc(100vh - 48px); border-radius:28px; overflow:hidden; box-shadow:0 30px 70px rgba(15,35,55,.22); }
+  .bottom-nav { bottom:24px; border-radius:0 0 28px 28px; overflow:hidden; }
+}
+
+//skills.html
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>Skills</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-row"><h1>Skills</h1><div class="icon-circle"><i data-lucide="target"></i></div></div>
+    <div class="tabs"><a class="active" href="#">Insights</a><a href="#">Practice</a><a href="#">Library</a></div>
+  </header>
+  <main class="content">
+    <section class="card light-card">
+      <div class="card-head"><h3>Your Call Insights</h3><button class="mini-select">Last 7 days⌄</button></div>
+      <div class="insight-grid">
+        <div class="insight"><strong>78%</strong><span>Talk Time</span><em>↑ 12%</em></div>
+        <div class="insight"><strong>4:32</strong><span>Avg. Call Length</span><em>↑ 28%</em></div>
+        <div class="insight"><strong>62%</strong><span>Positive Sentiment</span><em>↑ 18%</em></div>
+      </div>
+    </section>
+
+    <div class="section-title">Recent Call Feedback</div>
+    <section class="card light-card feedback-list">
+      <div class="feedback"><div class="feedback-icon green"><i data-lucide="trophy"></i></div><div><strong>Great opening!</strong><p>You built rapport quickly.</p></div><time>2h ago</time></div>
+      <div class="feedback"><div class="feedback-icon blue"><i data-lucide="mic-2"></i></div><div><strong>Talk slower</strong><p>Try pausing after key points.</p></div><time>4h ago</time></div>
+      <div class="feedback"><div class="feedback-icon green"><i data-lucide="chart-no-axes-column-increasing"></i></div><div><strong>Handled pricing well</strong><p>You addressed the objection clearly.</p></div><time>1d ago</time></div>
+      <div class="feedback"><div class="feedback-icon orange"><i data-lucide="target"></i></div><div><strong>Ask more questions</strong><p>Learn about their timeline earlier.</p></div><time>1d ago</time></div>
+      <div class="transcript">
+        <div class="transcript-head"><strong>Transcript Example</strong><a href="#">Full Transcript →</a></div>
+        <div class="bubble-row"><div class="avatar">You</div><div class="bubble"><span class="speaker">You</span><small>0:08</small><br>Hi Sarah, this is Alex from BrightPath. Do you have a minute to chat about…</div></div>
+        <div class="bubble-row"><div class="avatar purple">SJ</div><div class="bubble"><span class="speaker">Sarah</span><small>0:24</small><br>Yeah, of course. We’re actually looking at a few options right now…</div></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-item" href="index.html"><i data-lucide="phone"></i><span>Outreach</span></a>
+    <a class="nav-item active" href="skills.html"><i data-lucide="chart-no-axes-column-increasing"></i><span>Skills</span></a>
+    <a class="nav-item" href="earnings.html"><i data-lucide="circle-dollar-sign"></i><span>Earnings</span></a>
+    <a class="nav-item" href="referrals.html"><i data-lucide="users"></i><span>Referrals</span></a>
+    <a class="nav-item" href="account.html"><i data-lucide="ellipsis"></i><span>More</span></a>
+  </nav>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
+
+//referrals.html
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>Referrals</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar"><div class="topbar-row"><h1>Referrals</h1></div></header>
+  <main class="content">
+    <section class="card ref-card">
+      <div class="invite-head"><div class="giftbox"><i data-lucide="gift"></i></div><div><strong>Invite &amp; Earn</strong><p>Get other great sales reps on the app and earn bonuses when they’re active.</p></div></div>
+      <div class="code-row"><div class="code">SALESBOOST23</div><button class="icon-btn" data-copy="SALESBOOST23"><i data-lucide="copy"></i></button></div>
+      <button class="share-btn"><i data-lucide="share-2"></i> Share Invite Link</button>
+    </section>
+
+    <div class="ref-stats">
+      <div class="ref-stat"><i style="color:#2f7dea" data-lucide="users"></i><strong>12</strong><span>Active Referrals</span></div>
+      <div class="ref-stat"><i style="color:#f08b22" data-lucide="clock-3"></i><strong>3</strong><span>Pending Bonuses</span></div>
+      <div class="ref-stat"><i style="color:#20ad66" data-lucide="circle-dollar-sign"></i><strong>$600</strong><span>Total Earned</span></div>
+    </div>
+
+    <div class="section-title">Referred Users</div>
+    <section class="card light-card">
+      <div class="user-row"><div class="user-avatar">JD</div><div class="user-info"><strong>Jake Daniels</strong><small>Joined 2 weeks ago</small></div><div class="user-side"><span class="badge active">Active</span><small>$100 earned</small></div></div>
+      <div class="user-row"><div class="user-avatar">ES</div><div class="user-info"><strong>Emily Carter</strong><small>Joined 1 month ago</small></div><div class="user-side"><span class="badge active">Active</span><small>$100 earned</small></div></div>
+      <div class="user-row"><div class="user-avatar">MT</div><div class="user-info"><strong>Michael Tran</strong><small>Joined 1 month ago</small></div><div class="user-side"><span class="badge pending">Pending</span><small>$100 pending</small></div></div>
+      <div class="user-row"><div class="user-avatar">SP</div><div class="user-info"><strong>Sophie Parker</strong><small>Joined 2 months ago</small></div><div class="user-side"><span class="badge paid">Paid</span><small>$100 earned</small></div></div>
+      <div class="user-row"><div class="user-avatar">DK</div><div class="user-info"><strong>David Kim</strong><small>Joined 3 months ago</small></div><div class="user-side"><span class="badge paid">Paid</span><small>$100 earned</small></div></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-item" href="index.html"><i data-lucide="phone"></i><span>Outreach</span></a>
+    <a class="nav-item" href="skills.html"><i data-lucide="chart-no-axes-column-increasing"></i><span>Skills</span></a>
+    <a class="nav-item" href="earnings.html"><i data-lucide="circle-dollar-sign"></i><span>Earnings</span></a>
+    <a class="nav-item active" href="referrals.html"><i data-lucide="users"></i><span>Referrals</span></a>
+    <a class="nav-item" href="account.html"><i data-lucide="ellipsis"></i><span>More</span></a>
+  </nav>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
+
+//more.html
+
+<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=account.html"><title>More</title></head><body></body></html>
+
+//earnings.html
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>Earnings</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar"><div class="topbar-row"><h1>Earnings</h1><button class="mini-select" style="background:#163754;color:#dce9f4;border-color:#3f607d">This Month⌄</button></div></header>
+  <main class="content">
+    <section class="earn-hero">
+      <div class="label">Total Earnings</div>
+      <div class="earn-row">
+        <div><span class="earn-total">$4,850</span><span class="growth">↑ 38%</span></div>
+        <div class="spark" aria-hidden="true"><span style="height:10px"></span><span style="height:17px"></span><span style="height:24px"></span><span style="height:31px"></span><span style="height:39px"></span><span style="height:45px"></span></div>
+      </div>
+    </section>
+
+    <div class="two-grid">
+      <section class="card metric-card"><div class="metric-label"><i class="green-icon" data-lucide="circle-dollar-sign"></i> Commission</div><strong>$4,200</strong></section>
+      <section class="card metric-card"><div class="metric-label"><i class="orange-icon" data-lucide="clock-3"></i> Pending Payouts</div><strong>$650</strong></section>
+    </div>
+
+    <section class="card chart-card">
+      <div class="chart-top"><h3>Monthly Sales</h3><button class="mini-select">This Month⌄</button></div>
+      <div class="sales-grid">
+        <div class="sales-stat"><div class="iconbox"><i data-lucide="badge-check"></i></div><div><strong>12</strong><span>Closed Deals</span></div></div>
+        <div class="sales-stat"><div class="iconbox blue"><i data-lucide="chart-no-axes-column-increasing"></i></div><div><strong>$28,400</strong><span>Pipeline Value</span></div></div>
+      </div>
+      <div class="section-title" style="margin-top:16px">Weekly Earnings</div>
+      <div class="bar-chart">
+        <div class="bar-wrap"><div class="bar" style="height:27px"><b>$320</b></div>Mon</div>
+        <div class="bar-wrap"><div class="bar" style="height:54px"><b>$680</b></div>Tue</div>
+        <div class="bar-wrap"><div class="bar" style="height:88px"><b>$1.1K</b></div>Wed</div>
+        <div class="bar-wrap"><div class="bar" style="height:74px"><b>$920</b></div>Thu</div>
+        <div class="bar-wrap"><div class="bar" style="height:69px"><b>$860</b></div>Fri</div>
+      </div>
+    </section>
+
+    <div class="section-title">Recent Payouts</div>
+    <section class="card light-card">
+      <div class="payout-row"><div class="payout-dot"><i data-lucide="check"></i></div><div class="payout-main"><strong>Apr 12, 2024</strong><small>Commission Payout</small></div><div class="payout-side"><strong>$1,240</strong><span class="badge paid">Paid</span></div></div>
+      <div class="payout-row"><div class="payout-dot"><i data-lucide="check"></i></div><div class="payout-main"><strong>Mar 29, 2024</strong><small>Commission Payout</small></div><div class="payout-side"><strong>$980</strong><span class="badge paid">Paid</span></div></div>
+      <div class="payout-row"><div class="payout-dot pending"><i data-lucide="clock-3"></i></div><div class="payout-main"><strong>Mar 15, 2024</strong><small>Commission Payout</small></div><div class="payout-side"><strong>$650</strong><span class="badge pending">Pending</span></div></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-item" href="index.html"><i data-lucide="phone"></i><span>Outreach</span></a>
+    <a class="nav-item" href="skills.html"><i data-lucide="chart-no-axes-column-increasing"></i><span>Skills</span></a>
+    <a class="nav-item active" href="earnings.html"><i data-lucide="circle-dollar-sign"></i><span>Earnings</span></a>
+    <a class="nav-item" href="referrals.html"><i data-lucide="users"></i><span>Referrals</span></a>
+    <a class="nav-item" href="account.html"><i data-lucide="ellipsis"></i><span>More</span></a>
+  </nav>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
+
+//app.js
+const q = (s, root=document) => root.querySelector(s);
+const qa = (s, root=document) => [...root.querySelectorAll(s)];
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+
+  qa('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const value = btn.getAttribute('data-copy') || '';
+      try { await navigator.clipboard.writeText(value); }
+      catch { /* no-op in local preview */ }
+      const old = btn.innerHTML;
+      btn.innerHTML = '<i data-lucide="check"></i>';
+      if (window.lucide) lucide.createIcons();
+      setTimeout(() => { btn.innerHTML = old; if (window.lucide) lucide.createIcons(); }, 1200);
+    });
+  });
+
+  qa('[data-demo-call]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.innerHTML = '<i data-lucide="phone-call"></i> Calling…';
+      if (window.lucide) lucide.createIcons();
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="phone"></i> Call';
+        if (window.lucide) lucide.createIcons();
+      }, 1600);
+    });
+  });
+});
+
+//account.html
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>More</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar"><div class="topbar-row"><h1>More</h1></div></header>
+  <main class="content">
+    <section class="card profile-card"><div class="profile-avatar">AH</div><div class="profile-info"><strong>Alex Harper</strong><small>alex@company.com</small></div><i class="chev" data-lucide="chevron-right"></i></section>
+
+    <section class="card settings-group">
+      <div class="group-title">Account</div>
+      <a class="setting-row" href="#"><i data-lucide="user-round"></i><span>Profile Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <a class="setting-row logout" href="#"><i data-lucide="log-out"></i><span>Log Out</span><i class="chev" data-lucide="chevron-right"></i></a>
+    </section>
+
+    <section class="card settings-group">
+      <div class="group-title">Calling &amp; Audio</div>
+      <a class="setting-row" href="#"><i data-lucide="phone"></i><span>Phone Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <a class="setting-row" href="#"><i data-lucide="headphones"></i><span>Audio Devices</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <div class="setting-row"><i data-lucide="badge-dot"></i><span>Call Recording</span><div class="toggle"></div></div>
+      <a class="setting-row" href="#"><i data-lucide="bell"></i><span>Notifications</span><i class="chev" data-lucide="chevron-right"></i></a>
+    </section>
+
+    <section class="card settings-group">
+      <div class="group-title">Team &amp; Admin</div>
+      <a class="setting-row" href="#"><i data-lucide="users"></i><span>Team Management</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <a class="setting-row" href="#"><i data-lucide="user-x"></i><span>Inactive Users</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <a class="setting-row" href="#"><i data-lucide="tag"></i><span>Tags</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <a class="setting-row" href="#"><i data-lucide="triangle-alert"></i><span>Alerts</span><i class="chev" data-lucide="chevron-right"></i></a>
+    </section>
+
+    <section class="card settings-group">
+      <div class="group-title">App Settings</div>
+      <a class="setting-row" href="#"><i data-lucide="settings"></i><span>General Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-item" href="index.html"><i data-lucide="phone"></i><span>Outreach</span></a>
+    <a class="nav-item" href="skills.html"><i data-lucide="chart-no-axes-column-increasing"></i><span>Skills</span></a>
+    <a class="nav-item" href="earnings.html"><i data-lucide="circle-dollar-sign"></i><span>Earnings</span></a>
+    <a class="nav-item" href="referrals.html"><i data-lucide="users"></i><span>Referrals</span></a>
+    <a class="nav-item active" href="account.html"><i data-lucide="ellipsis"></i><span>More</span></a>
+  </nav>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
