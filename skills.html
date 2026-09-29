@@ -1,1 +1,53 @@
+//skills.html
 
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>Skills</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-row"><h1>Skills</h1><div class="icon-circle"><i data-lucide="target"></i></div></div>
+    <div class="tabs"><a class="active" href="#">Insights</a><a href="#">Practice</a><a href="#">Library</a></div>
+  </header>
+  <main class="content">
+    <section class="card light-card">
+      <div class="card-head"><h3>Your Call Insights</h3><button class="mini-select">Last 7 days⌄</button></div>
+      <div class="insight-grid">
+        <div class="insight"><strong>78%</strong><span>Talk Time</span><em>↑ 12%</em></div>
+        <div class="insight"><strong>4:32</strong><span>Avg. Call Length</span><em>↑ 28%</em></div>
+        <div class="insight"><strong>62%</strong><span>Positive Sentiment</span><em>↑ 18%</em></div>
+      </div>
+    </section>
+
+    <div class="section-title">Recent Call Feedback</div>
+    <section class="card light-card feedback-list">
+      <div class="feedback"><div class="feedback-icon green"><i data-lucide="trophy"></i></div><div><strong>Great opening!</strong><p>You built rapport quickly.</p></div><time>2h ago</time></div>
+      <div class="feedback"><div class="feedback-icon blue"><i data-lucide="mic-2"></i></div><div><strong>Talk slower</strong><p>Try pausing after key points.</p></div><time>4h ago</time></div>
+      <div class="feedback"><div class="feedback-icon green"><i data-lucide="chart-no-axes-column-increasing"></i></div><div><strong>Handled pricing well</strong><p>You addressed the objection clearly.</p></div><time>1d ago</time></div>
+      <div class="feedback"><div class="feedback-icon orange"><i data-lucide="target"></i></div><div><strong>Ask more questions</strong><p>Learn about their timeline earlier.</p></div><time>1d ago</time></div>
+      <div class="transcript">
+        <div class="transcript-head"><strong>Transcript Example</strong><a href="#">Full Transcript →</a></div>
+        <div class="bubble-row"><div class="avatar">You</div><div class="bubble"><span class="speaker">You</span><small>0:08</small><br>Hi Sarah, this is Alex from BrightPath. Do you have a minute to chat about…</div></div>
+        <div class="bubble-row"><div class="avatar purple">SJ</div><div class="bubble"><span class="speaker">Sarah</span><small>0:24</small><br>Yeah, of course. We’re actually looking at a few options right now…</div></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-item" href="index.html"><i data-lucide="phone"></i><span>Outreach</span></a>
+    <a class="nav-item active" href="skills.html"><i data-lucide="chart-no-axes-column-increasing"></i><span>Skills</span></a>
+    <a class="nav-item" href="earnings.html"><i data-lucide="circle-dollar-sign"></i><span>Earnings</span></a>
+    <a class="nav-item" href="referrals.html"><i data-lucide="users"></i><span>Referrals</span></a>
+    <a class="nav-item" href="account.html"><i data-lucide="ellipsis"></i><span>More</span></a>
+  </nav>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
