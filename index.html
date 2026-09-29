@@ -1,1 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>Outreach</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-row">
+      <h1>Outreach</h1>
+      <div class="status-pill"><i data-lucide="circle-check"></i> On Track</div>
+    </div>
+    <div class="stat-grid" style="margin-top:18px">
+      <div class="stat-card green"><i data-lucide="phone-call"></i><div class="num">12</div><div class="label">Calls Today</div></div>
+      <div class="stat-card purple"><i data-lucide="rotate-ccw"></i><div class="num">3</div><div class="label">Callbacks</div></div>
+      <div class="stat-card orange"><i data-lucide="flame"></i><div class="num">2</div><div class="label">Interested</div></div>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="filter-row">
+      <button class="pill active">All Leads</button>
+      <button class="pill">Due for Follow Up</button>
+      <button class="pill">High Priority</button>
+    </div>
+
+    <section class="card lead-card">
+      <div class="lead-head">
+        <div class="company-icon"><i data-lucide="building-2"></i></div>
+        <div class="lead-title">
+          <h2>BrightPath Marketing</h2>
+          <div class="name">Sarah Johnson</div>
+          <div class="role">Marketing Director</div>
+        </div>
+        <i class="star" data-lucide="star"></i>
+      </div>
+
+      <div class="contact-line">
+        <i data-lucide="phone"></i>
+        <span>(415) 555-0187</span>
+        <button class="copy-btn" data-copy="(415) 555-0187" aria-label="Copy phone"><i data-lucide="copy"></i></button>
+      </div>
+
+      <div class="tag-row">
+        <span class="tag blue">SaaS</span>
+        <span class="tag purple">Marketing</span>
+        <span class="tag orange">Warm</span>
+      </div>
+
+      <div class="time-row">
+        <span><i data-lucide="clock-3"></i> 10:24 AM (PST)</span>
+        <span><i data-lucide="map-pin"></i> San Francisco, CA</span>
+      </div>
+
+      <div class="notes">
+        <div class="notes-title"><i data-lucide="notebook-pen"></i> Notes</div>
+        <p>Interested in automation tools.<br>Mentioned expanding team Q2.<br>Follow up about pricing.</p>
+      </div>
+
+      <button class="call-btn" data-demo-call><i data-lucide="phone"></i> Call</button>
+      <div class="quick-actions">
+        <button class="quick-btn"><i data-lucide="shuffle"></i>Random</button>
+        <button class="quick-btn"><i data-lucide="play"></i>Next</button>
+        <button class="quick-btn"><i data-lucide="calendar-clock"></i>Follow Up</button>
+      </div>
+    </section>
+
+    <section class="card lead-card">
+      <div class="lead-head">
+        <div class="company-icon"><i data-lucide="hard-hat"></i></div>
+        <div class="lead-title"><h2>Summit Construction</h2><div class="name">Mike Reynolds</div><div class="role">Owner</div></div>
+        <i class="star" data-lucide="star"></i>
+      </div>
+      <div class="contact-line"><i data-lucide="phone"></i><span>(702) 555-0144</span></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a class="nav-item active" href="index.html"><i data-lucide="phone"></i><span>Outreach</span></a>
+    <a class="nav-item" href="skills.html"><i data-lucide="chart-no-axes-column-increasing"></i><span>Skills</span></a>
+    <a class="nav-item" href="earnings.html"><i data-lucide="circle-dollar-sign"></i><span>Earnings</span></a>
+    <a class="nav-item" href="referrals.html"><i data-lucide="users"></i><span>Referrals</span></a>
+    <a class="nav-item" href="account.html"><i data-lucide="ellipsis"></i><span>More</span></a>
+  </nav>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
 
