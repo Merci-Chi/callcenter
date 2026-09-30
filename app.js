@@ -163,6 +163,47 @@ function setupOutreach() {
   // Selection is stored as the actual lead card, never as a position.
   let selectedCard = null;
   let leadSort = 'hours';
+  // Keep the entire lead list mounted while its content changes. Only one
+  // transition can run at a time, preventing rapid taps from racing.
+  let queueTransition = false;
+  let queuePending = null;
+  const SKELETON_DELAY = 390;
+  const skeletonMarkup = () => `
+    <div class="skeleton-lead" aria-hidden="true">
+      <div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div><div class="sk-shape sk-star"></div></div>
+      <div class="sk-shape sk-phone"></div>
+      <div class="sk-chips"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
+      <div class="sk-shape sk-line"></div><div class="sk-shape sk-line short"></div>
+      <div class="sk-shape sk-preview"></div><div class="sk-shape sk-note"></div>
+      <div class="sk-shape sk-call"></div><div class="sk-chips sk-bottom"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
+    </div>
+    <div class="skeleton-sort" aria-hidden="true"><span class="sk-shape"></span><span class="sk-shape"></span></div>
+    ${Array.from({length:10},()=>`<div class="skeleton-lead skeleton-compact" aria-hidden="true"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div></div><div class="sk-shape sk-phone"></div></div>`).join('')}`;
+  function changeLeads(update) {
+    // While an animation is in progress, apply only the last requested change.
+    if (queueTransition) { queuePending = update; return; }
+    queueTransition = true;
+    const previousHeight = Math.ceil(leadContainer.getBoundingClientRect().height);
+    leadContainer.style.minHeight = `${previousHeight}px`;
+    leadContainer.classList.add('leads-switching');
+    leadContainer.setAttribute('aria-busy','true');
+    const overlay = document.createElement('div');
+    overlay.className = 'lead-skeleton-overlay';
+    overlay.innerHTML = skeletonMarkup();
+    leadContainer.appendChild(overlay);
+    refreshIcons();
+    window.setTimeout(() => {
+      try { update(); } catch(error) { console.error('Unable to change leads:', error); }
+      // Do not auto-scroll the page or collapse the content area mid-update.
+      overlay.remove();
+      leadContainer.classList.remove('leads-switching');
+      leadContainer.removeAttribute('aria-busy');
+      leadContainer.style.minHeight = '';
+      queueTransition = false;
+      if (queuePending) { const next = queuePending; queuePending = null; changeLeads(next); }
+    }, SKELETON_DELAY);
+  }
+
   const MAX_FOLLOWING = 10;
   const orderToggle = document.createElement('div');
   orderToggle.className = 'lead-sort-control';
@@ -331,7 +372,7 @@ function setupOutreach() {
   qa('.lead-sort-option', orderToggle).forEach(btn => btn.addEventListener('click', () => {
     leadSort = btn.dataset.sort;
     updateSortButtons();
-    renderQueue(false);
+    changeLeads(() => renderQueue(false));
   }));
 
   const renderQueue = (shouldScroll = false) => {
@@ -362,24 +403,24 @@ function setupOutreach() {
 
     refreshIcons();
     if (shouldScroll && visibleCards[0]) {
-      visibleCards[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // No automatic scrolling: the user's viewport remains in place.
     }
   };
 
   const selectCard = (card, shouldScroll = true) => {
     if (!card || !matchesFilter(card)) return;
 
+    changeLeads(() => {
     selectedCard = card;
 
     // Every selection rebuilds from original CRM order + saved star state.
     // No current DOM position is ever reused.
-    renderQueue(shouldScroll);
+    renderQueue(false);
+    });
   };
 
   const applyFilter = label => {
-    activeFilter = label;
-    selectedCard = null;
-    renderQueue(false);
+    changeLeads(() => { activeFilter = label; selectedCard = null; renderQueue(false); });
   };
 
   qa('.pill').forEach(btn => {
@@ -828,8 +869,7 @@ function setupOutreach() {
       } while (nextCard === selectedCard);
     }
 
-    selectedCard = nextCard;
-    renderQueue(true);
+    changeLeads(() => { selectedCard = nextCard; renderQueue(false); });
   });
 
   if (label.includes('next')) btn.addEventListener('click', e => {
@@ -839,9 +879,8 @@ function setupOutreach() {
     if (!queue.length) return;
 
     const currentPos = selectedCard ? queue.indexOf(selectedCard) : -1;
-    selectedCard = queue[(currentPos + 1 + queue.length) % queue.length];
-
-    renderQueue(true);
+    const nextCard = queue[(currentPos + 1 + queue.length) % queue.length];
+    changeLeads(() => { selectedCard = nextCard; renderQueue(false); });
   });
 
   if (label.includes('calendar')) btn.addEventListener('click', e => {
@@ -909,7 +948,7 @@ function setupOutreach() {
       // Keep the selected lead fixed. Re-render using the only allowed order:
     // selected -> starred -> unstarred.
     if (currentCard) selectedCard = currentCard;
-    renderQueue(false);
+    changeLeads(() => renderQueue(false));
 
   };
 
@@ -919,10 +958,14 @@ function setupOutreach() {
 
 
 
+  // Use the same skeleton for searches; wait until typing pauses.
+  let searchTimer;
+  q('#crmSearch')?.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => changeLeads(() => { selectedCard = null; renderQueue(false); }), 240);
+  });
   renderQueue(false);
-
 }
-
 
 
 function setupSkills() {
@@ -1250,6 +1293,7 @@ async function loadApprovedPreviewCRM() {
     return;
   }
   status.textContent='Loading leads...';
+  box.innerHTML = `<div class="lead-skeleton-initial" aria-hidden="true"><div class="skeleton-lead"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div></div><div class="sk-shape sk-phone"></div><div class="sk-shape sk-line"></div><div class="sk-shape sk-line short"></div><div class="sk-shape sk-preview"></div><div class="sk-shape sk-note"></div><div class="sk-shape sk-call"></div></div></div>${Array.from({length:10},()=>`<div class="skeleton-lead skeleton-compact"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div></div><div class="sk-shape sk-phone"></div></div>`).join('')}</div>`;
   try {
     // Fetch every approved URL, not just the first 1,000 Supabase rows.
     const inventory=[];
@@ -1283,7 +1327,7 @@ async function loadApprovedPreviewCRM() {
     setupCopyButtons();
     setupOutreach();
     const search=q('#crmSearch');
-    search.addEventListener('input',()=>window.refreshCRMQueue?.());
+    // Search listener is attached by setupOutreach and uses the skeleton.
     refreshIcons();
   } catch(error) {
     status.textContent='Unable to load leads. Please try again.';

@@ -606,3 +606,61 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .login-submit:disabled {opacity:.65;cursor:wait;}
 .login-submit svg {width:17px;height:17px;}
 .login-foot {margin-top:23px;text-align:center;color:#9ba8b6;font-size:11px;}
+
+
+/* Interaction polish: color/scale response with stable geometry. */
+button, a.nav-item, a.preview-link, a.setting-row, .lead-sort-option,
+.notes, .lead-card, .pill { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button:not(:disabled), a.nav-item, a.preview-link, .lead-sort-option, .pill {
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease,
+    box-shadow .18s ease, opacity .18s ease, transform .14s ease;
+}
+button:not(:disabled):active, a.nav-item:active, a.preview-link:active,
+.lead-sort-option:active, .pill:active { transform: scale(.95); filter:brightness(.94); }
+button:not(:disabled):focus-visible, a.preview-link:focus-visible, a.nav-item:focus-visible {
+  outline: 3px solid #1688ff88; outline-offset: 2px;
+}
+button:disabled {cursor:not-allowed}
+@media (hover:hover) {
+  button:not(:disabled):hover, a.preview-link:hover { filter:brightness(.965); }
+}
+/* Each slot is a stable height: expanded/compact switching never shifts the list. */
+.crm-leads {position:relative; overflow-anchor:none;}
+.crm-leads > .lead-card.selected-lead {
+  height: 505px; min-height:505px; max-height:505px; overflow-y:auto;
+  overscroll-behavior:contain; scrollbar-width:thin;
+}
+.crm-leads > .lead-card:not(.selected-lead) {
+  height: 112px; min-height:112px; max-height:112px; overflow:hidden;
+}
+.crm-leads > .lead-sort-control { flex-shrink:0; }
+/* Skeleton covers cards in place, so existing content never visibly jumps. */
+.crm-leads.leads-switching > :not(.lead-skeleton-overlay) {visibility:hidden!important;}
+.lead-skeleton-overlay {position:absolute;inset:0 0 auto;z-index:9;pointer-events:all; background:var(--page); min-height:100%;overflow:hidden;}
+.skeleton-lead {box-sizing:border-box;height:505px; padding:16px; border:1px solid #e6ebf2;
+  border-radius:18px;background:#fff;margin-bottom:14px;overflow:hidden;}
+.skeleton-compact {height:112px;padding:13px 15px;}
+.sk-row {display:flex;align-items:center;gap:12px;}
+.sk-grow {flex:1;min-width:0;}
+.sk-shape {display:block;background:linear-gradient(100deg,#e9eef5 10%,#f6f9fc 35%,#e9eef5 60%);
+  background-size:220% 100%;animation:sk-shimmer 1.2s linear infinite;border-radius:8px;}
+.sk-icon {width:45px;height:45px;border-radius:13px;flex-shrink:0;}
+.sk-title{height:16px;width:68%;margin:0 0 9px;}
+.sk-subtitle{height:11px;width:42%;}
+.sk-star{height:20px;width:20px;border-radius:50%;}
+.sk-phone {height:13px;width:55%;margin:19px 0 16px;}
+.sk-chips{display:flex;gap:8px;margin:10px 0 18px;}
+.sk-chips .sk-shape{width:26%;height:23px;border-radius:40px;}
+.sk-line{height:12px;width:85%;margin:12px 0;}
+.sk-line.short{width:57%;}
+.sk-preview{width:65%;height:32px;margin:22px 0 15px;border-radius:9px;}
+.sk-note{height:64px;width:100%;margin:14px 0;}
+.sk-call{height:45px;width:100%;margin-top:17px;border-radius:12px;}
+.sk-bottom{margin-top:10px;}
+.sk-bottom .sk-shape{height:35px;flex:1;}
+.skeleton-compact .sk-phone{width:55%;margin:14px 0 0;}
+.skeleton-sort{height:78px;display:flex;gap:10px;align-items:center;padding:10px;margin-bottom:10px;}
+.skeleton-sort .sk-shape{height:34px;width:47%;border-radius:12px;}
+.lead-skeleton-initial{width:100%;}
+@keyframes sk-shimmer {from{background-position:220% 0}to{background-position:-220% 0}}
+@media(prefers-reduced-motion:reduce){.sk-shape{animation:none}button,a{transition:none!important}}
