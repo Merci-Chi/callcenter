@@ -257,17 +257,30 @@ function setupOutreach() {
 
   const renderQueue = (shouldScroll = false) => {
     const orderedCards = getOrderedCards();
+    const orderedSet = new Set(orderedCards);
 
+    // Fully reset every card before rebuilding the visible order.
     originalOrder.forEach(card => {
       card.classList.remove('selected-lead');
       card.style.display = 'none';
+      card.style.order = '';
     });
 
+    // Physically rebuild the DOM in the ONLY allowed visible order:
+    // selected -> starred -> unstarred.
+    // Setting CSS order too prevents any flex/grid rule from overriding it.
     orderedCards.forEach((card, index) => {
       card.style.display = '';
+      card.style.order = String(index);
       card.classList.toggle('selected-lead', index === 0);
       leadContainer.appendChild(card);
     });
+
+    // Keep filtered-out cards after every visible card so they can never
+    // interfere with the visible starred ordering when another lead is selected.
+    originalOrder
+      .filter(card => !orderedSet.has(card))
+      .forEach(card => leadContainer.appendChild(card));
 
     refreshIcons();
 
@@ -278,7 +291,11 @@ function setupOutreach() {
 
   const selectCard = (card, shouldScroll = true) => {
     if (!card || !matchesFilter(card)) return;
+
     selectedCard = card;
+
+    // Every selection rebuilds from original CRM order + saved star state.
+    // No current DOM position is ever reused.
     renderQueue(shouldScroll);
   };
 
