@@ -304,7 +304,8 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
   transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, padding .2s ease;
 }
 .lead-card:not(.selected-lead) {
-  padding: 13px 15px;
+  padding: 14px 15px;
+  display:block;
   box-shadow: 0 5px 16px rgba(15, 33, 54, .07);
 }
 .lead-card:not(.selected-lead):active { transform: scale(.99); }
@@ -314,15 +315,25 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
   border-radius: 12px;
 }
 .lead-card:not(.selected-lead) .company-icon i { width: 21px; height: 21px; }
-.lead-card:not(.selected-lead) .lead-title h2 { font-size: 15px; }
+.lead-card:not(.selected-lead) .lead-title h2 {
+  font-size: 15px;
+  line-height: 1.22;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
 .lead-card:not(.selected-lead) .contact-line {
-  margin-top: 7px;
+  margin-top: 10px;
   padding-left: 54px;
   font-size: 12px;
 }
 .lead-card:not(.selected-lead) .contact-line > i { width: 14px; height: 14px; }
 .lead-card:not(.selected-lead) .copy-btn { display: none; }
 .lead-card:not(.selected-lead) .lead-details { display: none; }
+.lead-card:not(.selected-lead) .lead-head { min-height:72px; }
+.lead-card:not(.selected-lead) .lead-title { min-width:0; padding-right:4px; }
+.lead-card:not(.selected-lead) .lead-title .name,
+.lead-card:not(.selected-lead) .lead-title .role { line-height:1.25; overflow-wrap:anywhere; }
+.lead-card:not(.selected-lead) .contact-line { min-height:22px; white-space:normal; overflow-wrap:anywhere; }
 .lead-card.selected-lead {
   cursor: default;
   border-color: rgba(22,136,255,.16);
@@ -631,7 +642,7 @@ button:disabled {cursor:not-allowed}
   overscroll-behavior:contain; scrollbar-width:thin;
 }
 .crm-leads > .lead-card:not(.selected-lead) {
-  height: 112px; min-height:112px; max-height:112px; overflow:hidden;
+  height: 160px; min-height:160px; max-height:160px; overflow:hidden;
 }
 .crm-leads > .lead-sort-control { flex-shrink:0; }
 /* Skeleton covers cards in place, so existing content never visibly jumps. */
@@ -639,7 +650,7 @@ button:disabled {cursor:not-allowed}
 .lead-skeleton-overlay {position:absolute;inset:0 0 auto;z-index:9;pointer-events:all; background:var(--page); min-height:100%;overflow:hidden;}
 .skeleton-lead {box-sizing:border-box;height:505px; padding:16px; border:1px solid #e6ebf2;
   border-radius:18px;background:#fff;margin-bottom:14px;overflow:hidden;}
-.skeleton-compact {height:112px;padding:13px 15px;}
+.skeleton-compact {height:160px;padding:13px 15px;}
 .sk-row {display:flex;align-items:center;gap:12px;}
 .sk-grow {flex:1;min-width:0;}
 .sk-shape {display:block;background:linear-gradient(100deg,#e9eef5 10%,#f6f9fc 35%,#e9eef5 60%);
