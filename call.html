@@ -172,7 +172,7 @@
 
     const stage = overlay.querySelector('.post-call-stage');
     const progress = overlay.querySelector('.post-call-progress span');
-    const data = { outcomes:[], reason:'', tags:[], notes:'' };
+    const data = { rating:'', outcomes:[], reason:'', tags:[], notes:'' };
     let screenIndex = 0;
     let screens = [];
 
@@ -190,9 +190,13 @@
     const tagOptions = ['Interested','Follow Up','Send Preview','Requested Text','Requested Email','Price Concern','Decision Maker','No Website','Busy','Do Not Call'];
 
     function rebuildScreens(){
-      screens = ['outcome'];
-      if(data.outcomes.includes('Not Interested')) screens.push('reason');
-      screens.push('tags','notes');
+      screens = ['rating'];
+      if(data.rating !== "Didn't call") {
+        screens.push('outcome');
+        if(data.outcomes.includes('Not Interested')) screens.push('reason');
+        screens.push('tags');
+      }
+      screens.push('notes');
     }
 
     function updateProgress(){
@@ -224,9 +228,29 @@
       updateProgress();
       const screen = screens[screenIndex];
 
+      if(screen === 'rating'){
+        const ratingOptions = [
+          ['thumbs-up','thumbs-up','Good'],
+          ['thumbs-down','thumbs-down','Bad'],
+          ['didnt-call','phone-off',"Didn't call"]
+        ];
+        stage.innerHTML = `
+          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Choose one to continue.</p></div>
+          <div class="pc-rating-grid">
+            ${ratingOptions.map(([cls,icon,label]) => `<button class="pc-rating ${cls} ${data.rating===label?'selected':''}" data-value="${label}" type="button"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
+          </div>
+          ${navRow({back:false,nextDisabled:!data.rating})}`;
+        stage.querySelectorAll('.pc-rating').forEach(btn => btn.addEventListener('click', () => {
+          data.rating = btn.dataset.value;
+          if(data.rating === "Didn't call") { data.outcomes = []; data.reason = ''; data.tags = []; }
+          stage.querySelectorAll('.pc-rating').forEach(x => x.classList.toggle('selected', x===btn));
+          stage.querySelector('.pc-next').disabled = false;
+        }));
+      }
+
       if(screen === 'outcome'){
         stage.innerHTML = `
-          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Select everything that applies to this call.</p></div>
+          <div class="pc-heading"><span class="pc-kicker">Call details</span><h2>What happened?</h2><p>Select everything that applies to this call.</p></div>
           <div class="pc-option-grid">
             ${outcomeOptions.map(([label,icon]) => `<button class="pc-option ${data.outcomes.includes(label)?'selected':''}" data-value="${label}"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
           </div>
@@ -304,7 +328,8 @@
           <h2>Call saved</h2>
           <p>Your call result${data.tags.length ? ', tags' : ''}${data.notes.trim() ? ', notes' : ''} and transcript were saved.</p>
           <div class="pc-confirm-summary">
-            <strong>${data.outcomes.join(' • ')}</strong>
+            <strong>${data.rating}</strong>
+            ${data.outcomes.length ? `<span>${data.outcomes.join(' • ')}</span>` : ''}
             ${data.reason ? `<span>${data.reason}</span>` : ''}
             ${connectedSeconds ? `<span>${Math.floor(connectedSeconds/60)}m ${connectedSeconds%60}s call</span>` : '<span>No connected call time</span>'}
           </div>

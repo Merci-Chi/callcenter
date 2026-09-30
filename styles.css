@@ -246,11 +246,11 @@ button { font: inherit; }
 }
 
 /* Functional interaction layer */
-button, a, .star, .profile-card, .setting-row { -webkit-tap-highlight-color: transparent; }
+button, a, .star-button, .profile-card, .setting-row { -webkit-tap-highlight-color: transparent; }
 button:active, .nav-item:active, .setting-row:active, .profile-card:active { transform: scale(.985); }
 .selected-lead { outline: none; }
-.star { cursor: pointer; }
-.star.favorite { fill: #f5b51b; stroke: #f5b51b; }
+.star-button { cursor: pointer; }
+.star-button.favorite svg { fill: #f5b51b; stroke: #f5b51b; }
 .toggle { cursor: pointer; transition: .2s ease; }
 .toggle.on { background: #2f7dea; }
 .toggle.on::after { transform: translateX(18px); }
@@ -329,9 +329,10 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
   box-shadow: 0 12px 30px rgba(15, 33, 54, .12);
 }
 .lead-card.selected-lead .lead-details { display: block; }
-.lead-card .star.favorite {
+.lead-card .star-button.favorite svg {
   fill: #ffb61d;
   color: #ffb61d;
+  stroke: #ffb61d;
 }
 
 /* Call screen */
@@ -425,6 +426,16 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .pc-kicker { display:block; color:var(--blue); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; margin-bottom:7px; }
 .pc-heading h2 { margin:0; font-size:27px; letter-spacing:-.6px; color:var(--text); }
 .pc-heading p { margin:7px 0 0; color:var(--muted); font-size:13px; line-height:1.45; }
+
+.pc-rating-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.pc-rating { min-height:118px; border:1px solid #dfe7ef; background:#fff; border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#41566d; font-weight:900; font-size:14px; box-shadow:0 6px 18px rgba(15,33,54,.06); }
+.pc-rating i { width:34px; height:34px; stroke-width:2.4; }
+.pc-rating.thumbs-up.selected { background:#eaf9f1; border-color:#22b96f; color:#178850; box-shadow:0 0 0 2px rgba(34,185,111,.10); }
+.pc-rating.thumbs-down.selected { background:#fff0f1; border-color:#e45b66; color:#c93f4b; box-shadow:0 0 0 2px rgba(228,91,102,.10); }
+.pc-rating.didnt-call { grid-column:1 / -1; min-height:62px; flex-direction:row; }
+.pc-rating.didnt-call i { width:23px; height:23px; }
+.pc-rating.didnt-call.selected { background:#eef3f8; border-color:#7d8ea1; color:#40566d; box-shadow:0 0 0 2px rgba(88,107,128,.08); }
+
 .pc-option-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .pc-option { min-height:88px; border:1px solid #dfe7ef; background:#fff; border-radius:16px; color:var(--text); display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; padding:14px; font-weight:850; text-align:left; box-shadow:0 6px 18px rgba(15,33,54,.06); }
 .pc-option i { width:22px; height:22px; color:#55708a; }
@@ -465,25 +476,30 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 }
 
 /* Outreach notes, starring, and custom calendar sheet */
-.star {
-  background: transparent !important;
-  border: 0 !important;
-  padding: 2px !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
-  cursor: pointer;
-  flex: 0 0 auto;
+.star-button {
+  appearance:none;
+  -webkit-appearance:none;
+  background:transparent !important;
+  border:0 !important;
+  padding:4px !important;
+  margin:-4px !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  outline:none !important;
+  cursor:pointer;
+  flex:0 0 auto;
+  color:#a8b4c1;
+  line-height:0;
 }
-.star:focus,
-.star:focus-visible,
-.star:active {
-  outline: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
+.star-button:focus,
+.star-button:focus-visible,
+.star-button:active {
+  outline:none !important;
+  box-shadow:none !important;
+  background:transparent !important;
 }
-.star:not(.favorite) { fill: transparent; stroke: #a8b4c1; color:#a8b4c1; }
-.star.favorite { fill:#ffb61d !important; stroke:#ffb61d !important; color:#ffb61d !important; }
+.star-button svg { width:21px; height:21px; fill:transparent; stroke:#a8b4c1; color:#a8b4c1; pointer-events:none; }
+.star-button.favorite svg { fill:#ffb61d !important; stroke:#ffb61d !important; color:#ffb61d !important; }
 .notes { cursor:pointer; border-radius:12px; transition:background .16s ease; }
 .notes:active { background:#f5f9fc; }
 .notes .notes-title::after { content:'Tap to edit'; margin-left:auto; color:#95a3b2; font-size:10px; font-weight:700; }

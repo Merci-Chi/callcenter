@@ -87,7 +87,7 @@ function setupOutreach() {
 
   // Star state is separate from High Priority. Restore the user's star choices.
   const initialStarred = originalOrder
-    .filter(card => q('.star', card)?.classList.contains('favorite'))
+    .filter(card => q('.star-button', card)?.classList.contains('favorite'))
     .map(companyName);
   let starredNames;
   try {
@@ -99,7 +99,7 @@ function setupOutreach() {
 
   const syncStars = () => {
     originalOrder.forEach(card => {
-      const star = q('.star', card);
+      const star = q('.star-button', card);
       if (!star) return;
       const on = starredNames.has(companyName(card));
       star.classList.toggle('favorite', on);
@@ -175,7 +175,7 @@ function setupOutreach() {
 
   originalOrder.forEach(card => {
     card.addEventListener('click', e => {
-      if (e.target.closest('button, .star, a, .notes')) return;
+      if (e.target.closest('button, a, .notes')) return;
       if (!card.classList.contains('selected-lead')) selectCard(card);
     });
   });
@@ -423,9 +423,7 @@ function setupOutreach() {
     });
   });
 
-  qa('.star').forEach(star => {
-    star.setAttribute('role', 'button');
-    star.setAttribute('tabindex', '0');
+  qa('.star-button').forEach(star => {
     const toggle = e => {
       e?.stopPropagation?.();
       const card = star.closest('.lead-card');
@@ -444,9 +442,6 @@ function setupOutreach() {
       renderQueue(false);
     };
     star.addEventListener('click', toggle);
-    star.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); }
-    });
   });
 
   renderQueue(false);
