@@ -297,3 +297,39 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .skill-placeholder p { color:#687b8e; }
 .skill-big-icon { width:58px; height:58px; margin:0 auto 12px; border-radius:18px; background:#eaf3ff; color:#2f7dea; display:grid; place-items:center; }
 .practice-btn { width:100%; border:1px solid #dbe5ee; background:#fff; color:#1c3551; border-radius:14px; padding:13px; margin-top:10px; font-weight:750; text-align:left; }
+
+/* Outreach lead selector: exactly one expanded card, all others compressed */
+.lead-card {
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease, padding .2s ease;
+}
+.lead-card:not(.selected-lead) {
+  padding: 13px 15px;
+  box-shadow: 0 5px 16px rgba(15, 33, 54, .07);
+}
+.lead-card:not(.selected-lead):active { transform: scale(.99); }
+.lead-card:not(.selected-lead) .company-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+.lead-card:not(.selected-lead) .company-icon i { width: 21px; height: 21px; }
+.lead-card:not(.selected-lead) .lead-title h2 { font-size: 15px; }
+.lead-card:not(.selected-lead) .contact-line {
+  margin-top: 7px;
+  padding-left: 54px;
+  font-size: 12px;
+}
+.lead-card:not(.selected-lead) .contact-line > i { width: 14px; height: 14px; }
+.lead-card:not(.selected-lead) .copy-btn { display: none; }
+.lead-card:not(.selected-lead) .lead-details { display: none; }
+.lead-card.selected-lead {
+  cursor: default;
+  border-color: rgba(22,136,255,.16);
+  box-shadow: 0 12px 30px rgba(15, 33, 54, .12);
+}
+.lead-card.selected-lead .lead-details { display: block; }
+.lead-card .star.favorite {
+  fill: #ffb61d;
+  color: #ffb61d;
+}

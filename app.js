@@ -75,13 +75,41 @@ function setupCopyButtons() {
 function setupOutreach() {
   const leadCards = qa('.lead-card');
   if (!leadCards.length) return;
-  let selected = 0;
+  let selected = Math.max(0, leadCards.findIndex(c => c.classList.contains('selected-lead')));
+  let activeFilter = 'All Leads';
 
-  const selectCard = index => {
+  const visibleCards = () => leadCards.filter(card => card.style.display !== 'none');
+
+  const selectCard = (cardOrIndex, shouldScroll = true) => {
     if (!leadCards.length) return;
-    selected = (index + leadCards.length) % leadCards.length;
-    leadCards.forEach((card, i) => card.classList.toggle('selected-lead', i === selected));
-    leadCards[selected].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    let card;
+    if (typeof cardOrIndex === 'number') {
+      const visible = visibleCards();
+      if (!visible.length) return;
+      const currentVisibleIndex = visible.indexOf(leadCards[selected]);
+      const index = ((cardOrIndex < 0 ? visible.length - 1 : cardOrIndex) + visible.length) % visible.length;
+      card = visible[index];
+      if (cardOrIndex === selected + 1 && currentVisibleIndex >= 0) card = visible[(currentVisibleIndex + 1) % visible.length];
+    } else {
+      card = cardOrIndex;
+    }
+    if (!card || card.style.display === 'none') return;
+    selected = leadCards.indexOf(card);
+    leadCards.forEach(c => c.classList.toggle('selected-lead', c === card));
+    refreshIcons();
+    if (shouldScroll) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  const applyFilter = label => {
+    activeFilter = label;
+    leadCards.forEach(card => {
+      let show = true;
+      if (label === 'Due for Follow Up') show = card.dataset.followup === 'true';
+      if (label === 'High Priority') show = card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite');
+      card.style.display = show ? '' : 'none';
+    });
+    const visible = visibleCards();
+    if (visible.length && !visible.includes(leadCards[selected])) selectCard(visible[0], false);
   };
 
   qa('.pill').forEach(btn => {
@@ -89,23 +117,39 @@ function setupOutreach() {
       qa('.pill').forEach(x => x.classList.remove('active'));
       btn.classList.add('active');
       const label = btn.textContent.trim();
-      leadCards.forEach(c => c.style.display = '');
-      if (label === 'Due for Follow Up') {
-        leadCards.forEach((c, i) => c.style.display = i === 0 ? '' : 'none');
-      } else if (label === 'High Priority') {
-        leadCards.forEach((c, i) => c.style.display = i === 1 ? '' : 'none');
-      }
+      applyFilter(label);
       showToast(label);
+    });
+  });
+
+  leadCards.forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('button, .star, a')) return;
+      if (!card.classList.contains('selected-lead')) selectCard(card);
     });
   });
 
   qa('.quick-btn').forEach(btn => {
     const label = btn.textContent.trim().toLowerCase();
-    if (label.includes('random')) btn.addEventListener('click', () => selectCard(Math.floor(Math.random() * leadCards.length)));
-    if (label.includes('next')) btn.addEventListener('click', () => selectCard(selected + 1));
-    if (label.includes('follow')) btn.addEventListener('click', () => {
-      const card = leadCards[selected];
-      const name = q('.lead-title strong', card)?.textContent || 'this lead';
+    if (label.includes('random')) btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const visible = visibleCards();
+      if (!visible.length) return;
+      let choices = visible.filter(c => c !== leadCards[selected]);
+      if (!choices.length) choices = visible;
+      selectCard(choices[Math.floor(Math.random() * choices.length)]);
+    });
+    if (label.includes('next')) btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const visible = visibleCards();
+      if (!visible.length) return;
+      const current = visible.indexOf(leadCards[selected]);
+      selectCard(visible[(current + 1 + visible.length) % visible.length]);
+    });
+    if (label.includes('follow')) btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const card = btn.closest('.lead-card') || leadCards[selected];
+      const name = q('.lead-title h2', card)?.textContent || 'this lead';
       modal('Schedule Follow Up', `
         <p class="modal-help">Set a reminder for <strong>${name}</strong>.</p>
         <label class="modal-label">Date<input class="modal-input" id="follow-date" type="date"></label>
@@ -114,17 +158,20 @@ function setupOutreach() {
           { label: 'Save Follow Up', primary: true, onClick: (close, root) => {
             const d = q('#follow-date', root).value;
             const t = q('#follow-time', root).value;
+            card.dataset.followup = 'true';
             localStorage.setItem('demo-followup', JSON.stringify({ name, d, t }));
             close(); showToast('Follow up saved');
+            if (activeFilter === 'Due for Follow Up') applyFilter(activeFilter);
           }}
         ]);
     });
   });
 
   qa('[data-demo-call]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
       const card = btn.closest('.lead-card');
-      const name = q('.lead-title strong', card)?.textContent || 'lead';
+      const name = q('.lead-title h2', card)?.textContent || 'lead';
       const number = q('.contact-line span', card)?.textContent?.trim() || '';
       modal('Start Call', `<p class="modal-help">Call <strong>${name}</strong><br>${number}</p><p class="modal-note">On a phone, this opens the device dialer. Your browser calling provider can be connected here later.</p>`, [
         { label: 'Cancel' },
@@ -143,13 +190,20 @@ function setupOutreach() {
   qa('.star').forEach(star => {
     star.setAttribute('role', 'button');
     star.setAttribute('tabindex', '0');
-    const toggle = () => {
+    const toggle = e => {
+      e?.stopPropagation?.();
       star.classList.toggle('favorite');
+      const card = star.closest('.lead-card');
+      if (card) card.dataset.priority = star.classList.contains('favorite') ? 'true' : 'false';
       showToast(star.classList.contains('favorite') ? 'Added to priority' : 'Removed from priority');
+      if (activeFilter === 'High Priority') applyFilter(activeFilter);
     };
     star.addEventListener('click', toggle);
-    star.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggle(); });
+    star.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggle(e); });
   });
+
+  applyFilter('All Leads');
+  selectCard(leadCards[selected], false);
 }
 
 function setupSkills() {
