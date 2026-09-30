@@ -168,39 +168,95 @@ function setupOutreach() {
   let queueTransition = false;
   let queuePending = null;
   const SKELETON_DELAY = 390;
-  const skeletonMarkup = () => `
-    <div class="skeleton-lead" aria-hidden="true">
-      <div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div><div class="sk-shape sk-star"></div></div>
+
+  const compactSkeleton = height => `
+    <div class="skeleton-lead skeleton-compact" style="height:${height}px" aria-hidden="true">
+      <div class="sk-row">
+        <div class="sk-shape sk-icon"></div>
+        <div class="sk-grow">
+          <div class="sk-shape sk-title"></div>
+          <div class="sk-shape sk-subtitle"></div>
+        </div>
+        <div class="sk-shape sk-star"></div>
+      </div>
+      <div class="sk-shape sk-phone"></div>
+    </div>`;
+
+  const expandedSkeleton = height => `
+    <div class="skeleton-lead skeleton-expanded" style="height:${height}px" aria-hidden="true">
+      <div class="sk-row">
+        <div class="sk-shape sk-icon"></div>
+        <div class="sk-grow">
+          <div class="sk-shape sk-title"></div>
+          <div class="sk-shape sk-subtitle"></div>
+        </div>
+        <div class="sk-shape sk-star"></div>
+      </div>
       <div class="sk-shape sk-phone"></div>
       <div class="sk-chips"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
-      <div class="sk-shape sk-line"></div><div class="sk-shape sk-line short"></div>
-      <div class="sk-shape sk-preview"></div><div class="sk-shape sk-note"></div>
-      <div class="sk-shape sk-call"></div><div class="sk-chips sk-bottom"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
-    </div>
-    <div class="skeleton-sort" aria-hidden="true"><span class="sk-shape"></span><span class="sk-shape"></span></div>
-    ${Array.from({length:10},()=>`<div class="skeleton-lead skeleton-compact" aria-hidden="true"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div></div><div class="sk-shape sk-phone"></div></div>`).join('')}`;
+      <div class="sk-shape sk-line"></div>
+      <div class="sk-shape sk-line short"></div>
+      <div class="sk-shape sk-preview"></div>
+      <div class="sk-shape sk-note"></div>
+      <div class="sk-shape sk-call"></div>
+      <div class="sk-chips sk-bottom"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
+    </div>`;
+
+  function skeletonMarkup() {
+    return [...leadContainer.children]
+      .filter(el => {
+        if (el.classList.contains('lead-skeleton-overlay')) return false;
+        const style = getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      })
+      .map(el => {
+        const height = Math.max(1, Math.ceil(el.getBoundingClientRect().height));
+        if (el.classList.contains('lead-sort-control')) {
+          return `<div class="skeleton-sort" style="height:${height}px" aria-hidden="true"><span class="sk-shape"></span><span class="sk-shape"></span></div>`;
+        }
+        if (el.classList.contains('lead-card')) {
+          return el.classList.contains('selected-lead')
+            ? expandedSkeleton(height)
+            : compactSkeleton(height);
+        }
+        return '';
+      })
+      .join('');
+  }
+
   function changeLeads(update) {
     // While an animation is in progress, apply only the last requested change.
     if (queueTransition) { queuePending = update; return; }
     queueTransition = true;
+
+    // Capture the current geometry BEFORE hiding anything. The skeleton overlay
+    // then mirrors those exact card heights, so nothing jumps or turns into a
+    // giant placeholder while the next lead is being selected.
     const previousHeight = Math.ceil(leadContainer.getBoundingClientRect().height);
+    const markup = skeletonMarkup();
+
     leadContainer.style.minHeight = `${previousHeight}px`;
     leadContainer.classList.add('leads-switching');
     leadContainer.setAttribute('aria-busy','true');
+
     const overlay = document.createElement('div');
     overlay.className = 'lead-skeleton-overlay';
-    overlay.innerHTML = skeletonMarkup();
+    overlay.innerHTML = markup;
     leadContainer.appendChild(overlay);
     refreshIcons();
+
     window.setTimeout(() => {
       try { update(); } catch(error) { console.error('Unable to change leads:', error); }
-      // Do not auto-scroll the page or collapse the content area mid-update.
       overlay.remove();
       leadContainer.classList.remove('leads-switching');
       leadContainer.removeAttribute('aria-busy');
       leadContainer.style.minHeight = '';
       queueTransition = false;
-      if (queuePending) { const next = queuePending; queuePending = null; changeLeads(next); }
+      if (queuePending) {
+        const next = queuePending;
+        queuePending = null;
+        changeLeads(next);
+      }
     }, SKELETON_DELAY);
   }
 
