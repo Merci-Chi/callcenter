@@ -449,7 +449,7 @@ function setupOutreach() {
           const client = window.steadyHandsCRMClient;
           if (!client || !card.dataset.crmId) { showToast('CRM is not connected'); return; }
           const { error } = await client.from('crm').update({ notes:value }).eq('id',card.dataset.crmId);
-          if (error) { showToast('Could not save note: ' + error.message); return; }
+          if (error) { console.error('Unable to save note:',error); showToast('Could not save note. Try again.'); return; }
           if (p) { p.textContent = value || 'No notes added yet.'; p.style.whiteSpace = 'pre-line'; }
           close();
           showToast('Note saved in CRM');
@@ -1109,7 +1109,7 @@ function setupAccount() {
 
       if (label === 'Log Out') return modal('Log Out', '<p class="modal-help">Are you sure you want to log out?</p>', [
 
-        { label: 'Cancel' }, { label: 'Log Out', danger: true, onClick: close => { close(); showToast('Demo logout complete'); } }
+        { label: 'Cancel' }, { label: 'Log Out', danger: true, onClick: async close => { close(); try { const client = window.steadyHandsCRMClient || (window.supabase && window.supabase.createClient(SH_SUPABASE_URL, SH_PUBLISHABLE_KEY)); if (client) await client.auth.signOut(); window.location.replace('login.html'); } catch(error) {console.error('Sign out failed:',error); showToast('Unable to sign out. Try again.');} } }
 
       ]);
 
@@ -1231,22 +1231,25 @@ async function loadApprovedPreviewCRM() {
   const status=q('#crmStatus');
   const box=q('#crmLeadCards');
   if (!status || !box) return;
-  if (!window.supabase) { status.textContent='Supabase library did not load. Check your internet connection.';return; }
+  q('#crmReload')?.addEventListener('click',()=>location.reload());
+  if (!window.supabase) { status.textContent='Unable to connect. Please try again.';return; }
   const client=window.steadyHandsCRMClient || window.supabase.createClient(SH_SUPABASE_URL,SH_PUBLISHABLE_KEY);
   window.steadyHandsCRMClient=client;
-  const { data:{session}, error:sessionError }=await client.auth.getSession();
-  if (sessionError) {status.textContent='Sign-in error: '+sessionError.message; return;}
-  if (!session) {
-    status.innerHTML='<h3>Sign in to view CRM previews</h3><p>This page displays business and contact information. Sign in using your authorized Steady Hands account.</p><form id="crmLogin"><label>Email<input required type="email" autocomplete="username" name="email" /></label><label>Password<input required type="password" autocomplete="current-password" name="password" /></label><button type="submit">Sign In</button><p id="crmLoginError" role="alert"></p></form>';
-    q('#crmLogin').addEventListener('submit',async e=>{
-      e.preventDefault(); const form=e.currentTarget;const errorText=q('#crmLoginError');errorText.textContent='Signing in…';
-      const {error}=await client.auth.signInWithPassword({email:form.elements.email.value,password:form.elements.password.value});
-      if(error){errorText.textContent=error.message;return;}
-      loadApprovedPreviewCRM();
-    });
+  let session;
+  try {
+    const authResult = await client.auth.getSession();
+    if (authResult.error) throw authResult.error;
+    session = authResult.data.session;
+  } catch (error) {
+    console.error('Authentication check failed:', error);
+    status.textContent='Unable to connect. Please try again.';
     return;
   }
-  status.textContent='Loading approved previews from Supabase…';
+  if (!session) {
+    window.location.replace('login.html');
+    return;
+  }
+  status.textContent='Loading leads...';
   try {
     // Fetch every approved URL, not just the first 1,000 Supabase rows.
     const inventory=[];
@@ -1272,7 +1275,7 @@ async function loadApprovedPreviewCRM() {
     leads.sort((a,b)=>crmText(a.company).localeCompare(crmText(b.company)));
     box.replaceChildren(...leads.map(lead=>makeCRMLinkCard(lead,byCRM.get(lead.id)||[])));
     const linked=leads.reduce((n,l)=>n+(byCRM.get(l.id)||[]).length,0);
-    status.textContent=`${leads.length.toLocaleString()} CRM businesses · ${linked.toLocaleString()} approved preview URLs${linked!==inventory.length?' · Some records are restricted by permissions':''}`;
+    status.textContent=`${leads.length.toLocaleString()} leads available`; 
     const today=new Date().toDateString();
     q('#statCalls').textContent=leads.filter(l=>l.lastcalled && new Date(l.lastcalled).toDateString()===today).length;
     q('#statCallbacks').textContent=leads.filter(l=>!!l.callbackdate||!!l.callbackat).length;
@@ -1281,10 +1284,9 @@ async function loadApprovedPreviewCRM() {
     setupOutreach();
     const search=q('#crmSearch');
     search.addEventListener('input',()=>window.refreshCRMQueue?.());
-    q('#crmReload').addEventListener('click',()=>location.reload());
     refreshIcons();
   } catch(error) {
-    status.textContent='Could not load approved previews: '+error.message;
+    status.textContent='Unable to load leads. Please try again.';
     box.replaceChildren();
     console.error(error);
   }

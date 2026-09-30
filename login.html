@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#102945"/><title>Sign In • Outreach</title>
+<link rel="stylesheet" href="styles.css"/>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head><body>
+<div class="login-page"><div class="login-panel">
+<div class="login-brand"><div class="login-brand-icon"><i data-lucide="handshake"></i></div><span>STEADY HANDS</span></div>
+<div class="login-title"><h1>Welcome back</h1><p>Sign in to continue to Outreach.</p></div>
+<form id="loginForm" class="login-form">
+<label for="loginEmail">Email address</label><div class="login-field"><i data-lucide="mail"></i><input id="loginEmail" type="email" name="email" placeholder="name@steadyhandsop.com" autocomplete="username" required/></div>
+<label for="loginPassword">Password</label><div class="login-field"><i data-lucide="lock-keyhole"></i><input id="loginPassword" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required/><button type="button" id="showPassword" aria-label="Show password"><i data-lucide="eye"></i></button></div>
+<div id="loginMessage" class="login-message" role="status" aria-live="polite"></div>
+<button type="submit" id="signInButton" class="login-submit">Sign in <i data-lucide="arrow-right"></i></button>
+</form><div class="login-foot">Authorized team access only</div>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="login.js"></script>
+</body></html>

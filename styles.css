@@ -582,3 +582,27 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .preview-link{display:inline-flex;align-items:center;gap:5px;padding:9px 11px;border-radius:10px;background:#e7f2ff;border:1px solid #d1e3fb;color:#1765b5;font-size:12px;font-weight:800}
 .preview-link svg{width:14px;height:14px}
 .call-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Sign-in and private page gate */
+.auth-checking body > .app { visibility:hidden; }
+.login-page { min-height:100vh; min-height:100dvh; display:flex; justify-content:center; align-items:center; background:linear-gradient(155deg,#0c2037 0%,#133d64 70%,#0f2841 100%); padding:25px 16px; }
+.login-panel { width:100%;max-width:410px;background:#fff;border-radius:25px;padding:34px 25px 27px;box-shadow:0 24px 75px #06152755; }
+.login-brand { display:flex;align-items:center;gap:11px;font-weight:900;font-size:12px;letter-spacing:2px;color:#133453; }
+.login-brand-icon {width:41px;height:41px;border-radius:13px;display:grid;place-items:center;background:#e7f2ff;color:#196cba;}
+.login-brand-icon svg {width:22px;height:22px;}
+.login-title {margin:34px 0 27px;}
+.login-title h1 {font-size:30px;letter-spacing:-1px;line-height:1.14;margin:0 0 9px;color:#112a43;}
+.login-title p {font-size:14px;line-height:1.55;margin:0;color:#718096;}
+.login-form {display:flex;flex-direction:column;}
+.login-form label {font-weight:800;font-size:13px;color:#23394f;margin-bottom:9px;}
+.login-field {display:flex;align-items:center;gap:10px;border:1px solid #dce5ef;background:#f9fbfe;border-radius:13px;padding:0 14px;margin-bottom:21px;min-height:51px;}
+.login-field:focus-within {border-color:#2587e4;box-shadow:0 0 0 3px #1688ff1a;}
+.login-field > svg {width:19px;height:19px;flex-shrink:0;color:#7891aa;}
+.login-field input {font:inherit;font-size:14px;outline:0;border:0;background:transparent;width:100%;min-width:0;color:#183650;}
+.login-field button {border:0;background:transparent;color:#7891aa;cursor:pointer;padding:5px;display:flex;}
+.login-field button svg {width:19px;height:19px;}
+.login-message {min-height:21px;color:#b43b3b;font-size:12px;line-height:1.5;margin-top:-6px;margin-bottom:11px;}
+.login-submit {width:100%;display:flex;align-items:center;justify-content:center;gap:12px;background:#146ddd;color:white;border:0;border-radius:13px;padding:15px;cursor:pointer;font-weight:850;font-size:15px;}
+.login-submit:disabled {opacity:.65;cursor:wait;}
+.login-submit svg {width:17px;height:17px;}
+.login-foot {margin-top:23px;text-align:center;color:#9ba8b6;font-size:11px;}
