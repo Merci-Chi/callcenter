@@ -158,7 +158,7 @@ function setupOutreach() {
 
   const leadContainer = leadCards[0].parentElement;
 
-  let activeFilter = 'All Leads';
+  let activeFilter = 'All Previews';
 
   // Selection is stored as the actual lead card, never as a position.
   let selectedCard = null;
@@ -178,8 +178,9 @@ function setupOutreach() {
 
 
   const companyName = card => q('.lead-title h2', card)?.textContent?.trim() || 'Business';
+  const starKey = card => card?.dataset.crmId || companyName(card);
 
-  const STAR_KEY = 'outreach-starred-companies';
+  const STAR_KEY = 'steadyhands-outreach-starred-preview-ids';
 
 
 
@@ -189,7 +190,7 @@ function setupOutreach() {
 
     .filter(card => q('.star-button', card)?.classList.contains('favorite'))
 
-    .map(companyName);
+    .map(starKey);
 
   let starredNames;
 
@@ -215,7 +216,7 @@ function setupOutreach() {
 
       if (!star) return;
 
-      const on = starredNames.has(companyName(card));
+      const on = starredNames.has(starKey(card));
 
       star.classList.toggle('favorite', on);
 
@@ -234,6 +235,8 @@ function setupOutreach() {
 
 
   const matchesFilter = card => {
+    const query = (q('#crmSearch')?.value || '').trim().toLowerCase();
+    if (query && !card.textContent.toLowerCase().includes(query)) return false;
 
     if (activeFilter === 'Due for Follow Up') return card.dataset.followup === 'true';
 
@@ -250,14 +253,17 @@ function setupOutreach() {
   const getFilteredQueue = () => originalOrder.filter(matchesFilter);
 
   const getTimeZone = card => {
-    const text = q('.time-row', card)?.textContent || '';
+    const text = card.dataset.timezone || q('.time-row', card)?.textContent || '';
     const phone = q('.contact-line span', card)?.textContent || '';
     if (/\b(EST|EDT)\b/i.test(text)) return 'America/New_York';
     if (/\b(CST|CDT)\b/i.test(text)) return 'America/Chicago';
     if (/\b(MST|MDT)\b/i.test(text)) return 'America/Denver';
     if (/\b(PST|PDT)\b/i.test(text)) return 'America/Los_Angeles';
     // Area codes are only a rough fallback; ported numbers can be misleading.
-    if (/(?:702|725|415)/.test(phone)) return 'America/Los_Angeles';
+    if (/(?:702|725|415|206|503|619|916)/.test(phone)) return 'America/Los_Angeles';
+    if (/(?:480|520|602|623|928)/.test(phone)) return 'America/Phoenix';
+    if (/(?:212|305|404|617|718|813|917)/.test(phone)) return 'America/New_York';
+    if (/(?:214|312|469|713|832)/.test(phone)) return 'America/Chicago';
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
   };
 
@@ -436,21 +442,17 @@ function setupOutreach() {
 
         { label: 'Cancel' },
 
-        { label: 'Save Note', primary: true, onClick: (close, root) => {
+        { label: 'Save Note', primary: true, onClick: async (close, root) => {
 
           const value = q('#lead-note-edit', root).value.trim();
 
-          if (p) {
-
-            p.textContent = value || 'No notes added yet.';
-
-            p.style.whiteSpace = 'pre-line';
-
-          }
-
+          const client = window.steadyHandsCRMClient;
+          if (!client || !card.dataset.crmId) { showToast('CRM is not connected'); return; }
+          const { error } = await client.from('crm').update({ notes:value }).eq('id',card.dataset.crmId);
+          if (error) { showToast('Could not save note: ' + error.message); return; }
+          if (p) { p.textContent = value || 'No notes added yet.'; p.style.whiteSpace = 'pre-line'; }
           close();
-
-          showToast('Note saved');
+          showToast('Note saved in CRM');
 
         }}
 
@@ -528,7 +530,7 @@ function setupOutreach() {
 
         <div class="calendar-progress"><span></span></div>
 
-        <p class="calendar-lead">Choose when to follow up with <strong>${companyName(card)}</strong>.</p>
+        <p class="calendar-lead">Choose when to follow up with <strong>${crmEscape(companyName(card))}</strong>.</p>
 
 
 
@@ -872,9 +874,9 @@ function setupOutreach() {
 
       const role = q('.lead-title .role', card)?.textContent?.trim() || '';
 
-      const params = new URLSearchParams({ company, contact, number, role });
+      const params = new URLSearchParams({ company, contact, number, role, crm_id:card.dataset.crmId || '' });
 
-      window.location.href = `call.html?${params.toString()}`;
+      modal('Demo call screen', '<p>This opens a simulated call screen, not a real phone call. No number is dialed or transcript recorded. To call, use the phone number in the CRM.</p>', [{label:'Cancel'}, {label:'Open demo',primary:true,onClick:()=>{window.location.href=`call.html?${params.toString()}`;}}]);
 
     });
 
@@ -890,7 +892,7 @@ function setupOutreach() {
 
       const card = star.closest('.lead-card');
 
-      const name = companyName(card);
+      const name = starKey(card);
 
       const currentCard = q('.lead-card.selected-lead');
 
@@ -1171,13 +1173,130 @@ function setupMore() {
 
 
 
+
+// APPROVED PREVIEW CONNECTION — the inventory is the source of truth.
+const SH_SUPABASE_URL = 'https://glonbvrcudwuzjundrii.supabase.co';
+// Supabase publishable key, NOT a service-role or secret key.
+const SH_PUBLISHABLE_KEY = 'sb_publishable_VZbed_uuOXSE744UrAfHXw_z2xDdYtr';
+
+function crmText(v) { return String(v ?? ''); }
+function crmEscape(v) { return crmText(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function crmUrl(v) {
+  try { const url = new URL(crmText(v)); return url.protocol === 'https:' && url.hostname === 'viewyoursite.today' && url.pathname.startsWith('/Sites/') ? url.href : ''; }
+  catch { return ''; }
+}
+function crmTags(data) {
+  let all = [];
+  for (const key of ['tags','sources']) {
+    let tags = data[key];
+    if (typeof tags === 'string') { try { tags=JSON.parse(tags); } catch { tags=[]; } }
+    if (Array.isArray(tags)) all.push(...tags.filter(t => typeof t === 'string'));
+  }
+  return all.slice(0,5);
+}
+function makeCRMLinkCard(lead, siteURLs) {
+  const company = crmEscape(lead.company || lead.name || 'Unnamed business');
+  const name = crmEscape(lead.name || 'Contact not listed');
+  const phone = crmText(lead.phone || '').trim();
+  const notes = crmText(lead.notes || '').trim();
+  const isFollowup = !!lead.lastcalled || !!lead.callbackdate || !!lead.callbackat || /follow.?up|callback/i.test(lead.stage || '');
+  const isPriority = /high|hot|urgent/i.test([lead.leadpotential,lead.tier,...crmTags(lead)].join(' '));
+  const tags = crmTags(lead);
+  const urls = [...new Set(siteURLs.map(crmUrl).filter(Boolean))];
+  const links = urls.map((url,i)=>`<a class="preview-link" target="_blank" rel="noopener noreferrer" href="${crmEscape(url)}"><i data-lucide="external-link"></i> ${urls.length > 1 ? `Preview ${i + 1}` : 'Open Website Preview'}</a>`).join('');
+  const card=document.createElement('section');
+  card.className='card lead-card';
+  card.dataset.crmId=lead.id;
+  card.dataset.followup=String(isFollowup);
+  card.dataset.priority=String(isPriority);
+  card.dataset.timezone=crmText(lead.timezone||'');
+  const dateText=lead.callbackdate ? `Callback: ${crmEscape(lead.callbackdate)}` : (lead.lastcalled ? 'Previously contacted' : 'Not yet contacted');
+  card.innerHTML=`
+    <div class="lead-head"><div class="company-icon"><i data-lucide="building-2"></i></div>
+      <div class="lead-title"><h2>${company}</h2><div class="name">${name}</div><div class="role">${urls.length} approved preview${urls.length === 1 ? '' : 's'}</div></div>
+      <button class="star-button" type="button" aria-label="Star company" aria-pressed="false"><i data-lucide="star"></i></button>
+    </div>
+    <div class="contact-line"><i data-lucide="phone"></i><span>${crmEscape(phone || 'No phone listed')}</span>${phone ? `<button class="copy-btn" type="button" data-copy="${crmEscape(phone)}" aria-label="Copy phone"><i data-lucide="copy"></i></button>` : ''}</div>
+    <div class="lead-details">
+      <div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
+      <div class="time-row"><span><i data-lucide="calendar"></i> ${dateText}</span></div>
+      <div class="preview-links">${links}</div>
+      <div class="notes"><div class="notes-title"><i data-lucide="notebook-pen"></i> CRM Notes</div><p>${crmEscape(notes || 'No notes added yet.')}</p></div>
+      <button class="call-btn" type="button" data-demo-call ${phone ? '' : 'disabled'}><i data-lucide="phone"></i> ${phone ? 'Demo Call Screen' : 'No Phone Number'}</button>
+      <div class="quick-actions"><button class="quick-btn" type="button"><i data-lucide="shuffle"></i>Random</button><button class="quick-btn" type="button"><i data-lucide="play"></i>Next</button><button class="quick-btn calendar-btn" type="button"><i data-lucide="calendar-plus"></i>Add to Calendar</button></div>
+    </div>`;
+  return card;
+}
+async function loadApprovedPreviewCRM() {
+  const status=q('#crmStatus');
+  const box=q('#crmLeadCards');
+  if (!status || !box) return;
+  if (!window.supabase) { status.textContent='Supabase library did not load. Check your internet connection.';return; }
+  const client=window.steadyHandsCRMClient || window.supabase.createClient(SH_SUPABASE_URL,SH_PUBLISHABLE_KEY);
+  window.steadyHandsCRMClient=client;
+  const { data:{session}, error:sessionError }=await client.auth.getSession();
+  if (sessionError) {status.textContent='Sign-in error: '+sessionError.message; return;}
+  if (!session) {
+    status.innerHTML='<h3>Sign in to view CRM previews</h3><p>This page displays business and contact information. Sign in using your authorized Steady Hands account.</p><form id="crmLogin"><label>Email<input required type="email" autocomplete="username" name="email" /></label><label>Password<input required type="password" autocomplete="current-password" name="password" /></label><button type="submit">Sign In</button><p id="crmLoginError" role="alert"></p></form>';
+    q('#crmLogin').addEventListener('submit',async e=>{
+      e.preventDefault(); const form=e.currentTarget;const errorText=q('#crmLoginError');errorText.textContent='Signing in…';
+      const {error}=await client.auth.signInWithPassword({email:form.elements.email.value,password:form.elements.password.value});
+      if(error){errorText.textContent=error.message;return;}
+      loadApprovedPreviewCRM();
+    });
+    return;
+  }
+  status.textContent='Loading approved previews from Supabase…';
+  try {
+    // Fetch every approved URL, not just the first 1,000 Supabase rows.
+    const inventory=[];
+    for(let start=0;;start+=500){
+      const {data,error}=await client.from('preview_inventory').select('url,crm_id').not('crm_id','is',null).order('url',{ascending:true}).range(start,start+499);
+      if(error) throw new Error('Preview inventory: '+error.message);
+      inventory.push(...(data||[]));
+      if(!data || data.length<500)break;
+      if(start>100000)throw new Error('Preview list too large');
+    }
+    if (!inventory.length) throw new Error('No approved preview links were returned. Check RLS permissions for the signed-in user.');
+    const byCRM=new Map();
+    inventory.forEach(item=>{if(!item.crm_id||!crmUrl(item.url))return;const list=byCRM.get(item.crm_id)||[];list.push(item.url);byCRM.set(item.crm_id,list)});
+    const ids=[...byCRM.keys()];
+    const leads=[];
+    for(let i=0;i<ids.length;i+=80){
+      const {data,error}=await client.from('crm').select('id,company,name,phone,notes,tags,sources,stage,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier').in('id',ids.slice(i,i+80));
+      if(error)throw new Error('CRM: '+error.message);
+      leads.push(...(data||[]));
+    }
+    // Do not present stale demos when permissions deny access.
+    if (!leads.length) throw new Error('The CRM returned no matching businesses. Verify read access and RLS.');
+    leads.sort((a,b)=>crmText(a.company).localeCompare(crmText(b.company)));
+    box.replaceChildren(...leads.map(lead=>makeCRMLinkCard(lead,byCRM.get(lead.id)||[])));
+    const linked=leads.reduce((n,l)=>n+(byCRM.get(l.id)||[]).length,0);
+    status.textContent=`${leads.length.toLocaleString()} CRM businesses · ${linked.toLocaleString()} approved preview URLs${linked!==inventory.length?' · Some records are restricted by permissions':''}`;
+    const today=new Date().toDateString();
+    q('#statCalls').textContent=leads.filter(l=>l.lastcalled && new Date(l.lastcalled).toDateString()===today).length;
+    q('#statCallbacks').textContent=leads.filter(l=>!!l.callbackdate||!!l.callbackat).length;
+    q('#statInterested').textContent=leads.filter(l=>crmTags(l).some(t=>/^interested$|^hot lead$/i.test(t))).length;
+    setupCopyButtons();
+    setupOutreach();
+    const search=q('#crmSearch');
+    search.addEventListener('input',()=>window.refreshCRMQueue?.());
+    q('#crmReload').addEventListener('click',()=>location.reload());
+    refreshIcons();
+  } catch(error) {
+    status.textContent='Could not load approved previews: '+error.message;
+    box.replaceChildren();
+    console.error(error);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
   refreshIcons();
 
   setupCopyButtons();
 
-  setupOutreach();
+  loadApprovedPreviewCRM();
 
   setupSkills();
 
