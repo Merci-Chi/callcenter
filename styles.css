@@ -40,9 +40,8 @@ button { font: inherit; }
   background: linear-gradient(180deg, var(--navy) 0%, #14314f 100%);
   color: #fff;
   padding: calc(18px + env(safe-area-inset-top)) 18px 22px;
-  position: sticky;
-  top: 0;
-  z-index: 5;
+  position: relative;
+  z-index: 1;
   box-shadow: 0 6px 20px rgba(14, 36, 60, .18);
 }
 .topbar-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
