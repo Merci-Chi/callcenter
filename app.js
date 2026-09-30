@@ -75,41 +75,73 @@ function setupCopyButtons() {
 function setupOutreach() {
   const leadCards = qa('.lead-card');
   if (!leadCards.length) return;
-  let selected = Math.max(0, leadCards.findIndex(c => c.classList.contains('selected-lead')));
+
+  // Keep the original CRM order forever. The selected lead is displayed at
+  // the top, while the compressed queue underneath keeps its normal order.
+  const originalOrder = [...leadCards];
+  const leadContainer = leadCards[0].parentElement;
+  let selectedCard = leadCards.find(c => c.classList.contains('selected-lead')) || leadCards[0];
+  let nextIndex = Math.min(1, originalOrder.length - 1);
   let activeFilter = 'All Leads';
 
-  const visibleCards = () => leadCards.filter(card => card.style.display !== 'none');
+  const matchesFilter = card => {
+    if (activeFilter === 'Due for Follow Up') return card.dataset.followup === 'true';
+    if (activeFilter === 'High Priority') return card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite');
+    return true;
+  };
 
-  const selectCard = (cardOrIndex, shouldScroll = true) => {
-    if (!leadCards.length) return;
-    let card;
-    if (typeof cardOrIndex === 'number') {
-      const visible = visibleCards();
-      if (!visible.length) return;
-      const currentVisibleIndex = visible.indexOf(leadCards[selected]);
-      const index = ((cardOrIndex < 0 ? visible.length - 1 : cardOrIndex) + visible.length) % visible.length;
-      card = visible[index];
-      if (cardOrIndex === selected + 1 && currentVisibleIndex >= 0) card = visible[(currentVisibleIndex + 1) % visible.length];
-    } else {
-      card = cardOrIndex;
+  const filteredOriginalOrder = () => originalOrder.filter(matchesFilter);
+
+  const renderLeadOrder = (shouldScroll = false) => {
+    // Selected lead always goes first.
+    selectedCard.classList.add('selected-lead');
+    originalOrder.forEach(card => {
+      if (card !== selectedCard) card.classList.remove('selected-lead');
+    });
+
+    // Hide cards that don't match the active filter.
+    originalOrder.forEach(card => {
+      card.style.display = matchesFilter(card) ? '' : 'none';
+    });
+
+    // If the selected lead doesn't match the filter, choose the first matching lead.
+    const filtered = filteredOriginalOrder();
+    if (filtered.length && !matchesFilter(selectedCard)) {
+      selectedCard.classList.remove('selected-lead');
+      selectedCard = filtered[0];
+      selectedCard.classList.add('selected-lead');
+      nextIndex = Math.max(0, originalOrder.indexOf(selectedCard) + 1);
     }
-    if (!card || card.style.display === 'none') return;
-    selected = leadCards.indexOf(card);
-    leadCards.forEach(c => c.classList.toggle('selected-lead', c === card));
+
+    // Put the selected lead at the top. Everything else remains in the same
+    // original order underneath it. The selected lead is not duplicated below.
+    if (matchesFilter(selectedCard)) leadContainer.appendChild(selectedCard);
+    originalOrder.forEach(card => {
+      if (card !== selectedCard && matchesFilter(card)) leadContainer.appendChild(card);
+    });
+
     refreshIcons();
-    if (shouldScroll) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (shouldScroll) selectedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const selectOnlyTop = (card, shouldScroll = true) => {
+    if (!card || !matchesFilter(card)) return;
+    selectedCard = card;
+    renderLeadOrder(shouldScroll);
   };
 
   const applyFilter = label => {
     activeFilter = label;
-    leadCards.forEach(card => {
-      let show = true;
-      if (label === 'Due for Follow Up') show = card.dataset.followup === 'true';
-      if (label === 'High Priority') show = card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite');
-      card.style.display = show ? '' : 'none';
-    });
-    const visible = visibleCards();
-    if (visible.length && !visible.includes(leadCards[selected])) selectCard(visible[0], false);
+    const filtered = filteredOriginalOrder();
+    if (!filtered.length) {
+      originalOrder.forEach(card => card.style.display = 'none');
+      return;
+    }
+    if (!filtered.includes(selectedCard)) {
+      selectedCard = filtered[0];
+      nextIndex = Math.max(0, originalOrder.indexOf(selectedCard) + 1);
+    }
+    renderLeadOrder(false);
   };
 
   qa('.pill').forEach(btn => {
@@ -122,33 +154,52 @@ function setupOutreach() {
     });
   });
 
-  leadCards.forEach(card => {
+  // Tapping any compressed business only replaces the expanded card at the top.
+  // It does not rearrange the order of the compressed list.
+  originalOrder.forEach(card => {
     card.addEventListener('click', e => {
       if (e.target.closest('button, .star, a')) return;
-      if (!card.classList.contains('selected-lead')) selectCard(card);
+      if (card !== selectedCard) selectOnlyTop(card);
     });
   });
 
   qa('.quick-btn').forEach(btn => {
     const label = btn.textContent.trim().toLowerCase();
+
     if (label.includes('random')) btn.addEventListener('click', e => {
       e.stopPropagation();
-      const visible = visibleCards();
-      if (!visible.length) return;
-      let choices = visible.filter(c => c !== leadCards[selected]);
-      if (!choices.length) choices = visible;
-      selectCard(choices[Math.floor(Math.random() * choices.length)]);
+      const pool = filteredOriginalOrder().filter(card => card !== selectedCard);
+      if (!pool.length) return;
+      // Random only changes the expanded top card. It intentionally does NOT
+      // change nextIndex, so pressing Next continues the normal CRM sequence.
+      selectOnlyTop(pool[Math.floor(Math.random() * pool.length)]);
     });
+
     if (label.includes('next')) btn.addEventListener('click', e => {
       e.stopPropagation();
-      const visible = visibleCards();
-      if (!visible.length) return;
-      const current = visible.indexOf(leadCards[selected]);
-      selectCard(visible[(current + 1 + visible.length) % visible.length]);
+      const filtered = filteredOriginalOrder();
+      if (!filtered.length) return;
+
+      // Find the next lead from the original CRM sequence, not from whichever
+      // random lead is currently expanded.
+      let tries = 0;
+      let candidate = null;
+      while (tries < originalOrder.length) {
+        const idx = nextIndex % originalOrder.length;
+        nextIndex = (idx + 1) % originalOrder.length;
+        const card = originalOrder[idx];
+        if (matchesFilter(card)) {
+          candidate = card;
+          break;
+        }
+        tries++;
+      }
+      if (candidate) selectOnlyTop(candidate);
     });
+
     if (label.includes('follow')) btn.addEventListener('click', e => {
       e.stopPropagation();
-      const card = btn.closest('.lead-card') || leadCards[selected];
+      const card = btn.closest('.lead-card') || selectedCard;
       const name = q('.lead-title h2', card)?.textContent || 'this lead';
       modal('Schedule Follow Up', `
         <p class="modal-help">Set a reminder for <strong>${name}</strong>.</p>
@@ -203,7 +254,7 @@ function setupOutreach() {
   });
 
   applyFilter('All Leads');
-  selectCard(leadCards[selected], false);
+  renderLeadOrder(false);
 }
 
 function setupSkills() {
