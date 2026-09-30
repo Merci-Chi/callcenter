@@ -188,6 +188,37 @@
     ];
     const reasonOptions = ['Too expensive','Already has someone','Not a priority','Doesn’t want a website','Bad timing','Not a fit','Other'];
     const tagOptions = ['Interested','Follow Up','Send Preview','Requested Text','Requested Email','Price Concern','Decision Maker','No Website','Busy','Do Not Call'];
+    // The quick tags appear directly beneath Good/Bad; More reveals extras.
+    const ratingTags = {
+      Good: {
+        featured: ['Interested', 'Follow Up', 'Send Preview', 'Decision Maker', 'Requested Email'],
+        extra: ['Requested Text', 'Needs More Info', 'Ready to Buy', 'Asked for Pricing', 'Call Back Later']
+      },
+      Bad: {
+        featured: ['Not Interested', 'Price Concern', 'Bad Timing', 'Already Has Someone', 'Do Not Call'],
+        extra: ['No Answer', 'Voicemail', 'Busy', 'Wrong Number', 'Not a Fit']
+      }
+    };
+    const allRatingTags = new Set(
+      Object.values(ratingTags).flatMap(group => [...group.featured, ...group.extra])
+    );
+    let showMoreRatingTags = false;
+
+    function quickRatingTagsMarkup() {
+      const group = ratingTags[data.rating];
+      if (!group) return '';
+      const visible = showMoreRatingTags ? [...group.featured, ...group.extra] : group.featured;
+      return `<div class="pc-quick-tags">
+        <p class="pc-quick-label">Select any tags that apply</p>
+        <div class="pc-quick-tag-grid">
+          ${visible.map(label => `<button class="pc-quick-tag ${data.tags.includes(label) ? 'selected' : ''}" type="button" data-quick-tag="${label}">${label}</button>`).join('')}
+          <button class="pc-quick-tag pc-quick-more" type="button" aria-expanded="${showMoreRatingTags}">
+            <i data-lucide="${showMoreRatingTags ? 'minus' : 'plus'}"></i><span>${showMoreRatingTags ? 'Less' : 'More'}</span>
+          </button>
+        </div>
+      </div>`;
+    }
+
 
     function rebuildScreens(){
       screens = ['rating'];
@@ -235,17 +266,50 @@
           ['didnt-call','phone-off',"Didn't call"]
         ];
         stage.innerHTML = `
-          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Choose one to continue.</p></div>
+          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Choose one, then select any tags that apply.</p></div>
           <div class="pc-rating-grid">
             ${ratingOptions.map(([cls,icon,label]) => `<button class="pc-rating ${cls} ${data.rating===label?'selected':''}" data-value="${label}" type="button"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
           </div>
+          <div class="pc-quick-tag-container">${quickRatingTagsMarkup()}</div>
           ${navRow({back:false,nextDisabled:!data.rating})}`;
+
+        function wireQuickTags() {
+          stage.querySelectorAll('[data-quick-tag]').forEach(btn => btn.addEventListener('click', () => {
+            const value = btn.dataset.quickTag;
+            if (data.tags.includes(value)) data.tags = data.tags.filter(t => t !== value);
+            else data.tags.push(value);
+            btn.classList.toggle('selected', data.tags.includes(value));
+            btn.setAttribute('aria-pressed', String(data.tags.includes(value)));
+          }));
+          const more = stage.querySelector('.pc-quick-more');
+          if (more) more.addEventListener('click', () => {
+            showMoreRatingTags = !showMoreRatingTags;
+            stage.querySelector('.pc-quick-tag-container').innerHTML = quickRatingTagsMarkup();
+            wireQuickTags();
+            lucide.createIcons();
+          });
+        }
+
         stage.querySelectorAll('.pc-rating').forEach(btn => btn.addEventListener('click', () => {
+          const prior = data.rating;
           data.rating = btn.dataset.value;
-          if(data.rating === "Didn't call") { data.outcomes = []; data.reason = ''; data.tags = []; }
+          if (prior !== data.rating) {
+            // Changing a rating should not leave its old quick-tags attached.
+            data.tags = data.tags.filter(tag => !allRatingTags.has(tag));
+            showMoreRatingTags = false;
+          }
+          if (data.rating === "Didn't call") {
+            data.outcomes = [];
+            data.reason = '';
+            data.tags = [];
+          }
           stage.querySelectorAll('.pc-rating').forEach(x => x.classList.toggle('selected', x===btn));
+          stage.querySelector('.pc-quick-tag-container').innerHTML = quickRatingTagsMarkup();
+          wireQuickTags();
           stage.querySelector('.pc-next').disabled = false;
+          lucide.createIcons();
         }));
+        wireQuickTags();
       }
 
       if(screen === 'outcome'){
