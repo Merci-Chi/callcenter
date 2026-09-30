@@ -556,13 +556,3 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
   .calendar-sheet-overlay { align-items:center; padding:18px; }
   .calendar-sheet { border-radius:26px; max-height:86vh; }
 }
-
-/* Inline Good/Bad tags, styled to match the post-call questionnaire cards. */
-.pc-quick-tags { margin-top: 17px; animation: pcQuickEnter .22s ease both; }
-.pc-quick-label { margin: 0 0 10px; font-size: 13px; font-weight: 750; color: #60738a; }
-.pc-quick-tag-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
-.pc-quick-tag { min-width: 0; min-height: 52px; display: flex; gap: 8px; align-items: center; justify-content: center; padding: 11px 10px; border: 1px solid #dfe7ef; background: #fff; border-radius: 15px; box-shadow: 0 6px 18px rgba(15,33,54,.06); color: #41566d; font: inherit; font-size: 12px; font-weight: 850; cursor: pointer; text-align: center; }
-.pc-quick-tag.selected { background: #163f72; color: #fff; border-color: #163f72; }
-.pc-quick-more { color: #2266b0; }
-.pc-quick-more i { width: 17px; height: 17px; }
-@keyframes pcQuickEnter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }

@@ -188,37 +188,31 @@
     ];
     const reasonOptions = ['Too expensive','Already has someone','Not a priority','Doesn’t want a website','Bad timing','Not a fit','Other'];
     const tagOptions = ['Interested','Follow Up','Send Preview','Requested Text','Requested Email','Price Concern','Decision Maker','No Website','Busy','Do Not Call'];
-    // The quick tags appear directly beneath Good/Bad; More reveals extras.
-    const ratingTags = {
-      Good: {
-        featured: ['Interested', 'Follow Up', 'Send Preview', 'Decision Maker', 'Requested Email'],
-        extra: ['Requested Text', 'Needs More Info', 'Ready to Buy', 'Asked for Pricing', 'Call Back Later']
-      },
-      Bad: {
-        featured: ['Not Interested', 'Price Concern', 'Bad Timing', 'Already Has Someone', 'Do Not Call'],
-        extra: ['No Answer', 'Voicemail', 'Busy', 'Wrong Number', 'Not a Fit']
-      }
+    // Show the relevant five outcomes on What happened?; More opens the rest.
+    const outcomeChoices = {
+      Good: [
+        ['Interested', 'sparkles'],
+        ['Follow Up', 'calendar-clock'],
+        ['Needs More Info', 'circle-help'],
+        ['Send Preview', 'monitor'],
+        ['Requested Email', 'mail']
+      ],
+      Bad: [
+        ['Not Interested', 'circle-x'],
+        ['No Answer', 'phone-missed'],
+        ['Voicemail', 'voicemail'],
+        ['Busy', 'phone-call'],
+        ['Wrong Number', 'ban']
+      ]
     };
-    const allRatingTags = new Set(
-      Object.values(ratingTags).flatMap(group => [...group.featured, ...group.extra])
-    );
-    let showMoreRatingTags = false;
-
-    function quickRatingTagsMarkup() {
-      const group = ratingTags[data.rating];
-      if (!group) return '';
-      const visible = showMoreRatingTags ? [...group.featured, ...group.extra] : group.featured;
-      return `<div class="pc-quick-tags">
-        <p class="pc-quick-label">Select any tags that apply</p>
-        <div class="pc-quick-tag-grid">
-          ${visible.map(label => `<button class="pc-quick-tag ${data.tags.includes(label) ? 'selected' : ''}" type="button" data-quick-tag="${label}">${label}</button>`).join('')}
-          <button class="pc-quick-tag pc-quick-more" type="button" aria-expanded="${showMoreRatingTags}">
-            <i data-lucide="${showMoreRatingTags ? 'minus' : 'plus'}"></i><span>${showMoreRatingTags ? 'Less' : 'More'}</span>
-          </button>
-        </div>
-      </div>`;
-    }
-
+    const extraOutcomes = [
+      ['Already Has Someone', 'users'],
+      ['Bad Timing', 'clock'],
+      ['Price Concern', 'badge-dollar-sign'],
+      ['Requested Text', 'message-square'],
+      ['Call Back Later', 'calendar-days']
+    ];
+    let showMoreOutcomes = false;
 
     function rebuildScreens(){
       screens = ['rating'];
@@ -266,60 +260,36 @@
           ['didnt-call','phone-off',"Didn't call"]
         ];
         stage.innerHTML = `
-          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Choose one, then select any tags that apply.</p></div>
+          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Choose how the call went.</p></div>
           <div class="pc-rating-grid">
             ${ratingOptions.map(([cls,icon,label]) => `<button class="pc-rating ${cls} ${data.rating===label?'selected':''}" data-value="${label}" type="button"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
           </div>
-          <div class="pc-quick-tag-container">${quickRatingTagsMarkup()}</div>
           ${navRow({back:false,nextDisabled:!data.rating})}`;
-
-        function wireQuickTags() {
-          stage.querySelectorAll('[data-quick-tag]').forEach(btn => btn.addEventListener('click', () => {
-            const value = btn.dataset.quickTag;
-            if (data.tags.includes(value)) data.tags = data.tags.filter(t => t !== value);
-            else data.tags.push(value);
-            btn.classList.toggle('selected', data.tags.includes(value));
-            btn.setAttribute('aria-pressed', String(data.tags.includes(value)));
-          }));
-          const more = stage.querySelector('.pc-quick-more');
-          if (more) more.addEventListener('click', () => {
-            showMoreRatingTags = !showMoreRatingTags;
-            stage.querySelector('.pc-quick-tag-container').innerHTML = quickRatingTagsMarkup();
-            wireQuickTags();
-            lucide.createIcons();
-          });
-        }
-
         stage.querySelectorAll('.pc-rating').forEach(btn => btn.addEventListener('click', () => {
-          const prior = data.rating;
-          data.rating = btn.dataset.value;
-          if (prior !== data.rating) {
-            // Changing a rating should not leave its old quick-tags attached.
-            data.tags = data.tags.filter(tag => !allRatingTags.has(tag));
-            showMoreRatingTags = false;
-          }
-          if (data.rating === "Didn't call") {
+          if (data.rating !== btn.dataset.value) {
             data.outcomes = [];
             data.reason = '';
-            data.tags = [];
+            showMoreOutcomes = false;
           }
+          data.rating = btn.dataset.value;
+          if (data.rating === "Didn't call") data.tags = [];
           stage.querySelectorAll('.pc-rating').forEach(x => x.classList.toggle('selected', x===btn));
-          stage.querySelector('.pc-quick-tag-container').innerHTML = quickRatingTagsMarkup();
-          wireQuickTags();
           stage.querySelector('.pc-next').disabled = false;
-          lucide.createIcons();
         }));
-        wireQuickTags();
       }
 
       if(screen === 'outcome'){
+        const choices = outcomeChoices[data.rating] || outcomeChoices.Good;
+        // More is the sixth card, styled exactly like the other outcome cards.
+        const visible = showMoreOutcomes ? [...choices, ...extraOutcomes] : choices;
         stage.innerHTML = `
           <div class="pc-heading"><span class="pc-kicker">Call details</span><h2>What happened?</h2><p>Select everything that applies to this call.</p></div>
           <div class="pc-option-grid">
-            ${outcomeOptions.map(([label,icon]) => `<button class="pc-option ${data.outcomes.includes(label)?'selected':''}" data-value="${label}"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
+            ${visible.map(([label,icon]) => `<button class="pc-option ${data.outcomes.includes(label)?'selected':''}" data-value="${label}" type="button"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
+            <button class="pc-option pc-outcome-more" type="button" aria-expanded="${showMoreOutcomes}"><i data-lucide="${showMoreOutcomes ? 'minus' : 'plus'}"></i><span>${showMoreOutcomes ? 'Less' : 'More'}</span></button>
           </div>
           ${navRow({back:false,nextDisabled:!data.outcomes.length})}`;
-        stage.querySelectorAll('.pc-option').forEach(btn => btn.addEventListener('click', () => {
+        stage.querySelectorAll('.pc-option[data-value]').forEach(btn => btn.addEventListener('click', () => {
           const value = btn.dataset.value;
           if(data.outcomes.includes(value)) data.outcomes = data.outcomes.filter(x => x !== value);
           else data.outcomes.push(value);
@@ -327,6 +297,10 @@
           btn.classList.toggle('selected', data.outcomes.includes(value));
           stage.querySelector('.pc-next').disabled = !data.outcomes.length;
         }));
+        stage.querySelector('.pc-outcome-more').addEventListener('click', () => {
+          showMoreOutcomes = !showMoreOutcomes;
+          render();
+        });
       }
 
       if(screen === 'reason'){
