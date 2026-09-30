@@ -76,45 +76,65 @@ function setupOutreach() {
   const leadCards = qa('.lead-card');
   if (!leadCards.length) return;
 
-  // One simple queue: the current filter decides which leads are included,
-  // the existing CRM/card order decides their sequence, and currentIndex
-  // decides where the visible queue starts.
   const originalOrder = [...leadCards];
   const leadContainer = leadCards[0].parentElement;
   let activeFilter = 'All Leads';
   let currentIndex = 0;
   let currentQueue = [];
 
+  const companyName = card => q('.lead-title h2', card)?.textContent?.trim() || 'Business';
+  const STAR_KEY = 'outreach-starred-companies';
+
+  // Star state is separate from High Priority. Restore the user's star choices.
+  const initialStarred = originalOrder
+    .filter(card => q('.star', card)?.classList.contains('favorite'))
+    .map(companyName);
+  let starredNames;
+  try {
+    const saved = JSON.parse(localStorage.getItem(STAR_KEY));
+    starredNames = Array.isArray(saved) ? new Set(saved) : new Set(initialStarred);
+  } catch {
+    starredNames = new Set(initialStarred);
+  }
+
+  const syncStars = () => {
+    originalOrder.forEach(card => {
+      const star = q('.star', card);
+      if (!star) return;
+      const on = starredNames.has(companyName(card));
+      star.classList.toggle('favorite', on);
+      star.setAttribute('aria-label', on ? 'Unstar company' : 'Star company');
+      star.setAttribute('aria-pressed', String(on));
+    });
+    localStorage.setItem(STAR_KEY, JSON.stringify([...starredNames]));
+  };
+  syncStars();
+
   const matchesFilter = card => {
     if (activeFilter === 'Due for Follow Up') return card.dataset.followup === 'true';
-    if (activeFilter === 'High Priority') return card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite');
+    if (activeFilter === 'High Priority') return card.dataset.priority === 'true';
     return true;
   };
 
-  // Starred/priority companies always rise to the top while preserving the
-  // existing order within the starred and unstarred groups.
+  // The filter chooses the pool. Starred companies are first, then the rest
+  // keep their original CRM order.
   const getFilteredQueue = () => {
     const filtered = originalOrder.filter(matchesFilter);
     return [
-      ...filtered.filter(card => card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite')),
-      ...filtered.filter(card => !(card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite')))
+      ...filtered.filter(card => starredNames.has(companyName(card))),
+      ...filtered.filter(card => !starredNames.has(companyName(card)))
     ];
   };
 
   const renderQueue = (shouldScroll = false) => {
     currentQueue = getFilteredQueue();
-
     originalOrder.forEach(card => {
       card.classList.remove('selected-lead');
       card.style.display = 'none';
     });
-
     if (!currentQueue.length) return;
 
     currentIndex = ((currentIndex % currentQueue.length) + currentQueue.length) % currentQueue.length;
-
-    // Start at the selected lead and continue in order. When the end is
-    // reached, wrap back to the beginning of the same filtered queue.
     const orderedFromCurrent = [
       ...currentQueue.slice(currentIndex),
       ...currentQueue.slice(0, currentIndex)
@@ -148,20 +168,216 @@ function setupOutreach() {
     btn.addEventListener('click', () => {
       qa('.pill').forEach(x => x.classList.remove('active'));
       btn.classList.add('active');
-      const label = btn.textContent.trim();
-      applyFilter(label);
-      showToast(label);
+      applyFilter(btn.textContent.trim());
+      showToast(btn.textContent.trim());
     });
   });
 
-  // Selecting any compressed lead makes it the new starting point, then all
-  // following leads stay in their normal filtered order underneath it.
   originalOrder.forEach(card => {
     card.addEventListener('click', e => {
-      if (e.target.closest('button, .star, a')) return;
+      if (e.target.closest('button, .star, a, .notes')) return;
       if (!card.classList.contains('selected-lead')) selectCard(card);
     });
   });
+
+  // Notes open in an editable popup on Outreach.
+  originalOrder.forEach(card => {
+    const notes = q('.notes', card);
+    if (!notes) return;
+    notes.setAttribute('role', 'button');
+    notes.setAttribute('tabindex', '0');
+    const openNotes = e => {
+      e?.stopPropagation?.();
+      const p = q('p', notes);
+      const current = (p?.innerText || '').trim();
+      const overlay = modal(`Notes — ${companyName(card)}`, `
+        <p class="modal-help">Add or update notes for this business.</p>
+        <textarea class="modal-textarea" id="lead-note-edit" placeholder="Add a note..."></textarea>`, [
+        { label: 'Cancel' },
+        { label: 'Save Note', primary: true, onClick: (close, root) => {
+          const value = q('#lead-note-edit', root).value.trim();
+          if (p) {
+            p.textContent = value || 'No notes added yet.';
+            p.style.whiteSpace = 'pre-line';
+          }
+          close();
+          showToast('Note saved');
+        }}
+      ]);
+      const textarea = q('#lead-note-edit', overlay);
+      textarea.value = current === 'No notes added yet.' ? '' : current;
+      setTimeout(() => textarea.focus(), 80);
+    };
+    notes.addEventListener('click', openNotes);
+    notes.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') openNotes(e);
+    });
+  });
+
+  function openCalendarSheet(card) {
+    q('.calendar-sheet-overlay')?.remove();
+    const now = new Date();
+    const state = {
+      month: now.getMonth(),
+      day: now.getDate(),
+      year: now.getFullYear(),
+      hour: ((now.getHours() + 11) % 12) + 1,
+      minute: [0,15,30,45].reduce((a,b) => Math.abs(b-now.getMinutes()) < Math.abs(a-now.getMinutes()) ? b : a, 0),
+      ampm: now.getHours() >= 12 ? 'PM' : 'AM'
+    };
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const years = Array.from({length: 6}, (_,i) => now.getFullYear() + i);
+    const hours = Array.from({length:12},(_,i)=>i+1);
+    const minutes = [0,15,30,45];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'calendar-sheet-overlay';
+    overlay.innerHTML = `
+      <section class="calendar-sheet" role="dialog" aria-modal="true" aria-label="Add to Calendar">
+        <div class="calendar-grabber"></div>
+        <div class="calendar-sheet-head">
+          <h2>Add to Calendar</h2>
+          <button class="calendar-close" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="calendar-progress"><span></span></div>
+        <p class="calendar-lead">Choose when to follow up with <strong>${companyName(card)}</strong>.</p>
+
+        <label class="calendar-label">Date</label>
+        <div class="picker-row date-picker-row">
+          <div class="picker-field month" data-picker="month"><button class="picker-button" type="button"><span></span><i data-lucide="chevron-down"></i></button><div class="picker-menu"></div></div>
+          <div class="picker-field day" data-picker="day"><button class="picker-button" type="button"><span></span><i data-lucide="chevron-down"></i></button><div class="picker-menu"></div></div>
+          <div class="picker-field year" data-picker="year"><button class="picker-button" type="button"><span></span><i data-lucide="chevron-down"></i></button><div class="picker-menu"></div></div>
+        </div>
+        <div class="calendar-date-preview"></div>
+
+        <label class="calendar-label">Time</label>
+        <div class="picker-row time-picker-row">
+          <div class="picker-field hour" data-picker="hour"><button class="picker-button" type="button"><span></span><i data-lucide="chevron-down"></i></button><div class="picker-menu"></div></div>
+          <span class="picker-separator">:</span>
+          <div class="picker-field minute" data-picker="minute"><button class="picker-button" type="button"><span></span><i data-lucide="chevron-down"></i></button><div class="picker-menu"></div></div>
+          <div class="picker-field ampm" data-picker="ampm"><button class="picker-button" type="button"><span></span><i data-lucide="chevron-down"></i></button><div class="picker-menu"></div></div>
+        </div>
+
+        <label class="calendar-label">Note <span style="font-weight:700;color:#91a0af">(optional)</span></label>
+        <textarea class="calendar-note" placeholder="Add a note for this follow-up..."></textarea>
+
+        <div class="calendar-actions">
+          <button class="calendar-action calendar-cancel" type="button">Cancel</button>
+          <button class="calendar-action primary calendar-save" type="button"><i data-lucide="calendar-plus"></i> Add to Calendar</button>
+        </div>
+      </section>`;
+    document.body.appendChild(overlay);
+
+    const sheet = q('.calendar-sheet', overlay);
+    const pickerFields = qa('.picker-field', sheet);
+    const closeMenus = except => pickerFields.forEach(f => { if (f !== except) f.classList.remove('open'); });
+    const daysInMonth = () => new Date(state.year, state.month + 1, 0).getDate();
+    const clampDay = () => { state.day = Math.min(state.day, daysInMonth()); };
+    const pad = n => String(n).padStart(2,'0');
+
+    const valuesFor = type => {
+      if (type === 'month') return months.map((label, value) => ({label, value}));
+      if (type === 'day') return Array.from({length:daysInMonth()},(_,i)=>({label:String(i+1),value:i+1}));
+      if (type === 'year') return years.map(v=>({label:String(v),value:v}));
+      if (type === 'hour') return hours.map(v=>({label:pad(v),value:v}));
+      if (type === 'minute') return minutes.map(v=>({label:pad(v),value:v}));
+      return [{label:'AM',value:'AM'},{label:'PM',value:'PM'}];
+    };
+
+    const getStateValue = type => type === 'month' ? state.month : state[type];
+    const setStateValue = (type, value) => {
+      if (type === 'month') state.month = Number(value);
+      else if (type === 'ampm') state.ampm = value;
+      else state[type] = Number(value);
+      if (type === 'month' || type === 'year') clampDay();
+    };
+
+    const renderPickers = () => {
+      pickerFields.forEach(field => {
+        const type = field.dataset.picker;
+        const buttonText = q('.picker-button span', field);
+        const menu = q('.picker-menu', field);
+        const vals = valuesFor(type);
+        const current = getStateValue(type);
+        const chosen = vals.find(x => String(x.value) === String(current)) || vals[0];
+        buttonText.textContent = chosen.label;
+        menu.innerHTML = '';
+        vals.forEach(item => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = `picker-option${String(item.value) === String(current) ? ' selected' : ''}`;
+          b.textContent = item.label;
+          b.addEventListener('click', e => {
+            e.stopPropagation();
+            setStateValue(type, item.value);
+            field.classList.remove('open');
+            renderPickers();
+          });
+          menu.appendChild(b);
+        });
+      });
+      q('.calendar-date-preview', sheet).textContent = `${months[state.month]} ${state.day}, ${state.year}`;
+      refreshIcons();
+    };
+
+    pickerFields.forEach(field => {
+      q('.picker-button', field).addEventListener('click', e => {
+        e.stopPropagation();
+        const open = field.classList.contains('open');
+        closeMenus(field);
+        field.classList.toggle('open', !open);
+      });
+    });
+    sheet.addEventListener('click', () => closeMenus());
+
+    const close = () => overlay.remove();
+    q('.calendar-close', sheet).addEventListener('click', close);
+    q('.calendar-cancel', sheet).addEventListener('click', close);
+    overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+    q('.calendar-save', sheet).addEventListener('click', () => {
+      let hour24 = state.hour % 12;
+      if (state.ampm === 'PM') hour24 += 12;
+      const start = new Date(state.year, state.month, state.day, hour24, state.minute, 0);
+      const end = new Date(start.getTime() + 30 * 60000);
+      const note = q('.calendar-note', sheet).value.trim();
+      const name = companyName(card);
+      const contact = q('.lead-title .name', card)?.textContent?.trim() || '';
+      const number = q('.contact-line span', card)?.textContent?.trim() || '';
+      const fmt = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+      const esc = v => String(v).replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+      const description = [contact, number, note].filter(Boolean).join('\n');
+      const ics = [
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Sales Call Pro//Outreach//EN','CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',`DTSTART:${fmt(start)}`,`DTEND:${fmt(end)}`,
+        `SUMMARY:${esc(`Follow up with ${name}`)}`,
+        `DESCRIPTION:${esc(description)}`,
+        `UID:${Date.now()}-${Math.random().toString(36).slice(2)}@salescallpro.local`,
+        'END:VEVENT','END:VCALENDAR'
+      ].join('\r\n');
+      const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `follow-up-${name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'lead'}.ics`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+      card.dataset.followup = 'true';
+      localStorage.setItem(`followup:${name}`, JSON.stringify({
+        date: `${months[state.month]} ${state.day}, ${state.year}`,
+        time: `${pad(state.hour)}:${pad(state.minute)} ${state.ampm}`,
+        note
+      }));
+      close();
+      showToast('Calendar event ready');
+      if (activeFilter === 'Due for Follow Up') { currentIndex = 0; renderQueue(false); }
+    });
+
+    renderPickers();
+  }
 
   qa('.quick-btn').forEach(btn => {
     const label = btn.textContent.trim().toLowerCase();
@@ -170,13 +386,10 @@ function setupOutreach() {
       e.stopPropagation();
       const queue = getFilteredQueue();
       if (!queue.length) return;
-      if (queue.length === 1) {
-        currentIndex = 0;
-      } else {
+      if (queue.length === 1) currentIndex = 0;
+      else {
         let nextRandom = currentIndex;
-        while (nextRandom === currentIndex) {
-          nextRandom = Math.floor(Math.random() * queue.length);
-        }
+        while (nextRandom === currentIndex) nextRandom = Math.floor(Math.random() * queue.length);
         currentIndex = nextRandom;
       }
       renderQueue(true);
@@ -190,27 +403,10 @@ function setupOutreach() {
       renderQueue(true);
     });
 
-    if (label.includes('follow')) btn.addEventListener('click', e => {
+    if (label.includes('calendar')) btn.addEventListener('click', e => {
       e.stopPropagation();
       const card = btn.closest('.lead-card') || getFilteredQueue()[currentIndex];
-      const name = q('.lead-title h2', card)?.textContent || 'this lead';
-      modal('Schedule Follow Up', `
-        <p class="modal-help">Set a reminder for <strong>${name}</strong>.</p>
-        <label class="modal-label">Date<input class="modal-input" id="follow-date" type="date"></label>
-        <label class="modal-label">Time<input class="modal-input" id="follow-time" type="time"></label>`, [
-          { label: 'Cancel' },
-          { label: 'Save Follow Up', primary: true, onClick: (close, root) => {
-            const d = q('#follow-date', root).value;
-            const t = q('#follow-time', root).value;
-            card.dataset.followup = 'true';
-            localStorage.setItem('demo-followup', JSON.stringify({ name, d, t }));
-            close(); showToast('Follow up saved');
-            if (activeFilter === 'Due for Follow Up') {
-              currentIndex = 0;
-              renderQueue(false);
-            }
-          }}
-        ]);
+      if (card) openCalendarSheet(card);
     });
   });
 
@@ -218,7 +414,7 @@ function setupOutreach() {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const card = btn.closest('.lead-card');
-      const company = q('.lead-title h2', card)?.textContent?.trim() || 'Business';
+      const company = companyName(card);
       const contact = q('.lead-title .name', card)?.textContent?.trim() || '';
       const number = q('.contact-line span', card)?.textContent?.trim() || '';
       const role = q('.lead-title .role', card)?.textContent?.trim() || '';
@@ -233,23 +429,24 @@ function setupOutreach() {
     const toggle = e => {
       e?.stopPropagation?.();
       const card = star.closest('.lead-card');
-      const wasCurrent = card?.classList.contains('selected-lead');
-      star.classList.toggle('favorite');
-      if (card) card.dataset.priority = star.classList.contains('favorite') ? 'true' : 'false';
-      showToast(star.classList.contains('favorite') ? 'Added to priority' : 'Removed from priority');
-      // Re-sort immediately so starred companies are always at the top.
+      const name = companyName(card);
+      const currentCard = q('.lead-card.selected-lead');
+      if (starredNames.has(name)) starredNames.delete(name);
+      else starredNames.add(name);
+      syncStars();
+      showToast(starredNames.has(name) ? 'Company starred' : 'Company unstarred');
+
+      // Re-sort starred companies to the top, while keeping the currently
+      // expanded company selected when possible.
       const queue = getFilteredQueue();
-      if (activeFilter === 'High Priority' && wasCurrent && !queue.includes(card)) {
-        currentIndex = 0;
-      } else if (card && queue.includes(card)) {
-        currentIndex = Math.max(0, queue.indexOf(card));
-      } else {
-        currentIndex = 0;
-      }
+      const currentPos = currentCard ? queue.indexOf(currentCard) : -1;
+      currentIndex = currentPos >= 0 ? currentPos : 0;
       renderQueue(false);
     };
     star.addEventListener('click', toggle);
-    star.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggle(e); });
+    star.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); }
+    });
   });
 
   renderQueue(false);
