@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#102945" />
+  <title>Call</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="app call-app">
+  <header class="call-topbar">
+    <button class="call-round-btn" id="callBack" aria-label="Back"><i data-lucide="chevron-left"></i></button>
+    <h1 id="callCompanyHeader">Business</h1>
+    <button class="call-round-btn call-business-icon" aria-label="Business"><i data-lucide="building-2"></i></button>
+  </header>
+
+  <main class="call-content">
+    <section class="call-identity">
+      <div class="call-avatar"><i data-lucide="user-round"></i></div>
+      <div class="call-number" id="callNumber">(000) 000-0000</div>
+      <div class="call-company" id="callCompany">Business</div>
+      <div class="call-status"><i data-lucide="audio-lines"></i><strong>In Call</strong><span>·</span><span id="callTimer">00:00</span></div>
+    </section>
+
+    <section class="call-action-grid">
+      <button class="call-action-card" data-call-action="Alerts">
+        <span class="call-action-icon alert"><i data-lucide="bell"></i><b>2</b></span>
+        <span>Alerts</span>
+      </button>
+      <button class="call-action-card" data-call-action="Tags">
+        <span class="call-action-icon blue"><i data-lucide="tag"></i></span>
+        <span>Tags</span>
+      </button>
+      <button class="call-action-card" data-call-action="Notes">
+        <span class="call-action-icon green"><i data-lucide="notebook-pen"></i></span>
+        <span>Notes</span>
+      </button>
+    </section>
+
+    <section class="call-controls">
+      <button class="call-control small" data-call-action="More"><i data-lucide="ellipsis"></i><span>More</span></button>
+      <button class="call-control hangup" id="hangupBtn" aria-label="End call"><i data-lucide="phone-off"></i></button>
+      <button class="call-control small" id="holdBtn"><i data-lucide="pause"></i><span>Hold</span></button>
+    </section>
+
+    <section class="call-transcript-section">
+      <h2>Transcript</h2>
+      <div class="call-transcript-card">
+        <div class="transcript-entry">
+          <div class="transcript-meta"><span>00:08</span><strong>You</strong></div>
+          <div class="transcript-bubble muted">Hi, this is Alex. I’m calling because I wanted to show you a website preview I put together.</div>
+        </div>
+        <div class="transcript-entry">
+          <div class="transcript-meta"><span>00:24</span><strong id="prospectLabel">Prospect</strong></div>
+          <div class="transcript-bubble prospect">Yeah, absolutely. I’m interested in hearing a little more about it.</div>
+        </div>
+        <div class="transcript-listening"><i data-lucide="audio-lines"></i><span>Listening...</span><i data-lucide="ellipsis"></i></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+<script>
+(function(){
+  const params = new URLSearchParams(location.search);
+  const company = params.get('company') || 'Business';
+  const contact = params.get('contact') || 'Prospect';
+  const number = params.get('number') || '(000) 000-0000';
+  document.getElementById('callCompanyHeader').textContent = company;
+  document.getElementById('callCompany').textContent = company;
+  document.getElementById('callNumber').textContent = number;
+  document.getElementById('prospectLabel').textContent = contact || 'Prospect';
+  document.getElementById('callBack').addEventListener('click', () => history.length > 1 ? history.back() : location.href='index.html');
+
+  let seconds = 0;
+  const timer = document.getElementById('callTimer');
+  const tick = setInterval(() => {
+    seconds++;
+    const m = String(Math.floor(seconds/60)).padStart(2,'0');
+    const s = String(seconds%60).padStart(2,'0');
+    timer.textContent = `${m}:${s}`;
+  },1000);
+
+  document.getElementById('hangupBtn').addEventListener('click', () => {
+    clearInterval(tick);
+    location.href='index.html';
+  });
+
+  document.getElementById('holdBtn').addEventListener('click', function(){
+    this.classList.toggle('active');
+    const span = this.querySelector('span');
+    span.textContent = this.classList.contains('active') ? 'Resume' : 'Hold';
+    const icon = this.querySelector('i');
+    icon.setAttribute('data-lucide', this.classList.contains('active') ? 'play' : 'pause');
+    lucide.createIcons();
+  });
+
+  document.querySelectorAll('[data-call-action]').forEach(btn => btn.addEventListener('click', () => {
+    const label = btn.dataset.callAction;
+    alert(label + ' panel can open here.');
+  }));
+
+  lucide.createIcons();
+})();
+</script>
+</body>
+</html>

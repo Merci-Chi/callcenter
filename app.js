@@ -210,19 +210,12 @@ function setupOutreach() {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const card = btn.closest('.lead-card');
-      const name = q('.lead-title h2', card)?.textContent || 'lead';
+      const company = q('.lead-title h2', card)?.textContent?.trim() || 'Business';
+      const contact = q('.lead-title .name', card)?.textContent?.trim() || '';
       const number = q('.contact-line span', card)?.textContent?.trim() || '';
-      modal('Start Call', `<p class="modal-help">Call <strong>${name}</strong><br>${number}</p><p class="modal-note">On a phone, this opens the device dialer. Your browser calling provider can be connected here later.</p>`, [
-        { label: 'Cancel' },
-        { label: 'Call', primary: true, onClick: close => {
-          close();
-          btn.innerHTML = '<i data-lucide="phone-call"></i> Calling…';
-          refreshIcons();
-          setTimeout(() => { btn.innerHTML = '<i data-lucide="phone"></i> Call'; refreshIcons(); }, 2000);
-          const digits = number.replace(/[^0-9+]/g, '');
-          if (digits) window.location.href = `tel:${digits}`;
-        }}
-      ]);
+      const role = q('.lead-title .role', card)?.textContent?.trim() || '';
+      const params = new URLSearchParams({ company, contact, number, role });
+      window.location.href = `call.html?${params.toString()}`;
     });
   });
 

@@ -333,3 +333,57 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
   fill: #ffb61d;
   color: #ffb61d;
 }
+
+/* Call screen */
+.call-app { padding-bottom: 24px; background: var(--page); }
+.call-topbar {
+  background: linear-gradient(180deg, var(--navy) 0%, #14314f 100%);
+  color:#fff;
+  min-height: 112px;
+  padding: calc(18px + env(safe-area-inset-top)) 18px 20px;
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) 44px;
+  gap:12px;
+  align-items:center;
+  box-shadow:0 6px 20px rgba(14,36,60,.18);
+}
+.call-topbar h1 { margin:0; text-align:center; font-size:22px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.call-round-btn { width:42px; height:42px; border-radius:50%; border:0; background:rgba(255,255,255,.08); color:#fff; display:grid; place-items:center; cursor:pointer; }
+.call-round-btn i { width:24px; height:24px; }
+.call-business-icon { color:#8ccfff; }
+.call-content { padding: 10px 18px 28px; }
+.call-identity { text-align:center; padding: 6px 0 18px; }
+.call-avatar { width:116px; height:116px; margin:0 auto 12px; border-radius:50%; background:var(--blue-soft); border:5px solid #fff; box-shadow:0 7px 22px rgba(21,63,103,.12); color:#247fe2; display:grid; place-items:center; }
+.call-avatar i { width:64px; height:64px; stroke-width:1.8; }
+.call-number { color:var(--navy-3); font-size:30px; line-height:1.05; font-weight:900; letter-spacing:-.8px; }
+.call-company { color:var(--muted); font-size:16px; font-weight:700; margin-top:6px; }
+.call-status { margin-top:8px; display:flex; justify-content:center; align-items:center; gap:7px; color:#66778c; font-size:15px; }
+.call-status i { color:var(--green); width:20px; height:20px; }
+.call-status strong { color:var(--green); }
+.call-action-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.call-action-card { min-height:112px; border:0; border-radius:18px; background:#fff; box-shadow:var(--shadow); color:var(--text); display:flex; flex-direction:column; justify-content:center; align-items:center; gap:9px; font-size:14px; font-weight:800; cursor:pointer; }
+.call-action-icon { position:relative; width:42px; height:42px; display:grid; place-items:center; color:var(--blue); }
+.call-action-icon i { width:31px; height:31px; }
+.call-action-icon.green { color:var(--green); }
+.call-action-icon.alert b { position:absolute; right:-6px; top:-7px; width:21px; height:21px; border-radius:50%; display:grid; place-items:center; background:#ff4949; color:#fff; font-size:11px; box-shadow:0 2px 7px rgba(255,73,73,.28); }
+.call-controls { display:grid; grid-template-columns:1fr 1.2fr 1fr; align-items:center; gap:18px; margin:22px 22px 24px; }
+.call-control { border:0; cursor:pointer; display:grid; place-items:center; }
+.call-control.small { width:72px; justify-self:center; background:transparent; color:var(--navy-3); gap:7px; }
+.call-control.small > i { width:60px; height:60px; padding:18px; border-radius:50%; background:#fff; box-shadow:var(--shadow); }
+.call-control.small span { color:var(--muted); font-size:12px; font-weight:800; }
+.call-control.small.active > i { background:var(--blue-soft); color:var(--blue); }
+.call-control.hangup { width:86px; height:86px; justify-self:center; border-radius:50%; color:#fff; background:#ff4848; box-shadow:0 12px 25px rgba(255,72,72,.25); }
+.call-control.hangup i { width:36px; height:36px; }
+.call-transcript-section h2 { margin:0 0 10px; font-size:22px; letter-spacing:-.4px; color:var(--text); }
+.call-transcript-card { overflow:hidden; background:#fff; border:1px solid rgba(20,43,69,.07); border-radius:18px; box-shadow:var(--shadow); }
+.transcript-entry { padding:14px 14px 4px; }
+.transcript-meta { display:flex; gap:14px; align-items:center; margin-bottom:7px; }
+.transcript-meta span { color:#8795a8; font-size:12px; }
+.transcript-meta strong { font-size:13px; color:var(--navy-3); }
+.transcript-bubble { border-radius:12px; padding:11px 12px; font-size:12px; line-height:1.45; color:#54677d; }
+.transcript-bubble.muted { background:#f5f7fa; }
+.transcript-bubble.prospect { background:var(--blue-soft); color:#365b85; }
+.transcript-listening { margin-top:10px; border-top:1px solid var(--line); min-height:52px; padding:0 14px; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:9px; color:#6f8094; font-size:12px; font-weight:700; }
+.transcript-listening i:first-child { color:var(--blue); }
+.transcript-listening i { width:20px; height:20px; }
+@media (min-width:700px) { .call-app { border-radius:28px; overflow:hidden; } }
