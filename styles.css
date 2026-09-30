@@ -556,3 +556,12 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
   .calendar-sheet-overlay { align-items:center; padding:18px; }
   .calendar-sheet { border-radius:26px; max-height:86vh; }
 }
+
+/* Inline sorting directly beneath the selected lead. */
+.lead-sort-control { margin: -2px 0 14px; padding: 10px 12px 12px; background:#fff; border:1px solid #e0e8f2; border-radius:16px; box-shadow:0 5px 15px rgba(16,41,69,.045); }
+.lead-sort-caption { display:flex; align-items:center; gap:7px; color:#647185; font-weight:800; font-size:11px; margin:0 0 9px; }
+.lead-sort-caption svg { height:14px; width:14px; }
+.lead-sort-options { display:grid; grid-template-columns: 1fr 1fr; gap:7px; }
+.lead-sort-option { border:1px solid #dce5f1; padding:10px 5px; background:#f7f9fc; color:#546b82; font:inherit; font-size:11px; font-weight:800; border-radius:11px; cursor:pointer; }
+.lead-sort-option.active { background:#163f72; border-color:#163f72; color:white; }
+.lead-sort-option:focus-visible { outline:2px solid #3987dd; outline-offset:2px; }

@@ -162,6 +162,18 @@ function setupOutreach() {
 
   // Selection is stored as the actual lead card, never as a position.
   let selectedCard = null;
+  let leadSort = 'hours';
+  const MAX_FOLLOWING = 10;
+  const orderToggle = document.createElement('div');
+  orderToggle.className = 'lead-sort-control';
+  orderToggle.setAttribute('role', 'group');
+  orderToggle.setAttribute('aria-label', 'Sort companies');
+  orderToggle.innerHTML = `
+    <span class="lead-sort-caption"><i data-lucide="list-filter"></i> Sort next leads</span>
+    <div class="lead-sort-options">
+      <button type="button" class="lead-sort-option active" data-sort="hours" aria-pressed="true">Best Hours to Call</button>
+      <button type="button" class="lead-sort-option" data-sort="website" aria-pressed="false">Website Opportunity</button>
+    </div>`;
 
 
 
@@ -233,59 +245,118 @@ function setupOutreach() {
 
 
 
-  // ONE authoritative display order:
-  // selected company -> all starred companies -> all unstarred companies.
-  // Original CRM order is preserved inside the starred and unstarred groups.
+  // One source of truth: selected, then starred, then unstarred.
+  // Sorting changes the order WITHIN each star group, never across groups.
   const getFilteredQueue = () => originalOrder.filter(matchesFilter);
 
-  const getOrderedCards = () => {
-    const filtered = getFilteredQueue();
-    if (!filtered.length) return [];
-
-    if (!selectedCard || !filtered.includes(selectedCard)) {
-      selectedCard =
-        filtered.find(card => starredNames.has(companyName(card))) ||
-        filtered[0];
-    }
-
-    const remaining = filtered.filter(card => card !== selectedCard);
-    const starred = remaining.filter(card => starredNames.has(companyName(card)));
-    const unstarred = remaining.filter(card => !starredNames.has(companyName(card)));
-
-    return [selectedCard, ...starred, ...unstarred];
+  const getTimeZone = card => {
+    const text = q('.time-row', card)?.textContent || '';
+    const phone = q('.contact-line span', card)?.textContent || '';
+    if (/\b(EST|EDT)\b/i.test(text)) return 'America/New_York';
+    if (/\b(CST|CDT)\b/i.test(text)) return 'America/Chicago';
+    if (/\b(MST|MDT)\b/i.test(text)) return 'America/Denver';
+    if (/\b(PST|PDT)\b/i.test(text)) return 'America/Los_Angeles';
+    // Area codes are only a rough fallback; ported numbers can be misleading.
+    if (/(?:702|725|415)/.test(phone)) return 'America/Los_Angeles';
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
   };
+
+  const localHour = card => {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: getTimeZone(card), hour: 'numeric', hourCycle: 'h23'
+      }).formatToParts(new Date());
+      return Number(parts.find(p => p.type === 'hour')?.value ?? 12);
+    } catch { return 12; }
+  };
+
+  // Estimate a convenient calling time using the contact's local clock.
+  // 9 AM–5 PM is a configurable working-hours assumption, not a guarantee.
+  const hourScore = card => {
+    const hour = localHour(card);
+    const preferred = 10;
+    if (hour >= 9 && hour < 17) return 100 - Math.abs(hour - preferred);
+    if (hour < 9) return 50 - (9 - hour);
+    return 50 - (hour - 17);
+  };
+
+  // Website Opportunity uses only existing notes/tags as *signals*.
+  // It does not claim to know whether a business actually needs a site.
+  const websiteScore = card => {
+    const notes = q('.notes p', card)?.textContent || '';
+    const tags = q('.tag-row', card)?.textContent || '';
+    const details = `${notes} ${tags}`.toLowerCase();
+    let score = 0;
+    if (/no website|without a website|doesn't have a website|does not have a website/.test(details)) score += 4;
+    if (/outdated|old website|old site|broken site/.test(details)) score += 3;
+    if (/website preview|preview concept|send preview|asked to see a website|wants online booking/.test(details)) score += 2;
+    if (/interested|asked about pricing|high priority/.test(details)) score += 1;
+    return score;
+  };
+
+  const rankedPool = () => {
+    const pool = getFilteredQueue();
+    const sourceIndex = new Map(originalOrder.map((card, i) => [card, i]));
+    const rank = card => leadSort === 'website' ? websiteScore(card) : hourScore(card);
+    return [...pool].sort((a, b) => {
+      const starDiff = Number(starredNames.has(companyName(b))) - Number(starredNames.has(companyName(a)));
+      if (starDiff) return starDiff;
+      return rank(b) - rank(a) || sourceIndex.get(a) - sourceIndex.get(b);
+    });
+  };
+
+  const getOrderedCards = () => {
+    const pool = rankedPool();
+    if (!pool.length) { selectedCard = null; return []; }
+    if (!selectedCard || !pool.includes(selectedCard)) selectedCard = pool[0];
+    const remaining = pool.filter(card => card !== selectedCard);
+    // Wrap around the ranking without losing starred-first priority below selection.
+    return [selectedCard, ...remaining];
+  };
+
+  const updateSortButtons = () => {
+    qa('.lead-sort-option', orderToggle).forEach(btn => {
+      const active = btn.dataset.sort === leadSort;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
+    });
+  };
+
+  qa('.lead-sort-option', orderToggle).forEach(btn => btn.addEventListener('click', () => {
+    leadSort = btn.dataset.sort;
+    updateSortButtons();
+    renderQueue(false);
+  }));
 
   const renderQueue = (shouldScroll = false) => {
     const orderedCards = getOrderedCards();
-    const orderedSet = new Set(orderedCards);
+    const visibleCards = orderedCards.slice(0, MAX_FOLLOWING + 1);
 
-    // Fully reset every card before rebuilding the visible order.
     originalOrder.forEach(card => {
       card.classList.remove('selected-lead');
       card.style.display = 'none';
       card.style.order = '';
     });
 
-    // Physically rebuild the DOM in the ONLY allowed visible order:
-    // selected -> starred -> unstarred.
-    // Setting CSS order too prevents any flex/grid rule from overriding it.
-    orderedCards.forEach((card, index) => {
+    // Reset the children in physical DOM order, to avoid hidden cards
+    // appearing in the middle of the visible sorted sequence.
+    orderToggle.remove();
+    visibleCards.forEach((card, index) => {
       card.style.display = '';
-      card.style.order = String(index);
+      card.style.order = String(index * 2);
       card.classList.toggle('selected-lead', index === 0);
       leadContainer.appendChild(card);
+      if (index === 0) {
+        orderToggle.style.order = '1';
+        leadContainer.appendChild(orderToggle);
+      }
     });
-
-    // Keep filtered-out cards after every visible card so they can never
-    // interfere with the visible starred ordering when another lead is selected.
-    originalOrder
-      .filter(card => !orderedSet.has(card))
+    originalOrder.filter(card => !visibleCards.includes(card))
       .forEach(card => leadContainer.appendChild(card));
 
     refreshIcons();
-
-    if (shouldScroll && orderedCards[0]) {
-      orderedCards[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (shouldScroll && visibleCards[0]) {
+      visibleCards[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
@@ -744,7 +815,7 @@ function setupOutreach() {
     if (label.includes('random')) btn.addEventListener('click', e => {
     e.stopPropagation();
 
-    const queue = getFilteredQueue();
+    const queue = rankedPool();
     if (!queue.length) return;
 
     let nextCard = queue[0];
@@ -762,7 +833,7 @@ function setupOutreach() {
   if (label.includes('next')) btn.addEventListener('click', e => {
     e.stopPropagation();
 
-    const queue = getFilteredQueue();
+    const queue = rankedPool();
     if (!queue.length) return;
 
     const currentPos = selectedCard ? queue.indexOf(selectedCard) : -1;
