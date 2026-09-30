@@ -248,7 +248,7 @@ button { font: inherit; }
 /* Functional interaction layer */
 button, a, .star, .profile-card, .setting-row { -webkit-tap-highlight-color: transparent; }
 button:active, .nav-item:active, .setting-row:active, .profile-card:active { transform: scale(.985); }
-.selected-lead { outline: 2px solid #2f7dea; outline-offset: 2px; }
+.selected-lead { outline: none; }
 .star { cursor: pointer; }
 .star.favorite { fill: #f5b51b; stroke: #f5b51b; }
 .toggle { cursor: pointer; transition: .2s ease; }
