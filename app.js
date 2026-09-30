@@ -146,112 +146,199 @@ function setupOutreach() {
 
   let activeFilter = 'All Previews';
 
-  let selectedCard = null;
+  let selectedCard = originalOrder.find(card => card.dataset.crmId === window.steadyHandsForcedCRMId) || null;
+  window.steadyHandsForcedCRMId = null;
+
   let leadSort = 'hours';
+
   let queueTransition = false;
+
   let queuePending = null;
+
   const SKELETON_DELAY = 220;
 
   const compactSkeleton = height => `
+
     <div class="skeleton-lead skeleton-compact" style="height:${height}px" aria-hidden="true">
+
       <div class="sk-row">
+
         <div class="sk-shape sk-icon"></div>
+
         <div class="sk-grow">
+
           <div class="sk-shape sk-title"></div>
+
           <div class="sk-shape sk-subtitle"></div>
+
         </div>
+
         <div class="sk-shape sk-star"></div>
+
       </div>
+
       <div class="sk-shape sk-phone"></div>
+
     </div>`;
 
   const expandedSkeleton = height => `
+
     <div class="skeleton-lead skeleton-expanded" style="height:${height}px" aria-hidden="true">
+
       <div class="sk-row">
+
         <div class="sk-shape sk-icon"></div>
+
         <div class="sk-grow">
+
           <div class="sk-shape sk-title"></div>
+
           <div class="sk-shape sk-subtitle"></div>
+
         </div>
+
         <div class="sk-shape sk-star"></div>
+
       </div>
+
       <div class="sk-shape sk-phone"></div>
+
       <div class="sk-chips"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
+
       <div class="sk-shape sk-line"></div>
+
       <div class="sk-shape sk-line short"></div>
+
       <div class="sk-shape sk-preview"></div>
+
       <div class="sk-shape sk-note"></div>
+
       <div class="sk-shape sk-call"></div>
+
       <div class="sk-chips sk-bottom"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
+
     </div>`;
 
   function skeletonMarkup() {
+
     return [...leadContainer.children]
+
       .filter(el => {
+
         if (el.classList.contains('lead-skeleton-overlay')) return false;
+
         const style = getComputedStyle(el);
+
         return style.display !== 'none' && style.visibility !== 'hidden';
+
       })
+
       .map(el => {
+
         const height = Math.max(1, Math.ceil(el.getBoundingClientRect().height));
+
         if (el.classList.contains('lead-sort-control')) {
+
           return `<div class="skeleton-sort" style="height:${height}px" aria-hidden="true"><span class="sk-shape"></span><span class="sk-shape"></span></div>`;
+
         }
+
         if (el.classList.contains('lead-card')) {
+
           return el.classList.contains('selected-lead')
+
             ? expandedSkeleton(height)
+
             : compactSkeleton(height);
+
         }
+
         return '';
+
       })
+
       .join('');
+
   }
 
   function changeLeads(update) {
+
     if (queueTransition) { queuePending = update; return; }
+
     queueTransition = true;
 
     const previousHeight = Math.ceil(leadContainer.getBoundingClientRect().height);
+
     const markup = skeletonMarkup();
 
     leadContainer.style.minHeight = `${previousHeight}px`;
+
     leadContainer.classList.add('leads-switching');
+
     leadContainer.setAttribute('aria-busy','true');
 
     const overlay = document.createElement('div');
+
     overlay.className = 'lead-skeleton-overlay';
+
     overlay.innerHTML = markup;
+
     leadContainer.appendChild(overlay);
+
     refreshIcons();
 
     window.setTimeout(() => {
+
       try { update(); } catch(error) { console.error('Unable to change leads:', error); }
+
       overlay.remove();
+
       leadContainer.classList.remove('leads-switching');
+
       leadContainer.removeAttribute('aria-busy');
+
       leadContainer.style.minHeight = '';
+
       queueTransition = false;
+
       if (queuePending) {
+
         const next = queuePending;
+
         queuePending = null;
+
         changeLeads(next);
+
       }
+
     }, SKELETON_DELAY);
+
   }
 
   const MAX_FOLLOWING = 10;
+
   const orderToggle = document.createElement('div');
+
   orderToggle.className = 'lead-sort-control';
+
   orderToggle.setAttribute('role', 'group');
+
   orderToggle.setAttribute('aria-label', 'Sort companies');
+
   orderToggle.innerHTML = `
+
     <span class="lead-sort-caption"><i data-lucide="list-filter"></i> Sort next leads</span>
+
     <div class="lead-sort-options">
+
       <button type="button" class="lead-sort-option active" data-sort="hours" aria-pressed="true">Best Hours to Call</button>
+
       <button type="button" class="lead-sort-option" data-sort="website" aria-pressed="false">Website Opportunity</button>
+
     </div>`;
 
   const companyName = card => q('.lead-title h2', card)?.textContent?.trim() || 'Business';
+
   const starKey = card => card?.dataset.crmId || companyName(card);
 
   const STAR_KEY = 'steadyhands-outreach-starred-preview-ids';
@@ -301,7 +388,9 @@ function setupOutreach() {
   syncStars();
 
   const matchesFilter = card => {
+
     const query = (q('#crmSearch')?.value || '').trim().toLowerCase();
+
     if (query && !card.textContent.toLowerCase().includes(query)) return false;
 
     if (activeFilter === 'Due for Follow Up') return card.dataset.followup === 'true';
@@ -315,122 +404,209 @@ function setupOutreach() {
   const getFilteredQueue = () => originalOrder.filter(matchesFilter);
 
   const getTimeZone = card => {
+
     const text = card.dataset.timezone || q('.time-row', card)?.textContent || '';
+
     const phone = q('.contact-line span', card)?.textContent || '';
+
     if (/\b(EST|EDT)\b/i.test(text)) return 'America/New_York';
+
     if (/\b(CST|CDT)\b/i.test(text)) return 'America/Chicago';
+
     if (/\b(MST|MDT)\b/i.test(text)) return 'America/Denver';
+
     if (/\b(PST|PDT)\b/i.test(text)) return 'America/Los_Angeles';
+
     if (/(?:702|725|415|206|503|619|916)/.test(phone)) return 'America/Los_Angeles';
+
     if (/(?:480|520|602|623|928)/.test(phone)) return 'America/Phoenix';
+
     if (/(?:212|305|404|617|718|813|917)/.test(phone)) return 'America/New_York';
+
     if (/(?:214|312|469|713|832)/.test(phone)) return 'America/Chicago';
+
     return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
+
   };
 
   const localHour = card => {
+
     try {
+
       const parts = new Intl.DateTimeFormat('en-US', {
+
         timeZone: getTimeZone(card), hour: 'numeric', hourCycle: 'h23'
+
       }).formatToParts(new Date());
+
       return Number(parts.find(p => p.type === 'hour')?.value ?? 12);
+
     } catch { return 12; }
+
   };
 
   const hourScore = card => {
+
     const hour = localHour(card);
+
     const preferred = 10;
+
     if (hour >= 9 && hour < 17) return 100 - Math.abs(hour - preferred);
+
     if (hour < 9) return 50 - (9 - hour);
+
     return 50 - (hour - 17);
+
   };
 
   const websiteScore = card => {
+
     const notes = q('.notes p', card)?.textContent || '';
+
     const tags = q('.tag-row', card)?.textContent || '';
+
     const details = `${notes} ${tags}`.toLowerCase();
+
     let score = 0;
+
     if (/no website|without a website|doesn't have a website|does not have a website/.test(details)) score += 4;
+
     if (/outdated|old website|old site|broken site/.test(details)) score += 3;
+
     if (/website preview|preview concept|send preview|asked to see a website|wants online booking/.test(details)) score += 2;
+
     if (/interested|asked about pricing|high priority/.test(details)) score += 1;
+
     return score;
+
   };
 
   const rankedPool = () => {
+
     const pool = getFilteredQueue();
+
     const sourceIndex = new Map(originalOrder.map((card, i) => [card, i]));
+
     const rank = card => leadSort === 'website' ? websiteScore(card) : hourScore(card);
+
     return [...pool].sort((a, b) => {
+
       const starDiff = Number(starredNames.has(companyName(b))) - Number(starredNames.has(companyName(a)));
+
       if (starDiff) return starDiff;
+
       return rank(b) - rank(a) || sourceIndex.get(a) - sourceIndex.get(b);
+
     });
+
   };
 
   const getOrderedCards = () => {
+
     const pool = rankedPool();
+
     if (!pool.length) { selectedCard = null; return []; }
+
     if (!selectedCard || !pool.includes(selectedCard)) selectedCard = pool[0];
+
     const remaining = pool.filter(card => card !== selectedCard);
+
     return [selectedCard, ...remaining];
+
   };
 
   const updateSortButtons = () => {
+
     qa('.lead-sort-option', orderToggle).forEach(btn => {
+
       const active = btn.dataset.sort === leadSort;
+
       btn.classList.toggle('active', active);
+
       btn.setAttribute('aria-pressed', String(active));
+
     });
+
   };
 
   qa('.lead-sort-option', orderToggle).forEach(btn => btn.addEventListener('click', () => {
+
     leadSort = btn.dataset.sort;
+
     updateSortButtons();
+
     changeLeads(() => renderQueue(false));
+
   }));
 
   const renderQueue = (shouldScroll = false) => {
+
     const orderedCards = getOrderedCards();
+
     const visibleCards = orderedCards.slice(0, MAX_FOLLOWING + 1);
 
     originalOrder.forEach(card => {
+
       card.classList.remove('selected-lead');
+
       card.style.display = 'none';
+
       card.style.order = '';
+
     });
 
     orderToggle.remove();
+
     visibleCards.forEach((card, index) => {
+
       card.style.display = '';
+
       card.style.order = String(index * 2);
+
       card.classList.toggle('selected-lead', index === 0);
+
       leadContainer.appendChild(card);
+
       if (index === 0) {
+
         orderToggle.style.order = '1';
+
         leadContainer.appendChild(orderToggle);
+
       }
+
     });
+
     originalOrder.filter(card => !visibleCards.includes(card))
+
       .forEach(card => leadContainer.appendChild(card));
 
     refreshIcons();
+
     if (shouldScroll && visibleCards[0]) {
+
     }
+
   };
 
   const selectCard = (card, shouldScroll = true) => {
+
     if (!card || !matchesFilter(card)) return;
 
     changeLeads(() => {
+
     selectedCard = card;
 
     renderQueue(false);
+
     });
+
   };
 
   const applyFilter = label => {
+
     changeLeads(() => { activeFilter = label; selectedCard = null; renderQueue(false); });
+
   };
 
   qa('.pill').forEach(btn => {
@@ -492,11 +668,17 @@ function setupOutreach() {
           const value = q('#lead-note-edit', root).value.trim();
 
           const client = window.steadyHandsCRMClient;
+
           if (!client || !card.dataset.crmId) { showToast('CRM is not connected'); return; }
+
           const { error } = await client.from('crm').update({ notes:value }).eq('id',card.dataset.crmId);
+
           if (error) { console.error('Unable to save note:',error); showToast('Could not save note. Try again.'); return; }
+
           if (p) { p.textContent = value || 'No notes added yet.'; p.style.whiteSpace = 'pre-line'; }
+
           close();
+
           showToast('Note saved in CRM');
 
         }}
@@ -759,7 +941,7 @@ function setupOutreach() {
 
       const fmt = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
 
-      const esc = v => String(v).replace(/**\\\**/g,'\\\\\\\\').replace(/\n/g,'\\\n').replace(/,/g,'\\\\,').replace(/;/g,'\\\\;');
+      const esc = v => String(v).replace(/**\\\\\\**/g,'\\\\\\\\\\\\\\\\').replace(/\n/g,'\\\\\n').replace(/,/g,'\\\\\\\\,').replace(/;/g,'\\\\\\\\;');
 
       const description = [contact, number, note].filter(Boolean).join('\n');
 
@@ -825,32 +1007,99 @@ function setupOutreach() {
 
     const label = btn.textContent.trim().toLowerCase();
 
-    if (label.includes('random')) btn.addEventListener('click', e => {
+    if (label.includes('random')) btn.addEventListener('click', async e => {
     e.stopPropagation();
+    if (queueTransition) return;
 
-    const queue = rankedPool();
-    if (!queue.length) return;
-
-    let nextCard = queue[0];
-
-    if (queue.length > 1) {
-      do {
-        nextCard = queue[Math.floor(Math.random() * queue.length)];
-      } while (nextCard === selectedCard);
+    const client = window.steadyHandsCRMClient;
+    if (!client) {
+      showToast('Unable to load a random lead.');
+      return;
     }
 
-    changeLeads(() => { selectedCard = nextCard; renderQueue(false); });
+    queueTransition = true;
+    const previousHeight = Math.ceil(leadContainer.getBoundingClientRect().height);
+    const overlay = document.createElement('div');
+    overlay.className = 'lead-skeleton-overlay';
+    overlay.innerHTML = skeletonMarkup();
+
+    leadContainer.style.minHeight = `${previousHeight}px`;
+    leadContainer.classList.add('leads-switching');
+    leadContainer.setAttribute('aria-busy', 'true');
+    leadContainer.appendChild(overlay);
+    refreshIcons();
+
+    try {
+      const { count, error: countError } = await client
+        .from('preview_inventory')
+        .select('url', { count: 'exact', head: true })
+        .not('crm_id', 'is', null);
+
+      if (countError) throw countError;
+      if (!count) throw new Error('No approved previews found.');
+
+      const currentId = selectedCard?.dataset.crmId || '';
+      let picked = null;
+
+      for (let attempt = 0; attempt < 4; attempt++) {
+        const offset = Math.floor(Math.random() * count);
+
+        const { data, error } = await client
+          .from('preview_inventory')
+          .select('url,crm_id')
+          .not('crm_id', 'is', null)
+          .order('url', { ascending: true })
+          .range(offset, offset);
+
+        if (error) throw error;
+
+        picked = data?.[0] || null;
+
+        if (picked && (picked.crm_id !== currentId || count === 1)) {
+          break;
+        }
+      }
+
+      if (!picked?.crm_id || !crmUrl(picked.url)) {
+        throw new Error('Random lead could not be loaded.');
+      }
+
+      sessionStorage.setItem(
+        'steadyhands-global-random-lead',
+        JSON.stringify({
+          crm_id: picked.crm_id,
+          url: picked.url
+        })
+      );
+
+      window.location.reload();
+    } catch (error) {
+      console.error('Unable to load random lead:', error);
+
+      overlay.remove();
+      leadContainer.classList.remove('leads-switching');
+      leadContainer.removeAttribute('aria-busy');
+      leadContainer.style.minHeight = '';
+      queueTransition = false;
+
+      showToast('Unable to load a random lead. Try again.');
+    }
   });
 
   if (label.includes('next')) btn.addEventListener('click', e => {
+
     e.stopPropagation();
 
     const queue = rankedPool();
+
     if (!queue.length) return;
 
     const currentPos = selectedCard ? queue.indexOf(selectedCard) : -1;
+
     const nextCard = queue[(currentPos + 1 + queue.length) % queue.length];
+
     changeLeads(() => { selectedCard = nextCard; renderQueue(false); });
+
   });
 
   if (label.includes('calendar')) btn.addEventListener('click', e => {
@@ -910,6 +1159,7 @@ function setupOutreach() {
       showToast(starredNames.has(name) ? 'Company starred' : 'Company unstarred');
 
     if (currentCard) selectedCard = currentCard;
+
     changeLeads(() => renderQueue(false));
 
   };
@@ -919,11 +1169,17 @@ function setupOutreach() {
   });
 
   let searchTimer;
+
   q('#crmSearch')?.addEventListener('input', () => {
+
     clearTimeout(searchTimer);
+
     searchTimer = setTimeout(() => changeLeads(() => { selectedCard = null; renderQueue(false); }), 240);
+
   });
+
   renderQueue(false);
+
 }
 
 function setupSkills() {
@@ -1112,7 +1368,7 @@ function setupAccount() {
 
   function showProfile() {
 
-    modal('Profile Settings', '<label class="modal-label">Name<input class="modal-input" value="Alex Harper"></label><label class="modal-label">Email<input class="modal-input" type="email" value="alex@company.com"></label>', [{ label: 'Cancel' }, { label: 'Save', primary: true, onClick: close => { close(); showToast('Profile saved'); } }]);
+    modal('Profile Settings', '<label class="modal-label">Name<input class="modal-input" value="Alex Harper"></label><label class="modal-label">Email<input class="modal-input" type="email" value="alex\@company.com"></label>', [{ label: 'Cancel' }, { label: 'Save', primary: true, onClick: close => { close(); showToast('Profile saved'); } }]);
 
   }
 
@@ -1154,122 +1410,369 @@ function setupMore() {
 
 }
 
-const SH_SUPABASE_URL = 'https://glonbvrcudwuzjundrii.supabase.co';
+const SH_SUPABASE_URL = 'https\://glonbvrcudwuzjundrii.supabase.co';
+
 const SH_PUBLISHABLE_KEY = 'sb_publishable_VZbed_uuOXSE744UrAfHXw_z2xDdYtr';
 
 function crmText(v) { return String(v ?? ''); }
+
 function crmEscape(v) { return crmText(v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
 function crmUrl(v) {
+
   try { const url = new URL(crmText(v)); return url.protocol === 'https:' && url.hostname === 'viewyoursite.today' && url.pathname.startsWith('/Sites/') ? url.href : ''; }
+
   catch { return ''; }
+
 }
+
 function crmTags(data) {
+
   let all = [];
+
   for (const key of ['tags','sources']) {
+
     let tags = data[key];
+
     if (typeof tags === 'string') { try { tags=JSON.parse(tags); } catch { tags=[]; } }
+
     if (Array.isArray(tags)) all.push(...tags.filter(t => typeof t === 'string'));
+
   }
+
   return all.slice(0,5);
+
 }
+
 function makeCRMLinkCard(lead, siteURLs) {
+
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
+
   const name = crmEscape(lead.name || 'Contact not listed');
+
   const phone = crmText(lead.phone || '').trim();
+
   const notes = crmText(lead.notes || '').trim();
+
   const isFollowup = !!lead.lastcalled || !!lead.callbackdate || !!lead.callbackat || /follow.?up|callback/i.test(lead.stage || '');
+
   const isPriority = /high|hot|urgent/i.test([lead.leadpotential,lead.tier,...crmTags(lead)].join(' '));
+
   const tags = crmTags(lead);
+
   const urls = [...new Set(siteURLs.map(crmUrl).filter(Boolean))];
+
   const links = urls.map((url,i)=>`<a class="preview-link" target="_blank" rel="noopener noreferrer" href="${crmEscape(url)}"><i data-lucide="external-link"></i> ${urls.length > 1 ? `Preview ${i + 1}` : 'Open Website Preview'}</a>`).join('');
+
   const card=document.createElement('section');
+
   card.className='card lead-card';
+
   card.dataset.crmId=lead.id;
+
   card.dataset.followup=String(isFollowup);
+
   card.dataset.priority=String(isPriority);
+
   card.dataset.timezone=crmText(lead.timezone||'');
+
   const dateText=lead.callbackdate ? `Callback: ${crmEscape(lead.callbackdate)}` : (lead.lastcalled ? 'Previously contacted' : 'Not yet contacted');
+
   card.innerHTML=`
+
     <div class="lead-head"><div class="company-icon"><i data-lucide="building-2"></i></div>
+
       <div class="lead-title"><h2>${company}</h2><div class="name">${name}</div><div class="role">${urls.length} approved preview${urls.length === 1 ? '' : 's'}</div></div>
+
       <button class="star-button" type="button" aria-label="Star company" aria-pressed="false"><i data-lucide="star"></i></button>
+
     </div>
+
     <div class="contact-line"><i data-lucide="phone"></i><span>${crmEscape(phone || 'No phone listed')}</span>${phone ? `<button class="copy-btn" type="button" data-copy="${crmEscape(phone)}" aria-label="Copy phone"><i data-lucide="copy"></i></button>` : ''}</div>
+
     <div class="lead-details">
+
       <div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
+
       <div class="time-row"><span><i data-lucide="calendar"></i> ${dateText}</span></div>
+
       <div class="preview-links">${links}</div>
+
       <div class="notes"><div class="notes-title"><i data-lucide="notebook-pen"></i> CRM Notes</div><p>${crmEscape(notes || 'No notes added yet.')}</p></div>
+
       <button class="call-btn" type="button" data-demo-call ${phone ? '' : 'disabled'}><i data-lucide="phone"></i> ${phone ? 'Demo Call Screen' : 'No Phone Number'}</button>
+
       <div class="quick-actions"><button class="quick-btn" type="button"><i data-lucide="shuffle"></i>Random</button><button class="quick-btn" type="button"><i data-lucide="play"></i>Next</button><button class="quick-btn calendar-btn" type="button"><i data-lucide="calendar-plus"></i>Add to Calendar</button></div>
+
     </div>`;
+
   return card;
+
 }
+
 async function loadApprovedPreviewCRM() {
-  const status=q('#crmStatus');
-  const box=q('#crmLeadCards');
-  if(!status||!box)return;
-  q('#crmReload')?.addEventListener('click',()=>location.reload());
-  if(!window.supabase){status.textContent='Unable to connect. Please try again.';return;}
-  const client=window.steadyHandsCRMClient||window.supabase.createClient(SH_SUPABASE_URL,SH_PUBLISHABLE_KEY);
-  window.steadyHandsCRMClient=client;
-  try{
-    const authResult=await client.auth.getSession();
-    if(authResult.error)throw authResult.error;
-    if(!authResult.data.session){window.location.replace('login.html');return;}
-  }catch(error){
-    console.error('Authentication check failed:',error);
-    status.textContent='Unable to connect. Please try again.';
+  const status = q('#crmStatus');
+  const box = q('#crmLeadCards');
+
+  if (!status || !box) return;
+
+  q('#crmReload')?.addEventListener('click', () => location.reload());
+
+  if (!window.supabase) {
+    status.textContent = 'Unable to connect. Please try again.';
     return;
   }
-  status.textContent='Loading leads...';
-  box.innerHTML=Array.from({length:6},()=>`<div class="skeleton-lead skeleton-compact" aria-hidden="true"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div><div class="sk-shape sk-star"></div></div><div class="sk-shape sk-phone"></div></div>`).join('');
-  try{
-    const TARGET_LEADS=80;
-    const INVENTORY_PAGE=100;
-    const MAX_INVENTORY_PAGES=2;
-    const byCRM=new Map();
-    for(let page=0;page<MAX_INVENTORY_PAGES&&byCRM.size<TARGET_LEADS;page++){
-      const from=page*INVENTORY_PAGE;
-      const {data,error}=await client.from('preview_inventory')
+
+  const client =
+    window.steadyHandsCRMClient ||
+    window.supabase.createClient(
+      SH_SUPABASE_URL,
+      SH_PUBLISHABLE_KEY
+    );
+
+  window.steadyHandsCRMClient = client;
+
+  try {
+    const authResult = await client.auth.getSession();
+
+    if (authResult.error) {
+      throw authResult.error;
+    }
+
+    if (!authResult.data.session) {
+      window.location.replace('login.html');
+      return;
+    }
+  } catch (error) {
+    console.error('Authentication check failed:', error);
+    status.textContent = 'Unable to connect. Please try again.';
+    return;
+  }
+
+  status.textContent = 'Loading leads...';
+
+  box.innerHTML = Array.from({ length: 6 }, () => `
+    <div class="skeleton-lead skeleton-compact" aria-hidden="true">
+      <div class="sk-row">
+        <div class="sk-shape sk-icon"></div>
+        <div class="sk-grow">
+          <div class="sk-shape sk-title"></div>
+          <div class="sk-shape sk-subtitle"></div>
+        </div>
+        <div class="sk-shape sk-star"></div>
+      </div>
+      <div class="sk-shape sk-phone"></div>
+    </div>
+  `).join('');
+
+  try {
+    const TARGET_LEADS = 80;
+    const INVENTORY_PAGE = 100;
+    const MAX_INVENTORY_PAGES = 2;
+    const byCRM = new Map();
+
+    let forcedRandom = null;
+
+    try {
+      forcedRandom = JSON.parse(
+        sessionStorage.getItem('steadyhands-global-random-lead') || 'null'
+      );
+    } catch {}
+
+    sessionStorage.removeItem('steadyhands-global-random-lead');
+
+    if (
+      forcedRandom?.crm_id &&
+      crmUrl(forcedRandom.url)
+    ) {
+      const { data, error } = await client
+        .from('preview_inventory')
         .select('url,crm_id')
-        .not('crm_id','is',null)
-        .order('url',{ascending:true})
-        .range(from,from+INVENTORY_PAGE-1);
-      if(error)throw new Error('Preview inventory: '+error.message);
-      for(const item of data||[]){
-        const url=crmUrl(item.url);
-        if(!item.crm_id||!url)continue;
-        const list=byCRM.get(item.crm_id)||[];
-        if(!list.includes(url))list.push(url);
-        byCRM.set(item.crm_id,list);
+        .eq('crm_id', forcedRandom.crm_id)
+        .order('url', { ascending: true })
+        .limit(20);
+
+      if (!error && data?.length) {
+        const urls = data
+          .map(item => crmUrl(item.url))
+          .filter(Boolean);
+
+        if (urls.length) {
+          byCRM.set(
+            forcedRandom.crm_id,
+            [...new Set(urls)]
+          );
+        }
+      } else {
+        byCRM.set(
+          forcedRandom.crm_id,
+          [forcedRandom.url]
+        );
       }
-      if(!data||data.length<INVENTORY_PAGE)break;
     }
-    const ids=[...byCRM.keys()].slice(0,TARGET_LEADS);
-    if(!ids.length)throw new Error('No approved preview leads returned.');
-    const leads=[];
-    for(let i=0;i<ids.length;i+=80){
-      const {data,error}=await client.from('crm')
-        .select('id,company,name,phone,notes,tags,sources,stage,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier')
-        .in('id',ids.slice(i,i+80));
-      if(error)throw new Error('CRM: '+error.message);
-      leads.push(...(data||[]));
+
+    for (
+      let page = 0;
+      page < MAX_INVENTORY_PAGES &&
+      byCRM.size < TARGET_LEADS;
+      page++
+    ) {
+      const from = page * INVENTORY_PAGE;
+
+      const { data, error } = await client
+        .from('preview_inventory')
+        .select('url,crm_id')
+        .not('crm_id', 'is', null)
+        .order('url', { ascending: true })
+        .range(
+          from,
+          from + INVENTORY_PAGE - 1
+        );
+
+      if (error) {
+        throw new Error(
+          'Preview inventory: ' + error.message
+        );
+      }
+
+      for (const item of data || []) {
+        const url = crmUrl(item.url);
+
+        if (!item.crm_id || !url) {
+          continue;
+        }
+
+        const urls = byCRM.get(item.crm_id) || [];
+
+        if (!urls.includes(url)) {
+          urls.push(url);
+        }
+
+        byCRM.set(item.crm_id, urls);
+
+        if (byCRM.size >= TARGET_LEADS) {
+          break;
+        }
+      }
+
+      if (
+        !data ||
+        data.length < INVENTORY_PAGE
+      ) {
+        break;
+      }
     }
-    if(!leads.length)throw new Error('No matching CRM leads returned.');
-    leads.sort((a,b)=>crmText(a.company).localeCompare(crmText(b.company)));
-    box.replaceChildren(...leads.map(lead=>makeCRMLinkCard(lead,byCRM.get(lead.id)||[])));
-    status.textContent=`${leads.length.toLocaleString()} leads ready`;
-    const today=new Date().toDateString();
-    q('#statCalls').textContent=leads.filter(l=>l.lastcalled&&new Date(l.lastcalled).toDateString()===today).length;
-    q('#statCallbacks').textContent=leads.filter(l=>!!l.callbackdate||!!l.callbackat).length;
-    q('#statInterested').textContent=leads.filter(l=>crmTags(l).some(t=>/^interested$|^hot lead$/i.test(t))).length;
+
+    const ids = [...byCRM.keys()]
+      .slice(0, TARGET_LEADS);
+
+    if (!ids.length) {
+      throw new Error(
+        'No approved preview leads returned.'
+      );
+    }
+
+    const leads = [];
+
+    for (
+      let i = 0;
+      i < ids.length;
+      i += 80
+    ) {
+      const { data, error } = await client
+        .from('crm')
+        .select(
+          'id,company,name,phone,notes,tags,sources,stage,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier'
+        )
+        .in(
+          'id',
+          ids.slice(i, i + 80)
+        );
+
+      if (error) {
+        throw new Error(
+          'CRM: ' + error.message
+        );
+      }
+
+      leads.push(...(data || []));
+    }
+
+    if (!leads.length) {
+      throw new Error(
+        'No matching CRM leads returned.'
+      );
+    }
+
+    leads.sort((a, b) =>
+      crmText(a.company)
+        .localeCompare(
+          crmText(b.company)
+        )
+    );
+
+    if (forcedRandom?.crm_id) {
+      const index = leads.findIndex(
+        lead =>
+          lead.id === forcedRandom.crm_id
+      );
+
+      if (index > 0) {
+        const [randomLead] =
+          leads.splice(index, 1);
+
+        leads.unshift(randomLead);
+      }
+
+      window.steadyHandsForcedCRMId =
+        forcedRandom.crm_id;
+    }
+
+    box.replaceChildren(
+      ...leads.map(lead =>
+        makeCRMLinkCard(
+          lead,
+          byCRM.get(lead.id) || []
+        )
+      )
+    );
+
+    status.textContent =
+      `${leads.length.toLocaleString()} leads ready`;
+
+    const today =
+      new Date().toDateString();
+
+    q('#statCalls').textContent =
+      leads.filter(lead =>
+        lead.lastcalled &&
+        new Date(lead.lastcalled)
+          .toDateString() === today
+      ).length;
+
+    q('#statCallbacks').textContent =
+      leads.filter(lead =>
+        !!lead.callbackdate ||
+        !!lead.callbackat
+      ).length;
+
+    q('#statInterested').textContent =
+      leads.filter(lead =>
+        crmTags(lead).some(tag =>
+          /^interested$|^hot lead$/i
+            .test(tag)
+        )
+      ).length;
+
     setupCopyButtons();
     setupOutreach();
     refreshIcons();
-  }catch(error){
-    status.textContent='Unable to load leads. Please try again.';
+  } catch (error) {
+    status.textContent =
+      'Unable to load leads. Please try again.';
+
     box.replaceChildren();
+
     console.error(error);
   }
 }
