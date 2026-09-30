@@ -76,13 +76,14 @@ function setupOutreach() {
   const leadCards = qa('.lead-card');
   if (!leadCards.length) return;
 
-  // Keep the original CRM order forever. The selected lead is displayed at
-  // the top, while the compressed queue underneath keeps its normal order.
+  // One simple queue: the current filter decides which leads are included,
+  // the existing CRM/card order decides their sequence, and currentIndex
+  // decides where the visible queue starts.
   const originalOrder = [...leadCards];
   const leadContainer = leadCards[0].parentElement;
-  let selectedCard = leadCards.find(c => c.classList.contains('selected-lead')) || leadCards[0];
-  let nextIndex = Math.min(1, originalOrder.length - 1);
   let activeFilter = 'All Leads';
+  let currentIndex = 0;
+  let currentQueue = [];
 
   const matchesFilter = card => {
     if (activeFilter === 'Due for Follow Up') return card.dataset.followup === 'true';
@@ -90,58 +91,49 @@ function setupOutreach() {
     return true;
   };
 
-  const filteredOriginalOrder = () => originalOrder.filter(matchesFilter);
+  const getFilteredQueue = () => originalOrder.filter(matchesFilter);
 
-  const renderLeadOrder = (shouldScroll = false) => {
-    // Selected lead always goes first.
-    selectedCard.classList.add('selected-lead');
+  const renderQueue = (shouldScroll = false) => {
+    currentQueue = getFilteredQueue();
+
     originalOrder.forEach(card => {
-      if (card !== selectedCard) card.classList.remove('selected-lead');
+      card.classList.remove('selected-lead');
+      card.style.display = 'none';
     });
 
-    // Hide cards that don't match the active filter.
-    originalOrder.forEach(card => {
-      card.style.display = matchesFilter(card) ? '' : 'none';
-    });
+    if (!currentQueue.length) return;
 
-    // If the selected lead doesn't match the filter, choose the first matching lead.
-    const filtered = filteredOriginalOrder();
-    if (filtered.length && !matchesFilter(selectedCard)) {
-      selectedCard.classList.remove('selected-lead');
-      selectedCard = filtered[0];
-      selectedCard.classList.add('selected-lead');
-      nextIndex = Math.max(0, originalOrder.indexOf(selectedCard) + 1);
-    }
+    currentIndex = ((currentIndex % currentQueue.length) + currentQueue.length) % currentQueue.length;
 
-    // Put the selected lead at the top. Everything else remains in the same
-    // original order underneath it. The selected lead is not duplicated below.
-    if (matchesFilter(selectedCard)) leadContainer.appendChild(selectedCard);
-    originalOrder.forEach(card => {
-      if (card !== selectedCard && matchesFilter(card)) leadContainer.appendChild(card);
+    // Start at the selected lead and continue in order. When the end is
+    // reached, wrap back to the beginning of the same filtered queue.
+    const orderedFromCurrent = [
+      ...currentQueue.slice(currentIndex),
+      ...currentQueue.slice(0, currentIndex)
+    ];
+
+    orderedFromCurrent.forEach((card, index) => {
+      card.style.display = '';
+      card.classList.toggle('selected-lead', index === 0);
+      leadContainer.appendChild(card);
     });
 
     refreshIcons();
-    if (shouldScroll) selectedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (shouldScroll) orderedFromCurrent[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const selectOnlyTop = (card, shouldScroll = true) => {
-    if (!card || !matchesFilter(card)) return;
-    selectedCard = card;
-    renderLeadOrder(shouldScroll);
+  const selectCard = (card, shouldScroll = true) => {
+    const queue = getFilteredQueue();
+    const index = queue.indexOf(card);
+    if (index === -1) return;
+    currentIndex = index;
+    renderQueue(shouldScroll);
   };
 
   const applyFilter = label => {
     activeFilter = label;
-    const filtered = filteredOriginalOrder();
-    if (!filtered.length) {
-      originalOrder.forEach(card => card.style.display = 'none');
-      return;
-    }
-    if (!filtered.includes(selectedCard)) {
-      selectedCard = filtered[0];
-      nextIndex = Math.max(0, originalOrder.indexOf(selectedCard) + 1);
-    }
-    renderLeadOrder(false);
+    currentIndex = 0;
+    renderQueue(false);
   };
 
   qa('.pill').forEach(btn => {
@@ -154,12 +146,12 @@ function setupOutreach() {
     });
   });
 
-  // Tapping any compressed business only replaces the expanded card at the top.
-  // It does not rearrange the order of the compressed list.
+  // Selecting any compressed lead makes it the new starting point, then all
+  // following leads stay in their normal filtered order underneath it.
   originalOrder.forEach(card => {
     card.addEventListener('click', e => {
       if (e.target.closest('button, .star, a')) return;
-      if (card !== selectedCard) selectOnlyTop(card);
+      if (!card.classList.contains('selected-lead')) selectCard(card);
     });
   });
 
@@ -168,38 +160,31 @@ function setupOutreach() {
 
     if (label.includes('random')) btn.addEventListener('click', e => {
       e.stopPropagation();
-      const pool = filteredOriginalOrder().filter(card => card !== selectedCard);
-      if (!pool.length) return;
-      // Random only changes the expanded top card. It intentionally does NOT
-      // change nextIndex, so pressing Next continues the normal CRM sequence.
-      selectOnlyTop(pool[Math.floor(Math.random() * pool.length)]);
+      const queue = getFilteredQueue();
+      if (!queue.length) return;
+      if (queue.length === 1) {
+        currentIndex = 0;
+      } else {
+        let nextRandom = currentIndex;
+        while (nextRandom === currentIndex) {
+          nextRandom = Math.floor(Math.random() * queue.length);
+        }
+        currentIndex = nextRandom;
+      }
+      renderQueue(true);
     });
 
     if (label.includes('next')) btn.addEventListener('click', e => {
       e.stopPropagation();
-      const filtered = filteredOriginalOrder();
-      if (!filtered.length) return;
-
-      // Find the next lead from the original CRM sequence, not from whichever
-      // random lead is currently expanded.
-      let tries = 0;
-      let candidate = null;
-      while (tries < originalOrder.length) {
-        const idx = nextIndex % originalOrder.length;
-        nextIndex = (idx + 1) % originalOrder.length;
-        const card = originalOrder[idx];
-        if (matchesFilter(card)) {
-          candidate = card;
-          break;
-        }
-        tries++;
-      }
-      if (candidate) selectOnlyTop(candidate);
+      const queue = getFilteredQueue();
+      if (!queue.length) return;
+      currentIndex = (currentIndex + 1) % queue.length;
+      renderQueue(true);
     });
 
     if (label.includes('follow')) btn.addEventListener('click', e => {
       e.stopPropagation();
-      const card = btn.closest('.lead-card') || selectedCard;
+      const card = btn.closest('.lead-card') || getFilteredQueue()[currentIndex];
       const name = q('.lead-title h2', card)?.textContent || 'this lead';
       modal('Schedule Follow Up', `
         <p class="modal-help">Set a reminder for <strong>${name}</strong>.</p>
@@ -212,7 +197,10 @@ function setupOutreach() {
             card.dataset.followup = 'true';
             localStorage.setItem('demo-followup', JSON.stringify({ name, d, t }));
             close(); showToast('Follow up saved');
-            if (activeFilter === 'Due for Follow Up') applyFilter(activeFilter);
+            if (activeFilter === 'Due for Follow Up') {
+              currentIndex = 0;
+              renderQueue(false);
+            }
           }}
         ]);
     });
@@ -243,18 +231,23 @@ function setupOutreach() {
     star.setAttribute('tabindex', '0');
     const toggle = e => {
       e?.stopPropagation?.();
-      star.classList.toggle('favorite');
       const card = star.closest('.lead-card');
+      const wasCurrent = card?.classList.contains('selected-lead');
+      star.classList.toggle('favorite');
       if (card) card.dataset.priority = star.classList.contains('favorite') ? 'true' : 'false';
       showToast(star.classList.contains('favorite') ? 'Added to priority' : 'Removed from priority');
-      if (activeFilter === 'High Priority') applyFilter(activeFilter);
+      if (activeFilter === 'High Priority') {
+        const queue = getFilteredQueue();
+        if (wasCurrent && !queue.includes(card)) currentIndex = 0;
+        else if (card && queue.includes(card)) currentIndex = Math.max(0, queue.indexOf(card));
+        renderQueue(false);
+      }
     };
     star.addEventListener('click', toggle);
     star.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggle(e); });
   });
 
-  applyFilter('All Leads');
-  renderLeadOrder(false);
+  renderQueue(false);
 }
 
 function setupSkills() {
