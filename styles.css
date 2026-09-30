@@ -872,8 +872,8 @@ button:disabled {cursor:not-allowed}
 
 .skeleton-lead {
   box-sizing: border-box;
-  min-height: 505px;
-  height: 505px;
+  min-height: 0;
+  height: auto;
   padding: 16px;
   border: 1px solid #e6ebf2;
   border-radius: 20px;
@@ -883,8 +883,8 @@ button:disabled {cursor:not-allowed}
 }
 
 .skeleton-compact {
-  min-height: 108px;
-  height: 108px;
+  min-height: 0;
+  height: auto;
   padding: 14px 15px;
 }
 
@@ -983,7 +983,8 @@ button:disabled {cursor:not-allowed}
 .sk-bottom .sk-shape { height:35px; flex:1; }
 
 .skeleton-sort {
-  height:78px;
+  min-height:0;
+  height:auto;
   display:flex;
   gap:10px;
   align-items:center;
