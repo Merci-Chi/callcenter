@@ -22,7 +22,7 @@
       <div class="call-avatar"><i data-lucide="user-round"></i></div>
       <div class="call-number" id="callNumber">(000) 000-0000</div>
       <div class="call-company" id="callCompany">Business</div>
-      <div class="call-status"><i data-lucide="audio-lines"></i><strong>In Call</strong><span>·</span><span id="callTimer">00:00</span></div>
+      <div class="call-status" data-state="calling"><i id="callStatusIcon" data-lucide="phone-call"></i><strong id="callStatusText">Calling…</strong><span id="callTimerWrap" hidden>· <span id="callTimer">00:00</span></span></div>
     </section>
 
     <section class="call-action-grid">
@@ -46,7 +46,7 @@
       <button class="call-control small" id="holdBtn"><i data-lucide="pause"></i><span>Hold</span></button>
     </section>
 
-    <section class="call-transcript-section">
+    <section class="call-transcript-section transcript-waiting" id="transcriptSection">
       <h2>Transcript</h2>
       <div class="call-transcript-card">
         <div class="transcript-entry">
@@ -70,27 +70,82 @@
   const company = params.get('company') || 'Business';
   const contact = params.get('contact') || 'Prospect';
   const number = params.get('number') || '(000) 000-0000';
-  document.getElementById('callCompanyHeader').textContent = company;
-  document.getElementById('callCompany').textContent = company;
-  document.getElementById('callNumber').textContent = number;
-  document.getElementById('prospectLabel').textContent = contact || 'Prospect';
-  document.getElementById('callBack').addEventListener('click', () => history.length > 1 ? history.back() : location.href='index.html');
 
-  let seconds = 0;
+  const header = document.getElementById('callCompanyHeader');
+  const companyEl = document.getElementById('callCompany');
+  const numberEl = document.getElementById('callNumber');
+  const prospectEl = document.getElementById('prospectLabel');
+  const statusText = document.getElementById('callStatusText');
+  const timerWrap = document.getElementById('callTimerWrap');
   const timer = document.getElementById('callTimer');
-  const tick = setInterval(() => {
-    seconds++;
-    const m = String(Math.floor(seconds/60)).padStart(2,'0');
-    const s = String(seconds%60).padStart(2,'0');
-    timer.textContent = `${m}:${s}`;
-  },1000);
+  const statusIcon = document.getElementById('callStatusIcon');
+  const transcript = document.getElementById('transcriptSection');
+
+  header.textContent = company;
+  companyEl.textContent = company;
+  numberEl.textContent = number;
+  prospectEl.textContent = contact || 'Prospect';
+
+  document.getElementById('callBack').addEventListener('click', () => {
+    history.length > 1 ? history.back() : location.href='index.html';
+  });
+
+  let callState = 'calling';
+  let connectedSeconds = 0;
+  let timerTick = null;
+  let stateTimers = [];
+  let questionnaireOpen = false;
+
+  function setState(state){
+    callState = state;
+    const map = {
+      calling: 'Calling…',
+      ringing: 'Ringing…',
+      connected: 'Connected',
+      ended: 'Call Ended'
+    };
+    statusText.textContent = map[state] || state;
+    document.querySelector('.call-status').dataset.state = state;
+
+    if(state === 'connected'){
+      timerWrap.hidden = false;
+      transcript.classList.remove('transcript-waiting');
+      if(!timerTick){
+        timerTick = setInterval(() => {
+          connectedSeconds++;
+          const m = String(Math.floor(connectedSeconds/60)).padStart(2,'0');
+          const s = String(connectedSeconds%60).padStart(2,'0');
+          timer.textContent = `${m}:${s}`;
+        },1000);
+      }
+    } else {
+      timerWrap.hidden = true;
+      if(state === 'calling' || state === 'ringing') transcript.classList.add('transcript-waiting');
+    }
+  }
+
+  // Demo call-state sequence. When real calling is connected, these state
+  // changes can be driven by the provider's actual call events instead.
+  setState('calling');
+  stateTimers.push(setTimeout(() => setState('ringing'), 900));
+  stateTimers.push(setTimeout(() => setState('connected'), 3000));
+
+  function stopCall(){
+    stateTimers.forEach(clearTimeout);
+    stateTimers = [];
+    if(timerTick) clearInterval(timerTick);
+    timerTick = null;
+    setState('ended');
+  }
 
   document.getElementById('hangupBtn').addEventListener('click', () => {
-    clearInterval(tick);
-    location.href='index.html';
+    if(questionnaireOpen) return;
+    stopCall();
+    openPostCallFlow();
   });
 
   document.getElementById('holdBtn').addEventListener('click', function(){
+    if(callState !== 'connected') return;
     this.classList.toggle('active');
     const span = this.querySelector('span');
     span.textContent = this.classList.contains('active') ? 'Resume' : 'Hold';
@@ -103,6 +158,163 @@
     const label = btn.dataset.callAction;
     alert(label + ' panel can open here.');
   }));
+
+  function openPostCallFlow(){
+    questionnaireOpen = true;
+    const overlay = document.createElement('div');
+    overlay.className = 'post-call-overlay';
+    overlay.innerHTML = `
+      <div class="post-call-sheet" role="dialog" aria-modal="true" aria-label="Complete call">
+        <div class="post-call-progress"><span></span></div>
+        <div class="post-call-stage"></div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const stage = overlay.querySelector('.post-call-stage');
+    const progress = overlay.querySelector('.post-call-progress span');
+    const data = { outcome:'', reason:'', tags:[], notes:'' };
+    let screenIndex = 0;
+    let screens = [];
+
+    const outcomeOptions = [
+      ['Interested','sparkles'],
+      ['Follow Up','calendar-clock'],
+      ['Needs More Info','circle-help'],
+      ['Not Interested','circle-x'],
+      ['No Answer','phone-missed'],
+      ['Voicemail','voicemail'],
+      ['Busy','phone-call'],
+      ['Wrong Number','ban']
+    ];
+    const reasonOptions = ['Too expensive','Already has someone','Not a priority','Doesn’t want a website','Bad timing','Not a fit','Other'];
+    const tagOptions = ['Interested','Follow Up','Send Preview','Requested Text','Requested Email','Price Concern','Decision Maker','No Website','Busy','Do Not Call'];
+
+    function rebuildScreens(){
+      screens = ['outcome'];
+      if(data.outcome === 'Not Interested') screens.push('reason');
+      screens.push('tags','notes');
+    }
+
+    function updateProgress(){
+      const pct = ((screenIndex + 1) / screens.length) * 100;
+      progress.style.width = `${pct}%`;
+    }
+
+    function slideTo(renderFn, direction='forward'){
+      stage.classList.remove('slide-in-right','slide-in-left');
+      stage.classList.add(direction === 'back' ? 'slide-out-right' : 'slide-out-left');
+      setTimeout(() => {
+        renderFn();
+        stage.classList.remove('slide-out-left','slide-out-right');
+        stage.classList.add(direction === 'back' ? 'slide-in-left' : 'slide-in-right');
+        setTimeout(() => stage.classList.remove('slide-in-right','slide-in-left'), 220);
+      }, 170);
+    }
+
+    function navRow({back=true,nextLabel='Continue',nextDisabled=false,onNext}){
+      return `<div class="post-call-nav">
+        ${back ? '<button class="pc-back" type="button"><i data-lucide="chevron-left"></i> Back</button>' : '<span></span>'}
+        <button class="pc-next" type="button" ${nextDisabled?'disabled':''}>${nextLabel}<i data-lucide="chevron-right"></i></button>
+      </div>`;
+    }
+
+    function render(){
+      rebuildScreens();
+      if(screenIndex >= screens.length) screenIndex = screens.length - 1;
+      updateProgress();
+      const screen = screens[screenIndex];
+
+      if(screen === 'outcome'){
+        stage.innerHTML = `
+          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Choose the result that best matches this call.</p></div>
+          <div class="pc-option-grid">
+            ${outcomeOptions.map(([label,icon]) => `<button class="pc-option ${data.outcome===label?'selected':''}" data-value="${label}"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
+          </div>
+          ${navRow({back:false,nextDisabled:!data.outcome})}`;
+        stage.querySelectorAll('.pc-option').forEach(btn => btn.addEventListener('click', () => {
+          data.outcome = btn.dataset.value;
+          if(data.outcome !== 'Not Interested') data.reason = '';
+          stage.querySelectorAll('.pc-option').forEach(x => x.classList.toggle('selected', x===btn));
+          stage.querySelector('.pc-next').disabled = false;
+        }));
+      }
+
+      if(screen === 'reason'){
+        stage.innerHTML = `
+          <div class="pc-heading"><span class="pc-kicker">Not interested</span><h2>Why weren’t they interested?</h2><p>This helps keep future outreach useful.</p></div>
+          <div class="pc-list-options">
+            ${reasonOptions.map(label => `<button class="pc-list-option ${data.reason===label?'selected':''}" data-value="${label}"><span>${label}</span><i data-lucide="check"></i></button>`).join('')}
+          </div>
+          ${navRow({nextDisabled:!data.reason})}`;
+        stage.querySelectorAll('.pc-list-option').forEach(btn => btn.addEventListener('click', () => {
+          data.reason = btn.dataset.value;
+          stage.querySelectorAll('.pc-list-option').forEach(x => x.classList.toggle('selected', x===btn));
+          stage.querySelector('.pc-next').disabled = false;
+        }));
+      }
+
+      if(screen === 'tags'){
+        stage.innerHTML = `
+          <div class="pc-heading"><span class="pc-kicker">Organize the call</span><h2>Add tags</h2><p>Select any that apply. You can choose more than one.</p></div>
+          <div class="pc-tag-options">
+            ${tagOptions.map(label => `<button class="pc-tag ${data.tags.includes(label)?'selected':''}" data-value="${label}">${label}</button>`).join('')}
+          </div>
+          ${navRow({nextLabel:'Continue'})}`;
+        stage.querySelectorAll('.pc-tag').forEach(btn => btn.addEventListener('click', () => {
+          const value = btn.dataset.value;
+          if(data.tags.includes(value)) data.tags = data.tags.filter(x => x!==value);
+          else data.tags.push(value);
+          btn.classList.toggle('selected');
+        }));
+      }
+
+      if(screen === 'notes'){
+        stage.innerHTML = `
+          <div class="pc-heading"><span class="pc-kicker">Last step</span><h2>Anything else?</h2><p>Notes are optional. Add anything you’ll want to remember later.</p></div>
+          <textarea class="pc-notes" placeholder="Add notes (optional)…">${data.notes}</textarea>
+          ${navRow({nextLabel:'Save Call'})}`;
+        stage.querySelector('.pc-notes').addEventListener('input', e => data.notes = e.target.value);
+      }
+
+      const back = stage.querySelector('.pc-back');
+      if(back) back.addEventListener('click', () => {
+        screenIndex = Math.max(0, screenIndex - 1);
+        slideTo(render, 'back');
+      });
+
+      const next = stage.querySelector('.pc-next');
+      if(next) next.addEventListener('click', () => {
+        if(next.disabled) return;
+        if(screen === 'notes') return showConfirmation();
+        rebuildScreens();
+        screenIndex++;
+        slideTo(render, 'forward');
+      });
+      lucide.createIcons();
+    }
+
+    function showConfirmation(){
+      progress.style.width = '100%';
+      stage.className = 'post-call-stage confirmation-stage';
+      stage.innerHTML = `
+        <div class="pc-confirm">
+          <div class="pc-check"><i data-lucide="check"></i></div>
+          <h2>Call saved</h2>
+          <p>Your call result${data.tags.length ? ', tags' : ''}${data.notes.trim() ? ', notes' : ''} and transcript were saved.</p>
+          <div class="pc-confirm-summary">
+            <strong>${data.outcome}</strong>
+            ${data.reason ? `<span>${data.reason}</span>` : ''}
+            ${connectedSeconds ? `<span>${Math.floor(connectedSeconds/60)}m ${connectedSeconds%60}s call</span>` : '<span>No connected call time</span>'}
+          </div>
+          <button class="pc-done" type="button">Done</button>
+        </div>`;
+      stage.querySelector('.pc-done').addEventListener('click', () => location.href='index.html');
+      lucide.createIcons();
+    }
+
+    rebuildScreens();
+    render();
+  }
 
   lucide.createIcons();
 })();

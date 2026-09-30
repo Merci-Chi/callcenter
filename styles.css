@@ -387,3 +387,77 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .transcript-listening i:first-child { color:var(--blue); }
 .transcript-listening i { width:20px; height:20px; }
 @media (min-width:700px) { .call-app { border-radius:28px; overflow:hidden; } }
+
+/* Call state + post-call flow */
+.call-status[data-state="calling"] strong,
+.call-status[data-state="ringing"] strong { color: var(--blue); }
+.call-status[data-state="calling"] i,
+.call-status[data-state="ringing"] i { color: var(--blue); }
+.call-status[data-state="ended"] strong,
+.call-status[data-state="ended"] i { color: var(--muted); }
+.transcript-waiting .call-transcript-card { opacity:.48; }
+.transcript-waiting .transcript-listening span { font-size:0; }
+.transcript-waiting .transcript-listening span::after { content:'Transcript starts when connected'; font-size:12px; }
+
+.post-call-overlay {
+  position:fixed; inset:0; z-index:9999; background:rgba(6,18,31,.58);
+  display:flex; align-items:flex-end; justify-content:center;
+  backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+}
+.post-call-sheet {
+  width:min(430px,100%); min-height:72vh; max-height:92vh; overflow:auto;
+  background:var(--page); border-radius:26px 26px 0 0;
+  box-shadow:0 -20px 50px rgba(7,25,43,.24);
+  padding:14px 18px calc(22px + env(safe-area-inset-bottom));
+  animation:pcSheetUp .28s ease both;
+}
+@keyframes pcSheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.post-call-progress { height:6px; background:#dfe7ef; border-radius:999px; overflow:hidden; margin:4px 0 24px; }
+.post-call-progress span { display:block; height:100%; width:0; border-radius:inherit; background:linear-gradient(90deg,#1688ff,#55a9ff); transition:width .28s ease; }
+.post-call-stage { transition:opacity .17s ease, transform .17s ease; }
+.post-call-stage.slide-out-left { opacity:0; transform:translateX(-22px); }
+.post-call-stage.slide-out-right { opacity:0; transform:translateX(22px); }
+.post-call-stage.slide-in-right { animation:pcInRight .22s ease; }
+.post-call-stage.slide-in-left { animation:pcInLeft .22s ease; }
+@keyframes pcInRight { from{opacity:0;transform:translateX(22px)} to{opacity:1;transform:none} }
+@keyframes pcInLeft { from{opacity:0;transform:translateX(-22px)} to{opacity:1;transform:none} }
+.pc-heading { margin-bottom:18px; }
+.pc-kicker { display:block; color:var(--blue); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; margin-bottom:7px; }
+.pc-heading h2 { margin:0; font-size:27px; letter-spacing:-.6px; color:var(--text); }
+.pc-heading p { margin:7px 0 0; color:var(--muted); font-size:13px; line-height:1.45; }
+.pc-option-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.pc-option { min-height:88px; border:1px solid #dfe7ef; background:#fff; border-radius:16px; color:var(--text); display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:8px; padding:14px; font-weight:850; text-align:left; box-shadow:0 6px 18px rgba(15,33,54,.06); }
+.pc-option i { width:22px; height:22px; color:#55708a; }
+.pc-option.selected { border-color:var(--blue); background:var(--blue-soft); box-shadow:0 0 0 2px rgba(22,136,255,.12); }
+.pc-option.selected i { color:var(--blue); }
+.pc-list-options { display:grid; gap:8px; }
+.pc-list-option { width:100%; min-height:52px; display:flex; align-items:center; justify-content:space-between; border:1px solid #dfe7ef; background:#fff; color:var(--text); border-radius:14px; padding:0 14px; font-weight:800; }
+.pc-list-option i { width:19px; height:19px; opacity:0; color:var(--blue); }
+.pc-list-option.selected { border-color:var(--blue); background:var(--blue-soft); }
+.pc-list-option.selected i { opacity:1; }
+.pc-tag-options { display:flex; flex-wrap:wrap; gap:9px; align-content:flex-start; }
+.pc-tag { border:1px solid #dbe5ef; background:#fff; color:#41566d; border-radius:999px; padding:10px 13px; font-weight:800; font-size:12px; }
+.pc-tag.selected { background:#163f72; border-color:#163f72; color:#fff; }
+.pc-notes { width:100%; min-height:180px; resize:vertical; border:1px solid #dbe5ef; background:#fff; color:var(--text); border-radius:16px; padding:14px; outline:none; font:inherit; line-height:1.5; box-shadow:0 6px 18px rgba(15,33,54,.05); }
+.pc-notes:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(22,136,255,.10); }
+.post-call-nav { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:24px; }
+.pc-back,.pc-next,.pc-done { border:0; border-radius:13px; min-height:48px; font-weight:900; display:inline-flex; align-items:center; justify-content:center; gap:5px; }
+.pc-back { background:transparent; color:#5d7086; padding:0 8px; }
+.pc-next { margin-left:auto; background:var(--blue); color:#fff; padding:0 18px; min-width:128px; box-shadow:0 7px 18px rgba(22,136,255,.22); }
+.pc-next:disabled { background:#b9c7d5; box-shadow:none; cursor:not-allowed; }
+.pc-back i,.pc-next i { width:18px; height:18px; }
+.confirmation-stage { min-height:58vh; display:grid; place-items:center; }
+.pc-confirm { width:100%; text-align:center; padding:34px 4px 10px; }
+.pc-check { width:86px; height:86px; border-radius:50%; margin:0 auto 18px; display:grid; place-items:center; background:var(--green-soft); color:var(--green); box-shadow:0 9px 28px rgba(36,200,117,.14); }
+.pc-check i { width:44px; height:44px; stroke-width:3; }
+.pc-confirm h2 { margin:0; font-size:29px; letter-spacing:-.6px; }
+.pc-confirm > p { color:var(--muted); font-size:13px; line-height:1.5; max-width:290px; margin:9px auto 18px; }
+.pc-confirm-summary { background:#fff; border:1px solid #e2e8ef; border-radius:16px; padding:14px; margin:0 auto 20px; max-width:310px; display:grid; gap:4px; }
+.pc-confirm-summary strong { color:var(--text); font-size:15px; }
+.pc-confirm-summary span { color:var(--muted); font-size:12px; }
+.pc-done { width:100%; background:var(--navy); color:#fff; }
+
+@media (min-width:700px) {
+  .post-call-sheet { border-radius:26px; margin-bottom:28px; min-height:auto; max-height:88vh; }
+  .post-call-overlay { align-items:center; }
+}
