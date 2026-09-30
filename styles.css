@@ -322,14 +322,16 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
   word-break: normal;
 }
 .lead-card:not(.selected-lead) .contact-line {
-  margin-top: 10px;
+  margin-top: auto;
   padding-left: 54px;
+  padding-bottom: 2px;
   font-size: 12px;
+  flex:0 0 auto;
 }
 .lead-card:not(.selected-lead) .contact-line > i { width: 14px; height: 14px; }
 .lead-card:not(.selected-lead) .copy-btn { display: none; }
 .lead-card:not(.selected-lead) .lead-details { display: none; }
-.lead-card:not(.selected-lead) .lead-head { min-height:72px; }
+.lead-card:not(.selected-lead) .lead-head { min-height:112px; align-items:flex-start; }
 .lead-card:not(.selected-lead) .lead-title { min-width:0; padding-right:4px; }
 .lead-card:not(.selected-lead) .lead-title .name,
 .lead-card:not(.selected-lead) .lead-title .role { line-height:1.25; overflow-wrap:anywhere; }
@@ -642,7 +644,8 @@ button:disabled {cursor:not-allowed}
   overscroll-behavior:contain; scrollbar-width:thin;
 }
 .crm-leads > .lead-card:not(.selected-lead) {
-  height: 160px; min-height:160px; max-height:160px; overflow:hidden;
+  height: 190px; min-height:190px; max-height:190px; overflow:hidden;
+  display:flex; flex-direction:column;
 }
 .crm-leads > .lead-sort-control { flex-shrink:0; }
 /* Skeleton covers cards in place, so existing content never visibly jumps. */
@@ -650,7 +653,7 @@ button:disabled {cursor:not-allowed}
 .lead-skeleton-overlay {position:absolute;inset:0 0 auto;z-index:9;pointer-events:all; background:var(--page); min-height:100%;overflow:hidden;}
 .skeleton-lead {box-sizing:border-box;height:505px; padding:16px; border:1px solid #e6ebf2;
   border-radius:18px;background:#fff;margin-bottom:14px;overflow:hidden;}
-.skeleton-compact {height:160px;padding:13px 15px;}
+.skeleton-compact {height:190px;padding:14px 15px 16px;}
 .sk-row {display:flex;align-items:center;gap:12px;}
 .sk-grow {flex:1;min-width:0;}
 .sk-shape {display:block;background:linear-gradient(100deg,#e9eef5 10%,#f6f9fc 35%,#e9eef5 60%);
@@ -675,3 +678,13 @@ button:disabled {cursor:not-allowed}
 .lead-skeleton-initial{width:100%;}
 @keyframes sk-shimmer {from{background-position:220% 0}to{background-position:-220% 0}}
 @media(prefers-reduced-motion:reduce){.sk-shape{animation:none}button,a{transition:none!important}}
+
+
+/* Compact lead fit safeguard: keep all metadata and phone inside every card. */
+.crm-leads > .lead-card:not(.selected-lead) .lead-head { flex:1 1 auto; width:100%; }
+.crm-leads > .lead-card:not(.selected-lead) .lead-title h2 { margin-top:0; margin-bottom:4px; }
+.crm-leads > .lead-card:not(.selected-lead) .lead-title .name { margin-bottom:2px; }
+.crm-leads > .lead-card:not(.selected-lead) .contact-line { width:100%; }
+/* Extra clearance so the fixed bottom navigation never covers the final lead. */
+.app { padding-bottom: calc(122px + env(safe-area-inset-bottom)); }
+@media (min-width:700px) { .app { padding-bottom:146px; } }
