@@ -637,54 +637,374 @@ button:disabled {cursor:not-allowed}
 @media (hover:hover) {
   button:not(:disabled):hover, a.preview-link:hover { filter:brightness(.965); }
 }
-/* Each slot is a stable height: expanded/compact switching never shifts the list. */
-.crm-leads {position:relative; overflow-anchor:none;}
-.crm-leads > .lead-card.selected-lead {
-  height: 505px; min-height:505px; max-height:505px; overflow-y:auto;
-  overscroll-behavior:contain; scrollbar-width:thin;
+/* =========================================================
+   FINAL OUTREACH LEAD CARD LAYOUT
+   Compact by default, expands naturally for long text.
+   Inspired by the approved mockup:
+   icon + lead info + star on top, divider, phone row below.
+   ========================================================= */
+
+/* Give the fixed bottom nav comfortable clearance. */
+.app {
+  padding-bottom: calc(122px + env(safe-area-inset-bottom));
 }
+
+@media (min-width:700px) {
+  .app { padding-bottom:146px; }
+}
+
+/* Lead list should not browser-anchor/jump while cards update. */
+.crm-leads {
+  position: relative;
+  overflow-anchor: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ---------- Shared card ---------- */
+.crm-leads > .lead-card {
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  border: 1px solid rgba(20,43,69,.055);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(15,33,54,.075);
+}
+
+/* ---------- Compact / unselected cards ---------- */
 .crm-leads > .lead-card:not(.selected-lead) {
-  height: 190px; min-height:190px; max-height:190px; overflow:hidden;
-  display:flex; flex-direction:column;
+  min-height: 0 !important;
+  padding: 15px 16px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
 }
-.crm-leads > .lead-sort-control { flex-shrink:0; }
-/* Skeleton covers cards in place, so existing content never visibly jumps. */
-.crm-leads.leads-switching > :not(.lead-skeleton-overlay) {visibility:hidden!important;}
-.lead-skeleton-overlay {position:absolute;inset:0 0 auto;z-index:9;pointer-events:all; background:var(--page); min-height:100%;overflow:hidden;}
-.skeleton-lead {box-sizing:border-box;height:505px; padding:16px; border:1px solid #e6ebf2;
-  border-radius:18px;background:#fff;margin-bottom:14px;overflow:hidden;}
-.skeleton-compact {height:190px;padding:14px 15px 16px;}
-.sk-row {display:flex;align-items:center;gap:12px;}
-.sk-grow {flex:1;min-width:0;}
-.sk-shape {display:block;background:linear-gradient(100deg,#e9eef5 10%,#f6f9fc 35%,#e9eef5 60%);
-  background-size:220% 100%;animation:sk-shimmer 1.2s linear infinite;border-radius:8px;}
-.sk-icon {width:45px;height:45px;border-radius:13px;flex-shrink:0;}
-.sk-title{height:16px;width:68%;margin:0 0 9px;}
-.sk-subtitle{height:11px;width:42%;}
-.sk-star{height:20px;width:20px;border-radius:50%;}
-.sk-phone {height:13px;width:55%;margin:19px 0 16px;}
-.sk-chips{display:flex;gap:8px;margin:10px 0 18px;}
-.sk-chips .sk-shape{width:26%;height:23px;border-radius:40px;}
-.sk-line{height:12px;width:85%;margin:12px 0;}
-.sk-line.short{width:57%;}
-.sk-preview{width:65%;height:32px;margin:22px 0 15px;border-radius:9px;}
-.sk-note{height:64px;width:100%;margin:14px 0;}
-.sk-call{height:45px;width:100%;margin-top:17px;border-radius:12px;}
-.sk-bottom{margin-top:10px;}
-.sk-bottom .sk-shape{height:35px;flex:1;}
-.skeleton-compact .sk-phone{width:55%;margin:14px 0 0;}
-.skeleton-sort{height:78px;display:flex;gap:10px;align-items:center;padding:10px;margin-bottom:10px;}
-.skeleton-sort .sk-shape{height:34px;width:47%;border-radius:12px;}
-.lead-skeleton-initial{width:100%;}
-@keyframes sk-shimmer {from{background-position:220% 0}to{background-position:-220% 0}}
-@media(prefers-reduced-motion:reduce){.sk-shape{animation:none}button,a{transition:none!important}}
 
+/* Top portion: icon | text | star */
+.lead-card:not(.selected-lead) .lead-head {
+  display: grid;
+  grid-template-columns: 48px minmax(0,1fr) 24px;
+  gap: 12px;
+  align-items: start;
+  min-height: 0 !important;
+  height: auto !important;
+  width: 100%;
+}
 
-/* Compact lead fit safeguard: keep all metadata and phone inside every card. */
-.crm-leads > .lead-card:not(.selected-lead) .lead-head { flex:1 1 auto; width:100%; }
-.crm-leads > .lead-card:not(.selected-lead) .lead-title h2 { margin-top:0; margin-bottom:4px; }
-.crm-leads > .lead-card:not(.selected-lead) .lead-title .name { margin-bottom:2px; }
-.crm-leads > .lead-card:not(.selected-lead) .contact-line { width:100%; }
-/* Extra clearance so the fixed bottom navigation never covers the final lead. */
-.app { padding-bottom: calc(122px + env(safe-area-inset-bottom)); }
-@media (min-width:700px) { .app { padding-bottom:146px; } }
+.lead-card:not(.selected-lead) .company-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #e7f2ff;
+  color: #1688ff;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.lead-card:not(.selected-lead) .company-icon i {
+  width: 24px;
+  height: 24px;
+}
+
+.lead-card:not(.selected-lead) .lead-title {
+  min-width: 0;
+  padding-right: 2px;
+  overflow: visible;
+}
+
+/* Business name: unlimited wrapping, never clipped. */
+.lead-card:not(.selected-lead) .lead-title h2 {
+  display: block !important;
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.22;
+  font-weight: 900;
+  letter-spacing: -.15px;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  max-height: none !important;
+  -webkit-line-clamp: unset !important;
+}
+
+/* Contact status */
+.lead-card:not(.selected-lead) .lead-title .name {
+  margin: 0;
+  color: #30425a;
+  font-size: 13px;
+  line-height: 1.28;
+  font-weight: 850;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+/* Preview count / role line */
+.lead-card:not(.selected-lead) .lead-title .role {
+  margin-top: 2px;
+  color: #718096;
+  font-size: 11.5px;
+  line-height: 1.3;
+  font-weight: 650;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+/* Star occupies its own clean column. */
+.lead-card:not(.selected-lead) .star-button {
+  width: 24px;
+  height: 28px;
+  margin: -1px 0 0 !important;
+  padding: 2px !important;
+  display: grid;
+  place-items: start center;
+  align-self: start;
+}
+
+.lead-card:not(.selected-lead) .star-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Phone row becomes its own section, like the mockup. */
+.lead-card:not(.selected-lead) .contact-line {
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  margin: 12px 0 0 !important;
+  padding: 12px 2px 1px !important;
+  border-top: 1px solid #e8edf3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #3f5570;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 850;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+.lead-card:not(.selected-lead) .contact-line > i,
+.lead-card:not(.selected-lead) .contact-line > svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+.lead-card:not(.selected-lead) .copy-btn {
+  display: none;
+}
+
+.lead-card:not(.selected-lead) .lead-details {
+  display: none;
+}
+
+/* ---------- Selected / expanded card ---------- */
+.crm-leads > .lead-card.selected-lead {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 16px;
+  margin-bottom: 14px;
+  cursor: default;
+  border-color: rgba(22,136,255,.14);
+  box-shadow: 0 12px 30px rgba(15,33,54,.11);
+}
+
+.lead-card.selected-lead .lead-head {
+  display: grid;
+  grid-template-columns: 50px minmax(0,1fr) 24px;
+  gap: 12px;
+  align-items: start;
+}
+
+.lead-card.selected-lead .lead-title h2 {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.lead-card.selected-lead .contact-line {
+  border-top: 1px solid #e8edf3;
+  margin-top: 13px;
+  padding-top: 12px;
+}
+
+/* ---------- Interaction polish ---------- */
+.lead-card:not(.selected-lead) {
+  cursor: pointer;
+  transition:
+    transform .14s ease,
+    box-shadow .18s ease,
+    border-color .18s ease;
+}
+
+.lead-card:not(.selected-lead):active {
+  transform: scale(.985);
+  box-shadow: 0 4px 14px rgba(15,33,54,.07);
+}
+
+/* ---------- Skeleton loading ---------- */
+/* Overlay keeps the existing list geometry untouched while switching. */
+.crm-leads.leads-switching > :not(.lead-skeleton-overlay) {
+  visibility: hidden !important;
+}
+
+.lead-skeleton-overlay {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 9;
+  pointer-events: all;
+  background: var(--page);
+  min-height: 100%;
+  overflow: hidden;
+}
+
+.skeleton-lead {
+  box-sizing: border-box;
+  min-height: 505px;
+  height: 505px;
+  padding: 16px;
+  border: 1px solid #e6ebf2;
+  border-radius: 20px;
+  background: #fff;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.skeleton-compact {
+  min-height: 108px;
+  height: 108px;
+  padding: 14px 15px;
+}
+
+.skeleton-compact .sk-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.skeleton-compact .sk-title {
+  height: 14px;
+  margin-bottom: 7px;
+}
+
+.skeleton-compact .sk-subtitle {
+  height: 10px;
+}
+
+.sk-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sk-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.sk-shape {
+  display: block;
+  background: linear-gradient(100deg,#e9eef5 10%,#f6f9fc 35%,#e9eef5 60%);
+  background-size: 220% 100%;
+  animation: sk-shimmer 1.2s linear infinite;
+  border-radius: 8px;
+}
+
+.sk-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.sk-title {
+  height: 16px;
+  width: 72%;
+  margin: 1px 0 8px;
+}
+
+.sk-subtitle {
+  height: 11px;
+  width: 44%;
+}
+
+.sk-star {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.skeleton-compact .sk-phone {
+  width: 48%;
+  height: 12px;
+  margin: 12px 0 0;
+}
+
+.sk-phone {
+  height: 13px;
+  width: 55%;
+  margin: 19px 0 16px;
+}
+
+.sk-chips {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 18px;
+}
+
+.sk-chips .sk-shape {
+  width: 26%;
+  height: 23px;
+  border-radius: 40px;
+}
+
+.sk-line {
+  height: 12px;
+  width: 85%;
+  margin: 12px 0;
+}
+
+.sk-line.short { width: 57%; }
+.sk-preview { width:65%; height:32px; margin:22px 0 15px; border-radius:9px; }
+.sk-note { height:64px; width:100%; margin:14px 0; }
+.sk-call { height:45px; width:100%; margin-top:17px; border-radius:12px; }
+.sk-bottom { margin-top:10px; }
+.sk-bottom .sk-shape { height:35px; flex:1; }
+
+.skeleton-sort {
+  height:78px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:10px;
+  margin-bottom:10px;
+}
+
+.skeleton-sort .sk-shape {
+  height:34px;
+  width:47%;
+  border-radius:12px;
+}
+
+.lead-skeleton-initial { width:100%; }
+
+@keyframes sk-shimmer {
+  from { background-position:220% 0; }
+  to { background-position:-220% 0; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .sk-shape { animation:none; }
+  button, a { transition:none !important; }
+}
