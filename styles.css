@@ -777,3 +777,82 @@ button:disabled {cursor:not-allowed}
   height: auto !important;
   min-height: 150px;
 }
+/* =========================================================
+   COMPACT-BY-DEFAULT LEAD CARDS
+   Small cards stay compact, but expand only when their text
+   actually needs more vertical room.
+   ========================================================= */
+
+.crm-leads > .lead-card:not(.selected-lead) {
+  height: auto !important;
+  min-height: 112px !important;
+  max-height: none !important;
+  overflow: visible !important;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 15px;
+}
+
+/* Keep the header compact unless wrapping requires more space. */
+.lead-card:not(.selected-lead) .lead-head {
+  min-height: 0 !important;
+  height: auto !important;
+  align-items: flex-start;
+}
+
+/* Let long names wrap naturally with no line clamp. */
+.lead-card:not(.selected-lead) .lead-title h2 {
+  margin: 1px 0 3px;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  max-height: none !important;
+  -webkit-line-clamp: unset !important;
+  display: block;
+}
+
+/* Secondary text also gets room when needed. */
+.lead-card:not(.selected-lead) .lead-title .name,
+.lead-card:not(.selected-lead) .lead-title .role {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  max-height: none;
+}
+
+/* Phone stays close to the header on normal cards, but moves down naturally
+   when the business name takes more lines. */
+.lead-card:not(.selected-lead) .contact-line {
+  margin-top: 8px !important;
+  padding-left: 54px;
+  padding-bottom: 0;
+  min-height: 20px;
+  height: auto;
+  flex: 0 0 auto;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+/* Selected/expanded lead remains fully auto-height as well. */
+.crm-leads > .lead-card.selected-lead {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Skeletons match the compact feel without forcing real cards to that height. */
+.skeleton-compact {
+  height: 112px !important;
+  min-height: 112px !important;
+}
+
+.skeleton-lead {
+  height: 505px !important;
+  min-height: 505px !important;
+}
