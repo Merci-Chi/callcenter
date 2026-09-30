@@ -2,15 +2,11 @@ const q = (s, root = document) => root.querySelector(s);
 
 const qa = (s, root = document) => [...root.querySelectorAll(s)];
 
-
-
 function refreshIcons() {
 
   if (window.lucide) lucide.createIcons();
 
 }
-
-
 
 function showToast(message) {
 
@@ -35,8 +31,6 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove('show'), 1800);
 
 }
-
-
 
 function modal(title, body, actions = [{ label: 'Done', primary: true }]) {
 
@@ -100,8 +94,6 @@ function modal(title, body, actions = [{ label: 'Done', primary: true }]) {
 
 }
 
-
-
 function cycleButton(btn, values) {
 
   const current = btn.dataset.value || values[0];
@@ -115,8 +107,6 @@ function cycleButton(btn, values) {
   showToast(`Showing ${next.toLowerCase()}`);
 
 }
-
-
 
 function setupCopyButtons() {
 
@@ -144,15 +134,11 @@ function setupCopyButtons() {
 
 }
 
-
-
 function setupOutreach() {
 
   const leadCards = qa('.lead-card');
 
   if (!leadCards.length) return;
-
-
 
   const originalOrder = [...leadCards];
 
@@ -160,14 +146,11 @@ function setupOutreach() {
 
   let activeFilter = 'All Previews';
 
-  // Selection is stored as the actual lead card, never as a position.
   let selectedCard = null;
   let leadSort = 'hours';
-  // Keep the entire lead list mounted while its content changes. Only one
-  // transition can run at a time, preventing rapid taps from racing.
   let queueTransition = false;
   let queuePending = null;
-  const SKELETON_DELAY = 390;
+  const SKELETON_DELAY = 220;
 
   const compactSkeleton = height => `
     <div class="skeleton-lead skeleton-compact" style="height:${height}px" aria-hidden="true">
@@ -225,13 +208,9 @@ function setupOutreach() {
   }
 
   function changeLeads(update) {
-    // While an animation is in progress, apply only the last requested change.
     if (queueTransition) { queuePending = update; return; }
     queueTransition = true;
 
-    // Capture the current geometry BEFORE hiding anything. The skeleton overlay
-    // then mirrors those exact card heights, so nothing jumps or turns into a
-    // giant placeholder while the next lead is being selected.
     const previousHeight = Math.ceil(leadContainer.getBoundingClientRect().height);
     const markup = skeletonMarkup();
 
@@ -272,16 +251,10 @@ function setupOutreach() {
       <button type="button" class="lead-sort-option" data-sort="website" aria-pressed="false">Website Opportunity</button>
     </div>`;
 
-
-
   const companyName = card => q('.lead-title h2', card)?.textContent?.trim() || 'Business';
   const starKey = card => card?.dataset.crmId || companyName(card);
 
   const STAR_KEY = 'steadyhands-outreach-starred-preview-ids';
-
-
-
-  // Star state is separate from High Priority. Restore the user's star choices.
 
   const initialStarred = originalOrder
 
@@ -302,8 +275,6 @@ function setupOutreach() {
     starredNames = new Set(initialStarred);
 
   }
-
-
 
   const syncStars = () => {
 
@@ -329,8 +300,6 @@ function setupOutreach() {
 
   syncStars();
 
-
-
   const matchesFilter = card => {
     const query = (q('#crmSearch')?.value || '').trim().toLowerCase();
     if (query && !card.textContent.toLowerCase().includes(query)) return false;
@@ -343,10 +312,6 @@ function setupOutreach() {
 
   };
 
-
-
-  // One source of truth: selected, then starred, then unstarred.
-  // Sorting changes the order WITHIN each star group, never across groups.
   const getFilteredQueue = () => originalOrder.filter(matchesFilter);
 
   const getTimeZone = card => {
@@ -356,7 +321,6 @@ function setupOutreach() {
     if (/\b(CST|CDT)\b/i.test(text)) return 'America/Chicago';
     if (/\b(MST|MDT)\b/i.test(text)) return 'America/Denver';
     if (/\b(PST|PDT)\b/i.test(text)) return 'America/Los_Angeles';
-    // Area codes are only a rough fallback; ported numbers can be misleading.
     if (/(?:702|725|415|206|503|619|916)/.test(phone)) return 'America/Los_Angeles';
     if (/(?:480|520|602|623|928)/.test(phone)) return 'America/Phoenix';
     if (/(?:212|305|404|617|718|813|917)/.test(phone)) return 'America/New_York';
@@ -373,8 +337,6 @@ function setupOutreach() {
     } catch { return 12; }
   };
 
-  // Estimate a convenient calling time using the contact's local clock.
-  // 9 AM–5 PM is a configurable working-hours assumption, not a guarantee.
   const hourScore = card => {
     const hour = localHour(card);
     const preferred = 10;
@@ -383,8 +345,6 @@ function setupOutreach() {
     return 50 - (hour - 17);
   };
 
-  // Website Opportunity uses only existing notes/tags as *signals*.
-  // It does not claim to know whether a business actually needs a site.
   const websiteScore = card => {
     const notes = q('.notes p', card)?.textContent || '';
     const tags = q('.tag-row', card)?.textContent || '';
@@ -413,7 +373,6 @@ function setupOutreach() {
     if (!pool.length) { selectedCard = null; return []; }
     if (!selectedCard || !pool.includes(selectedCard)) selectedCard = pool[0];
     const remaining = pool.filter(card => card !== selectedCard);
-    // Wrap around the ranking without losing starred-first priority below selection.
     return [selectedCard, ...remaining];
   };
 
@@ -441,8 +400,6 @@ function setupOutreach() {
       card.style.order = '';
     });
 
-    // Reset the children in physical DOM order, to avoid hidden cards
-    // appearing in the middle of the visible sorted sequence.
     orderToggle.remove();
     visibleCards.forEach((card, index) => {
       card.style.display = '';
@@ -459,7 +416,6 @@ function setupOutreach() {
 
     refreshIcons();
     if (shouldScroll && visibleCards[0]) {
-      // No automatic scrolling: the user's viewport remains in place.
     }
   };
 
@@ -469,8 +425,6 @@ function setupOutreach() {
     changeLeads(() => {
     selectedCard = card;
 
-    // Every selection rebuilds from original CRM order + saved star state.
-    // No current DOM position is ever reused.
     renderQueue(false);
     });
   };
@@ -495,8 +449,6 @@ function setupOutreach() {
 
   });
 
-
-
   originalOrder.forEach(card => {
 
     card.addEventListener('click', e => {
@@ -508,10 +460,6 @@ function setupOutreach() {
     });
 
   });
-
-
-
-  // Notes open in an editable popup on Outreach.
 
   originalOrder.forEach(card => {
 
@@ -573,8 +521,6 @@ function setupOutreach() {
 
   });
 
-
-
   function openCalendarSheet(card) {
 
     q('.calendar-sheet-overlay')?.remove();
@@ -605,8 +551,6 @@ function setupOutreach() {
 
     const minutes = [0,15,30,45];
 
-
-
     const overlay = document.createElement('div');
 
     overlay.className = 'calendar-sheet-overlay';
@@ -629,8 +573,6 @@ function setupOutreach() {
 
         <p class="calendar-lead">Choose when to follow up with <strong>${crmEscape(companyName(card))}</strong>.</p>
 
-
-
         <label class="calendar-label">Date</label>
 
         <div class="picker-row date-picker-row">
@@ -644,8 +586,6 @@ function setupOutreach() {
         </div>
 
         <div class="calendar-date-preview"></div>
-
-
 
         <label class="calendar-label">Time</label>
 
@@ -661,13 +601,9 @@ function setupOutreach() {
 
         </div>
 
-
-
         <label class="calendar-label">Note <span style="font-weight:700;color:#91a0af">(optional)</span></label>
 
         <textarea class="calendar-note" placeholder="Add a note for this follow-up..."></textarea>
-
-
 
         <div class="calendar-actions">
 
@@ -681,8 +617,6 @@ function setupOutreach() {
 
     document.body.appendChild(overlay);
 
-
-
     const sheet = q('.calendar-sheet', overlay);
 
     const pickerFields = qa('.picker-field', sheet);
@@ -694,8 +628,6 @@ function setupOutreach() {
     const clampDay = () => { state.day = Math.min(state.day, daysInMonth()); };
 
     const pad = n => String(n).padStart(2,'0');
-
-
 
     const valuesFor = type => {
 
@@ -713,8 +645,6 @@ function setupOutreach() {
 
     };
 
-
-
     const getStateValue = type => type === 'month' ? state.month : state[type];
 
     const setStateValue = (type, value) => {
@@ -728,8 +658,6 @@ function setupOutreach() {
       if (type === 'month' || type === 'year') clampDay();
 
     };
-
-
 
     const renderPickers = () => {
 
@@ -785,8 +713,6 @@ function setupOutreach() {
 
     };
 
-
-
     pickerFields.forEach(field => {
 
       q('.picker-button', field).addEventListener('click', e => {
@@ -805,8 +731,6 @@ function setupOutreach() {
 
     sheet.addEventListener('click', () => closeMenus());
 
-
-
     const close = () => overlay.remove();
 
     q('.calendar-close', sheet).addEventListener('click', close);
@@ -814,8 +738,6 @@ function setupOutreach() {
     q('.calendar-cancel', sheet).addEventListener('click', close);
 
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-
-
 
     q('.calendar-save', sheet).addEventListener('click', () => {
 
@@ -875,8 +797,6 @@ function setupOutreach() {
 
       setTimeout(() => URL.revokeObjectURL(url), 1500);
 
-
-
       card.dataset.followup = 'true';
 
       localStorage.setItem(`followup:${name}`, JSON.stringify({
@@ -897,19 +817,13 @@ function setupOutreach() {
 
     });
 
-
-
     renderPickers();
 
   }
 
-
-
   qa('.quick-btn').forEach(btn => {
 
     const label = btn.textContent.trim().toLowerCase();
-
-
 
     if (label.includes('random')) btn.addEventListener('click', e => {
     e.stopPropagation();
@@ -951,8 +865,6 @@ function setupOutreach() {
 
   });
 
-
-
   qa('[data-demo-call]').forEach(btn => {
 
     btn.addEventListener('click', e => {
@@ -977,8 +889,6 @@ function setupOutreach() {
 
   });
 
-
-
   qa('.star-button').forEach(star => {
 
     const toggle = e => {
@@ -999,10 +909,6 @@ function setupOutreach() {
 
       showToast(starredNames.has(name) ? 'Company starred' : 'Company unstarred');
 
-
-
-      // Keep the selected lead fixed. Re-render using the only allowed order:
-    // selected -> starred -> unstarred.
     if (currentCard) selectedCard = currentCard;
     changeLeads(() => renderQueue(false));
 
@@ -1012,9 +918,6 @@ function setupOutreach() {
 
   });
 
-
-
-  // Use the same skeleton for searches; wait until typing pauses.
   let searchTimer;
   q('#crmSearch')?.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -1022,7 +925,6 @@ function setupOutreach() {
   });
   renderQueue(false);
 }
-
 
 function setupSkills() {
 
@@ -1068,8 +970,6 @@ function setupSkills() {
 
     </section>`;
 
-
-
   const wireDynamic = () => {
 
     qa('[data-practice]').forEach(btn => btn.addEventListener('click', () => {
@@ -1085,8 +985,6 @@ function setupSkills() {
     qa('[data-transcript]').forEach(btn => btn.addEventListener('click', showTranscript));
 
   };
-
-
 
   tabs.forEach((tab, i) => {
 
@@ -1110,8 +1008,6 @@ function setupSkills() {
 
   });
 
-
-
   function showTranscript(e) {
 
     e?.preventDefault?.();
@@ -1122,8 +1018,6 @@ function setupSkills() {
 
   qa('.transcript-head a').forEach(a => a.addEventListener('click', showTranscript));
 
-
-
   function setupSkillSelectors() {
 
     qa('.mini-select').forEach(btn => btn.addEventListener('click', () => cycleButton(btn, ['Last 7 days', 'Last 30 days', 'All time'])));
@@ -1133,8 +1027,6 @@ function setupSkills() {
   setupSkillSelectors();
 
 }
-
-
 
 function setupEarnings() {
 
@@ -1166,8 +1058,6 @@ function setupEarnings() {
 
 }
 
-
-
 function setupAccount() {
 
   if (!q('.profile-card')) return;
@@ -1175,8 +1065,6 @@ function setupAccount() {
   q('.profile-card').style.cursor = 'pointer';
 
   q('.profile-card').addEventListener('click', () => showProfile());
-
-
 
   qa('.setting-row').forEach(row => {
 
@@ -1222,8 +1110,6 @@ function setupAccount() {
 
   });
 
-
-
   function showProfile() {
 
     modal('Profile Settings', '<label class="modal-label">Name<input class="modal-input" value="Alex Harper"></label><label class="modal-label">Email<input class="modal-input" type="email" value="alex@company.com"></label>', [{ label: 'Cancel' }, { label: 'Save', primary: true, onClick: close => { close(); showToast('Profile saved'); } }]);
@@ -1231,8 +1117,6 @@ function setupAccount() {
   }
 
 }
-
-
 
 function setupMore() {
 
@@ -1270,12 +1154,7 @@ function setupMore() {
 
 }
 
-
-
-
-// APPROVED PREVIEW CONNECTION — the inventory is the source of truth.
 const SH_SUPABASE_URL = 'https://glonbvrcudwuzjundrii.supabase.co';
-// Supabase publishable key, NOT a service-role or secret key.
 const SH_PUBLISHABLE_KEY = 'sb_publishable_VZbed_uuOXSE744UrAfHXw_z2xDdYtr';
 
 function crmText(v) { return String(v ?? ''); }
@@ -1329,63 +1208,66 @@ function makeCRMLinkCard(lead, siteURLs) {
 async function loadApprovedPreviewCRM() {
   const status=q('#crmStatus');
   const box=q('#crmLeadCards');
-  if (!status || !box) return;
+  if(!status||!box)return;
   q('#crmReload')?.addEventListener('click',()=>location.reload());
-  if (!window.supabase) { status.textContent='Unable to connect. Please try again.';return; }
-  const client=window.steadyHandsCRMClient || window.supabase.createClient(SH_SUPABASE_URL,SH_PUBLISHABLE_KEY);
+  if(!window.supabase){status.textContent='Unable to connect. Please try again.';return;}
+  const client=window.steadyHandsCRMClient||window.supabase.createClient(SH_SUPABASE_URL,SH_PUBLISHABLE_KEY);
   window.steadyHandsCRMClient=client;
-  let session;
-  try {
-    const authResult = await client.auth.getSession();
-    if (authResult.error) throw authResult.error;
-    session = authResult.data.session;
-  } catch (error) {
-    console.error('Authentication check failed:', error);
+  try{
+    const authResult=await client.auth.getSession();
+    if(authResult.error)throw authResult.error;
+    if(!authResult.data.session){window.location.replace('login.html');return;}
+  }catch(error){
+    console.error('Authentication check failed:',error);
     status.textContent='Unable to connect. Please try again.';
     return;
   }
-  if (!session) {
-    window.location.replace('login.html');
-    return;
-  }
   status.textContent='Loading leads...';
-  box.innerHTML = `<div class="lead-skeleton-initial" aria-hidden="true"><div class="skeleton-lead"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div></div><div class="sk-shape sk-phone"></div><div class="sk-shape sk-line"></div><div class="sk-shape sk-line short"></div><div class="sk-shape sk-preview"></div><div class="sk-shape sk-note"></div><div class="sk-shape sk-call"></div></div></div>${Array.from({length:10},()=>`<div class="skeleton-lead skeleton-compact"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div></div><div class="sk-shape sk-phone"></div></div>`).join('')}</div>`;
-  try {
-    // Fetch every approved URL, not just the first 1,000 Supabase rows.
-    const inventory=[];
-    for(let start=0;;start+=500){
-      const {data,error}=await client.from('preview_inventory').select('url,crm_id').not('crm_id','is',null).order('url',{ascending:true}).range(start,start+499);
-      if(error) throw new Error('Preview inventory: '+error.message);
-      inventory.push(...(data||[]));
-      if(!data || data.length<500)break;
-      if(start>100000)throw new Error('Preview list too large');
-    }
-    if (!inventory.length) throw new Error('No approved preview links were returned. Check RLS permissions for the signed-in user.');
+  box.innerHTML=Array.from({length:6},()=>`<div class="skeleton-lead skeleton-compact" aria-hidden="true"><div class="sk-row"><div class="sk-shape sk-icon"></div><div class="sk-grow"><div class="sk-shape sk-title"></div><div class="sk-shape sk-subtitle"></div></div><div class="sk-shape sk-star"></div></div><div class="sk-shape sk-phone"></div></div>`).join('');
+  try{
+    const TARGET_LEADS=80;
+    const INVENTORY_PAGE=100;
+    const MAX_INVENTORY_PAGES=2;
     const byCRM=new Map();
-    inventory.forEach(item=>{if(!item.crm_id||!crmUrl(item.url))return;const list=byCRM.get(item.crm_id)||[];list.push(item.url);byCRM.set(item.crm_id,list)});
-    const ids=[...byCRM.keys()];
+    for(let page=0;page<MAX_INVENTORY_PAGES&&byCRM.size<TARGET_LEADS;page++){
+      const from=page*INVENTORY_PAGE;
+      const {data,error}=await client.from('preview_inventory')
+        .select('url,crm_id')
+        .not('crm_id','is',null)
+        .order('url',{ascending:true})
+        .range(from,from+INVENTORY_PAGE-1);
+      if(error)throw new Error('Preview inventory: '+error.message);
+      for(const item of data||[]){
+        const url=crmUrl(item.url);
+        if(!item.crm_id||!url)continue;
+        const list=byCRM.get(item.crm_id)||[];
+        if(!list.includes(url))list.push(url);
+        byCRM.set(item.crm_id,list);
+      }
+      if(!data||data.length<INVENTORY_PAGE)break;
+    }
+    const ids=[...byCRM.keys()].slice(0,TARGET_LEADS);
+    if(!ids.length)throw new Error('No approved preview leads returned.');
     const leads=[];
     for(let i=0;i<ids.length;i+=80){
-      const {data,error}=await client.from('crm').select('id,company,name,phone,notes,tags,sources,stage,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier').in('id',ids.slice(i,i+80));
+      const {data,error}=await client.from('crm')
+        .select('id,company,name,phone,notes,tags,sources,stage,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier')
+        .in('id',ids.slice(i,i+80));
       if(error)throw new Error('CRM: '+error.message);
       leads.push(...(data||[]));
     }
-    // Do not present stale demos when permissions deny access.
-    if (!leads.length) throw new Error('The CRM returned no matching businesses. Verify read access and RLS.');
+    if(!leads.length)throw new Error('No matching CRM leads returned.');
     leads.sort((a,b)=>crmText(a.company).localeCompare(crmText(b.company)));
     box.replaceChildren(...leads.map(lead=>makeCRMLinkCard(lead,byCRM.get(lead.id)||[])));
-    const linked=leads.reduce((n,l)=>n+(byCRM.get(l.id)||[]).length,0);
-    status.textContent=`${leads.length.toLocaleString()} leads available`; 
+    status.textContent=`${leads.length.toLocaleString()} leads ready`;
     const today=new Date().toDateString();
-    q('#statCalls').textContent=leads.filter(l=>l.lastcalled && new Date(l.lastcalled).toDateString()===today).length;
+    q('#statCalls').textContent=leads.filter(l=>l.lastcalled&&new Date(l.lastcalled).toDateString()===today).length;
     q('#statCallbacks').textContent=leads.filter(l=>!!l.callbackdate||!!l.callbackat).length;
     q('#statInterested').textContent=leads.filter(l=>crmTags(l).some(t=>/^interested$|^hot lead$/i.test(t))).length;
     setupCopyButtons();
     setupOutreach();
-    const search=q('#crmSearch');
-    // Search listener is attached by setupOutreach and uses the skeleton.
     refreshIcons();
-  } catch(error) {
+  }catch(error){
     status.textContent='Unable to load leads. Please try again.';
     box.replaceChildren();
     console.error(error);
@@ -1409,5 +1291,3 @@ document.addEventListener('DOMContentLoaded', () => {
   setupMore();
 
 });
-
-
