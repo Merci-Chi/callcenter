@@ -151,6 +151,8 @@ function setupOutreach() {
 
   let leadSort = 'hours';
 
+  let navigationQueue = [];
+
   let queueTransition = false;
 
   let queuePending = null;
@@ -502,36 +504,17 @@ function setupOutreach() {
   };
 
   const getOrderedCards = () => {
+
     const pool = rankedPool();
-    if (!pool.length) {
-      selectedCard = null;
-      navigationQueue = [];
-      return [];
-    }
 
-    if (!selectedCard || !pool.includes(selectedCard)) {
-      selectedCard = pool[0];
-    }
+    if (!pool.length) { selectedCard = null; return []; }
 
-    const poolSet = new Set(pool);
-    navigationQueue = navigationQueue.filter(card => poolSet.has(card));
+    if (!selectedCard || !pool.includes(selectedCard)) selectedCard = pool[0];
 
-    for (const card of pool) {
-      if (!navigationQueue.includes(card)) navigationQueue.push(card);
-    }
+    const remaining = pool.filter(card => card !== selectedCard);
 
-    const selectedIndex = navigationQueue.indexOf(selectedCard);
+    return [selectedCard, ...remaining];
 
-    if (selectedIndex === -1) {
-      navigationQueue = [selectedCard, ...navigationQueue.filter(card => card !== selectedCard)];
-    } else if (selectedIndex > 0) {
-      navigationQueue = [
-        ...navigationQueue.slice(selectedIndex),
-        ...navigationQueue.slice(0, selectedIndex)
-      ];
-    }
-
-    return [...navigationQueue];
   };
 
   const updateSortButtons = () => {
@@ -551,8 +534,6 @@ function setupOutreach() {
   qa('.lead-sort-option', orderToggle).forEach(btn => btn.addEventListener('click', () => {
 
     leadSort = btn.dataset.sort;
-
-    navigationQueue = [];
 
     updateSortButtons();
 
@@ -625,8 +606,6 @@ function setupOutreach() {
   };
 
   const applyFilter = label => {
-
-    navigationQueue = [];
 
     changeLeads(() => { activeFilter = label; selectedCard = null; renderQueue(false); });
 
@@ -1110,18 +1089,19 @@ function setupOutreach() {
   });
 
   if (label.includes('next')) btn.addEventListener('click', e => {
+
     e.stopPropagation();
 
-    const queue = getOrderedCards();
-    if (queue.length < 2) return;
+    const queue = rankedPool();
 
-    const nextCard = queue[1];
-    navigationQueue = [...queue.slice(1), queue[0]];
+    if (!queue.length) return;
 
-    changeLeads(() => {
-      selectedCard = nextCard;
-      renderQueue(false);
-    });
+    const currentPos = selectedCard ? queue.indexOf(selectedCard) : -1;
+
+    const nextCard = queue[(currentPos + 1 + queue.length) % queue.length];
+
+    changeLeads(() => { selectedCard = nextCard; renderQueue(false); });
+
   });
 
   if (label.includes('calendar')) btn.addEventListener('click', e => {
@@ -1196,7 +1176,7 @@ function setupOutreach() {
 
     clearTimeout(searchTimer);
 
-    searchTimer = setTimeout(() => { navigationQueue = []; changeLeads(() => { selectedCard = null; renderQueue(false); }); }, 240);
+    searchTimer = setTimeout(() => changeLeads(() => { selectedCard = null; renderQueue(false); }), 240);
 
   });
 
