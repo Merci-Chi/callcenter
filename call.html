@@ -172,7 +172,7 @@
 
     const stage = overlay.querySelector('.post-call-stage');
     const progress = overlay.querySelector('.post-call-progress span');
-    const data = { outcome:'', reason:'', tags:[], notes:'' };
+    const data = { outcomes:[], reason:'', tags:[], notes:'' };
     let screenIndex = 0;
     let screens = [];
 
@@ -191,7 +191,7 @@
 
     function rebuildScreens(){
       screens = ['outcome'];
-      if(data.outcome === 'Not Interested') screens.push('reason');
+      if(data.outcomes.includes('Not Interested')) screens.push('reason');
       screens.push('tags','notes');
     }
 
@@ -226,16 +226,18 @@
 
       if(screen === 'outcome'){
         stage.innerHTML = `
-          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Choose the result that best matches this call.</p></div>
+          <div class="pc-heading"><span class="pc-kicker">Call complete</span><h2>How did it go?</h2><p>Select everything that applies to this call.</p></div>
           <div class="pc-option-grid">
-            ${outcomeOptions.map(([label,icon]) => `<button class="pc-option ${data.outcome===label?'selected':''}" data-value="${label}"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
+            ${outcomeOptions.map(([label,icon]) => `<button class="pc-option ${data.outcomes.includes(label)?'selected':''}" data-value="${label}"><i data-lucide="${icon}"></i><span>${label}</span></button>`).join('')}
           </div>
-          ${navRow({back:false,nextDisabled:!data.outcome})}`;
+          ${navRow({back:false,nextDisabled:!data.outcomes.length})}`;
         stage.querySelectorAll('.pc-option').forEach(btn => btn.addEventListener('click', () => {
-          data.outcome = btn.dataset.value;
-          if(data.outcome !== 'Not Interested') data.reason = '';
-          stage.querySelectorAll('.pc-option').forEach(x => x.classList.toggle('selected', x===btn));
-          stage.querySelector('.pc-next').disabled = false;
+          const value = btn.dataset.value;
+          if(data.outcomes.includes(value)) data.outcomes = data.outcomes.filter(x => x !== value);
+          else data.outcomes.push(value);
+          if(!data.outcomes.includes('Not Interested')) data.reason = '';
+          btn.classList.toggle('selected', data.outcomes.includes(value));
+          stage.querySelector('.pc-next').disabled = !data.outcomes.length;
         }));
       }
 
@@ -302,7 +304,7 @@
           <h2>Call saved</h2>
           <p>Your call result${data.tags.length ? ', tags' : ''}${data.notes.trim() ? ', notes' : ''} and transcript were saved.</p>
           <div class="pc-confirm-summary">
-            <strong>${data.outcome}</strong>
+            <strong>${data.outcomes.join(' • ')}</strong>
             ${data.reason ? `<span>${data.reason}</span>` : ''}
             ${connectedSeconds ? `<span>${Math.floor(connectedSeconds/60)}m ${connectedSeconds%60}s call</span>` : '<span>No connected call time</span>'}
           </div>

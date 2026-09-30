@@ -91,7 +91,15 @@ function setupOutreach() {
     return true;
   };
 
-  const getFilteredQueue = () => originalOrder.filter(matchesFilter);
+  // Starred/priority companies always rise to the top while preserving the
+  // existing order within the starred and unstarred groups.
+  const getFilteredQueue = () => {
+    const filtered = originalOrder.filter(matchesFilter);
+    return [
+      ...filtered.filter(card => card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite')),
+      ...filtered.filter(card => !(card.dataset.priority === 'true' || q('.star', card)?.classList.contains('favorite')))
+    ];
+  };
 
   const renderQueue = (shouldScroll = false) => {
     currentQueue = getFilteredQueue();
@@ -229,12 +237,16 @@ function setupOutreach() {
       star.classList.toggle('favorite');
       if (card) card.dataset.priority = star.classList.contains('favorite') ? 'true' : 'false';
       showToast(star.classList.contains('favorite') ? 'Added to priority' : 'Removed from priority');
-      if (activeFilter === 'High Priority') {
-        const queue = getFilteredQueue();
-        if (wasCurrent && !queue.includes(card)) currentIndex = 0;
-        else if (card && queue.includes(card)) currentIndex = Math.max(0, queue.indexOf(card));
-        renderQueue(false);
+      // Re-sort immediately so starred companies are always at the top.
+      const queue = getFilteredQueue();
+      if (activeFilter === 'High Priority' && wasCurrent && !queue.includes(card)) {
+        currentIndex = 0;
+      } else if (card && queue.includes(card)) {
+        currentIndex = Math.max(0, queue.indexOf(card));
+      } else {
+        currentIndex = 0;
       }
+      renderQueue(false);
     };
     star.addEventListener('click', toggle);
     star.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') toggle(e); });

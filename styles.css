@@ -448,8 +448,10 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .pc-back i,.pc-next i { width:18px; height:18px; }
 .confirmation-stage { min-height:58vh; display:grid; place-items:center; }
 .pc-confirm { width:100%; text-align:center; padding:34px 4px 10px; }
-.pc-check { width:86px; height:86px; border-radius:50%; margin:0 auto 18px; display:grid; place-items:center; background:var(--green-soft); color:var(--green); box-shadow:0 9px 28px rgba(36,200,117,.14); }
-.pc-check i { width:44px; height:44px; stroke-width:3; }
+.pc-check { width:86px; height:86px; border-radius:50%; margin:0 auto 18px; display:grid; place-items:center; background:#22b96f; color:#fff; box-shadow:0 12px 32px rgba(34,185,111,.28); animation:pcCheckPop .55s cubic-bezier(.2,.9,.2,1.25) both; }
+.pc-check i { width:44px; height:44px; stroke-width:3.5; animation:pcCheckDraw .45s .18s ease both; }
+@keyframes pcCheckPop { 0%{opacity:0;transform:scale(.55)} 65%{opacity:1;transform:scale(1.1)} 100%{opacity:1;transform:scale(1)} }
+@keyframes pcCheckDraw { 0%{opacity:0;transform:scale(.5) rotate(-10deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
 .pc-confirm h2 { margin:0; font-size:29px; letter-spacing:-.6px; }
 .pc-confirm > p { color:var(--muted); font-size:13px; line-height:1.5; max-width:290px; margin:9px auto 18px; }
 .pc-confirm-summary { background:#fff; border:1px solid #e2e8ef; border-radius:16px; padding:14px; margin:0 auto 20px; max-width:310px; display:grid; gap:4px; }
