@@ -1124,7 +1124,7 @@ function setupOutreach() {
 
   });
 
-  qa('[data-demo-call]').forEach(btn => {
+  qa('[data-select-lead]').forEach(btn => {
 
     btn.addEventListener('click', e => {
 
@@ -1140,9 +1140,13 @@ function setupOutreach() {
 
       const role = q('.lead-title .role', card)?.textContent?.trim() || '';
 
-      const params = new URLSearchParams({ company, contact, number, role, crm_id:card.dataset.crmId || '' });
+      const preview = card.dataset.previewUrl || q('.preview-link', card)?.href || '';
 
-      modal('Demo call screen', '<p>This opens a simulated call screen, not a real phone call. No number is dialed or transcript recorded. To call, use the phone number in the CRM.</p>', [{label:'Cancel'}, {label:'Open demo',primary:true,onClick:()=>{window.location.href=`call.html?${params.toString()}`;}}]);
+      const params = new URLSearchParams({
+        company, contact, number, role, preview, crm_id: card.dataset.crmId || ''
+      });
+
+      window.location.href = `call.html?${params.toString()}`;
 
     });
 
@@ -1433,6 +1437,7 @@ function makeCRMLinkCard(lead, siteURLs) {
   card.dataset.notInterested=String(isNotInterested);
 
   card.dataset.timezone=crmText(lead.timezone||'');
+  card.dataset.previewUrl=urls[0] || '';
 
   const dateText=lead.callbackdate ? `Callback: ${crmEscape(lead.callbackdate)}` : (lead.lastcalled ? 'Previously contacted' : 'Not yet contacted');
 
@@ -1458,7 +1463,7 @@ function makeCRMLinkCard(lead, siteURLs) {
 
       <div class="notes"><div class="notes-title"><i data-lucide="notebook-pen"></i> CRM Notes</div><p>${crmEscape(notes || 'No notes added yet.')}</p></div>
 
-      <button class="call-btn" type="button" data-demo-call ${phone ? '' : 'disabled'}><i data-lucide="phone"></i> ${phone ? 'Demo Call Screen' : 'No Phone Number'}</button>
+      <button class="call-btn" type="button" data-select-lead ${phone ? '' : 'disabled'}><i data-lucide="check-circle-2"></i> ${phone ? 'Select Lead' : 'No Phone Number'}</button>
 
       <div class="quick-actions"><button class="quick-btn" type="button"><i data-lucide="shuffle"></i>Random</button><button class="quick-btn" type="button"><i data-lucide="play"></i>Next</button><button class="quick-btn calendar-btn" type="button"><i data-lucide="calendar-plus"></i>Add to Calendar</button></div>
 
