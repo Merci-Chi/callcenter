@@ -1473,3 +1473,33 @@ button:disabled {cursor:not-allowed}
 }
 .tag-filter-clear{background:#f2f5f8;color:#40556c}
 .tag-filter-apply{background:#1688ff;color:#fff;border-color:#1688ff!important}
+
+
+/* Recipient local-time calling guidance */
+.call-time-status{
+  display:flex;align-items:center;gap:7px;margin:8px 0 0;padding:8px 10px;
+  border-radius:11px;font-size:11px;font-weight:850;
+}
+.call-time-status svg{width:14px;height:14px}
+.call-time-good{background:#eaf8f0;color:#24764a}
+.call-time-wait{background:#fff6df;color:#8a6417}
+.call-time-late{background:#fff0ed;color:#a24a3e}
+
+.call-time-confirm{text-align:center;padding:4px 2px 2px}
+.call-time-confirm-icon{
+  width:54px;height:54px;border-radius:17px;margin:0 auto 14px;
+  display:grid;place-items:center;background:#eef5ff;color:#1677e8
+}
+.call-time-confirm-icon svg{width:26px;height:26px}
+.call-time-confirm-question{margin:0 0 5px;color:#6d7d90;font-size:13px;font-weight:700}
+.call-time-confirm-time{display:block;color:#142b46;font-size:19px;line-height:1.35}
+.call-time-confirm-zone{margin:6px 0 14px;color:#7a8999;font-size:12px}
+.call-time-confirm-status{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:10px 12px;border-radius:12px;font-size:12px;font-weight:850
+}
+.call-time-confirm-status svg{width:16px;height:16px}
+.call-time-confirm-good{background:#eaf8f0;color:#24764a}
+.call-time-confirm-wait{background:#fff6df;color:#8a6417}
+.call-time-confirm-late{background:#fff0ed;color:#a24a3e}
+.call-time-confirm-hours{margin:12px 0 0;color:#8491a0;font-size:11px;line-height:1.45}
