@@ -395,9 +395,11 @@ function setupOutreach() {
 
     if (query && !card.textContent.toLowerCase().includes(query)) return false;
 
-    if (activeFilter === 'Due for Follow Up') return card.dataset.followup === 'true';
+    if (activeFilter === 'Call Backs') return card.dataset.followup === 'true';
 
-    if (activeFilter === 'High Priority') return card.dataset.priority === 'true';
+    if (activeFilter === 'Not Interested') return card.dataset.notInterested === 'true';
+
+    if (activeFilter === 'High Priority') return starredNames.has(starKey(card));
 
     return true;
 
@@ -493,7 +495,7 @@ function setupOutreach() {
 
     return [...pool].sort((a, b) => {
 
-      const starDiff = Number(starredNames.has(companyName(b))) - Number(starredNames.has(companyName(a)));
+      const starDiff = Number(starredNames.has(starKey(b))) - Number(starredNames.has(starKey(a)));
 
       if (starDiff) return starDiff;
 
@@ -1404,9 +1406,9 @@ function makeCRMLinkCard(lead, siteURLs) {
 
   const notes = crmText(lead.notes || '').trim();
 
-  const isFollowup = !!lead.lastcalled || !!lead.callbackdate || !!lead.callbackat || /follow.?up|callback/i.test(lead.stage || '');
+  const isFollowup = !!lead.callbackdate || !!lead.callbackat || /follow.?up|callback|call back/i.test([lead.outcome,lead.stage,...crmTags(lead)].join(' '));
 
-  const isPriority = /high|hot|urgent/i.test([lead.leadpotential,lead.tier,...crmTags(lead)].join(' '));
+  const isNotInterested = lead.stage === 'notinterested' || /not interested/i.test([lead.outcome,...crmTags(lead)].join(' '));
 
   const tags = crmTags(lead);
 
@@ -1422,7 +1424,7 @@ function makeCRMLinkCard(lead, siteURLs) {
 
   card.dataset.followup=String(isFollowup);
 
-  card.dataset.priority=String(isPriority);
+  card.dataset.notInterested=String(isNotInterested);
 
   card.dataset.timezone=crmText(lead.timezone||'');
 
@@ -1635,7 +1637,7 @@ async function loadApprovedPreviewCRM() {
       const { data, error } = await client
         .from('crm')
         .select(
-          'id,company,name,phone,notes,tags,sources,stage,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier'
+          'id,company,name,phone,notes,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier'
         )
         .in(
           'id',
