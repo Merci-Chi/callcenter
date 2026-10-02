@@ -609,6 +609,13 @@ function setupOutreach() {
 
     renderQueue(false);
 
+    if (card.dataset.crmId) {
+      window.callcenterSetResumeLocation?.(
+        `index.html?crm_id=${encodeURIComponent(card.dataset.crmId)}`,
+        companyName(card)
+      );
+    }
+
     });
 
   };
@@ -1108,7 +1115,16 @@ function setupOutreach() {
 
     const nextCard = queue[(currentPos + 1 + queue.length) % queue.length];
 
-    changeLeads(() => { selectedCard = nextCard; renderQueue(false); });
+    changeLeads(() => {
+      selectedCard = nextCard;
+      renderQueue(false);
+      if (nextCard?.dataset.crmId) {
+        window.callcenterSetResumeLocation?.(
+          `index.html?crm_id=${encodeURIComponent(nextCard.dataset.crmId)}`,
+          companyName(nextCard)
+        );
+      }
+    });
 
   });
 
@@ -1146,7 +1162,9 @@ function setupOutreach() {
         company, contact, number, role, preview, crm_id: card.dataset.crmId || ''
       });
 
-      window.location.href = `call.html?${params.toString()}`;
+      const callHref = `call.html?${params.toString()}`;
+      window.callcenterSetResumeLocation?.(callHref, company);
+      window.location.href = callHref;
 
     });
 
@@ -1350,7 +1368,7 @@ function setupAccount() {
 
       if (label === 'Log Out') return modal('Log Out', '<p class="modal-help">Are you sure you want to log out?</p>', [
 
-        { label: 'Cancel' }, { label: 'Log Out', danger: true, onClick: async close => { close(); try { const client = window.steadyHandsCRMClient || (window.supabase && window.supabase.createClient(SH_SUPABASE_URL, SH_PUBLISHABLE_KEY)); if (client) await client.auth.signOut(); window.location.replace('login.html'); } catch(error) {console.error('Sign out failed:',error); showToast('Unable to sign out. Try again.');} } }
+        { label: 'Cancel' }, { label: 'Log Out', danger: true, onClick: async close => { close(); try { const client = window.steadyHandsCRMClient || (window.supabase && window.supabase.createClient(SH_SUPABASE_URL, SH_PUBLISHABLE_KEY)); if (client) await client.auth.signOut(); window.callcenterClearResumeLocation?.(); sessionStorage.removeItem('callcenter-resume-checked'); window.location.replace('login.html'); } catch(error) {console.error('Sign out failed:',error); showToast('Unable to sign out. Try again.');} } }
 
       ]);
 
