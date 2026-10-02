@@ -13,6 +13,47 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+
+  if (event.data?.type === 'SHOW_SCHEDULED_NOTIFICATION') {
+    const data = event.data || {};
+    event.waitUntil(
+      self.registration.showNotification(
+        data.title || 'Scheduled call',
+        {
+          body: data.body || '',
+          icon: 'images/icon-192.png',
+          badge: 'images/icon-192.png',
+          tag: data.tag || 'scheduled-call',
+          renotify: true,
+          data: { url: data.url || 'index.html' }
+        }
+      )
+    );
+  }
+});
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const target = event.notification?.data?.url || 'index.html';
+
+  event.waitUntil((async () => {
+    const clientsList = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    });
+
+    for (const client of clientsList) {
+      try {
+        const url = new URL(client.url);
+        if (url.origin === self.location.origin) {
+          await client.navigate(target);
+          return client.focus();
+        }
+      } catch {}
+    }
+
+    return self.clients.openWindow(target);
+  })());
 });
 
 self.addEventListener('fetch', event => {
