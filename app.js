@@ -136,14 +136,20 @@ function setupCopyButtons() {
 
 function setupOutreach() {
 
-  const leadCards = qa('.lead-card');
+  const leadContainer = q('#crmLeadCards');
+  const selectedLeadTop = q('#selectedLeadTop');
+  if (!leadContainer) return;
 
-  if (!leadCards.length) return;
+  // Only treat cards inside the real results container as the searchable queue.
+  // Cards in selectedLeadTop must never become the parent for search results.
+  const leadCards = qa('.lead-card', leadContainer);
+
+  if (!leadCards.length) {
+    if ((q('#crmSearch')?.value || '').trim()) selectedLeadTop?.replaceChildren();
+    return;
+  }
 
   const originalOrder = [...leadCards];
-
-  const leadContainer = leadCards[0].parentElement;
-  const selectedLeadTop = q('#selectedLeadTop');
   const isSearchMode = () => {
     const query = (q('#crmSearch')?.value || '').trim();
     return !!query || (typeof crmSearchState !== 'undefined' && crmSearchState.tags?.size > 0);
@@ -1617,6 +1623,8 @@ async function crmRunGlobalSearch() {
   const siteMap = await crmFetchPreviewURLs(client, leads.map(lead => lead.id));
   if (requestId !== crmSearchState.requestId) return;
 
+  // Search results belong only in crmLeadCards, below the search controls.
+  q('#selectedLeadTop')?.replaceChildren();
   box.replaceChildren(...leads.map(lead => {
     const urls = siteMap.get(lead.id) || [crmUrl(lead.previewurl)].filter(Boolean);
     return makeCRMLinkCard(lead, urls);
