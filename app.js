@@ -1360,42 +1360,6 @@ function setupAccount() {
 
 }
 
-function setupMore() {
-
-  if (document.title !== 'More') return;
-
-  qa('.setting-row').forEach(row => {
-
-    const label = q('span', row)?.textContent?.trim();
-
-    row.addEventListener('click', e => {
-
-      e.preventDefault();
-
-      const configs = {
-
-        'Team Management': ['Team Management', '<p class="modal-help">Manage team members, roles, and access.</p><button class="practice-btn">+ Add Team Member</button>'],
-
-        'Inactive Users': ['Inactive Users', '<p class="modal-help">No inactive users in this demo.</p>'],
-
-        'Tags': ['Tags', '<p class="modal-help">Current tags</p><div class="modal-tags"><span>Warm</span><span>Follow Up</span><span>High Priority</span></div><button class="practice-btn">+ Add Tag</button>'],
-
-        'Alerts': ['Alerts', '<label class="modal-check"><input type="checkbox" checked> Missed follow-ups</label><label class="modal-check"><input type="checkbox" checked> New assignments</label>'],
-
-        'General Settings': ['General Settings', '<label class="modal-check"><input type="checkbox" checked> Haptic feedback</label><label class="modal-check"><input type="checkbox" checked> Confirm before calling</label>']
-
-      };
-
-      const cfg = configs[label];
-
-      if (cfg) modal(cfg[0], cfg[1], [{ label: 'Close' }, { label: 'Save', primary: true, onClick: close => { close(); showToast('Settings saved'); } }]);
-
-    });
-
-  });
-
-}
-
 const SH_SUPABASE_URL = 'https\://glonbvrcudwuzjundrii.supabase.co';
 
 const SH_PUBLISHABLE_KEY = 'sb_publishable_VZbed_uuOXSE744UrAfHXw_z2xDdYtr';
@@ -1567,10 +1531,13 @@ async function loadApprovedPreviewCRM() {
 
     sessionStorage.removeItem('steadyhands-global-random-lead');
 
-    if (
-      forcedRandom?.crm_id &&
-      crmUrl(forcedRandom.url)
-    ) {
+    const requestedCRMId = new URLSearchParams(location.search).get('crm_id');
+    if (requestedCRMId) {
+      forcedRandom = { crm_id: requestedCRMId, url: '' };
+      history.replaceState({}, '', 'index.html');
+    }
+
+    if (forcedRandom?.crm_id) {
       const { data, error } = await client
         .from('preview_inventory')
         .select('url,crm_id')
@@ -1752,7 +1719,5 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEarnings();
 
   setupAccount();
-
-  setupMore();
 
 });
