@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png" />
   <title>Outreach</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261001-live-search-every-key" />
+  <link rel="stylesheet" href="styles.css?v=20261002-outreach-filter-calendar" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="app-update.js" defer></script>
 </head>
@@ -31,10 +31,15 @@
     <div class="outreach-controls">
       <div class="crm-toolbar"><input type="search" id="crmSearch" aria-label="Search all leads" placeholder="Search name, company, phone, email, notes…" autocomplete="off" /><button id="crmReload" type="button" title="Refresh"><i data-lucide="refresh-cw"></i></button></div>
       <div class="filter-row">
-        <button class="pill active">All Previews</button>
-        <button class="pill">Call Backs</button>
-        <button class="pill">High Priority</button>
-        <button class="pill tag-filter-pill" id="crmTagFilter" type="button"><i data-lucide="tags"></i><span>Tags</span><span class="tag-filter-count" id="crmTagFilterCount" hidden></span></button>
+        <button class="pill active outreach-filter-pill" id="crmMainFilter" type="button">
+          <i data-lucide="list-filter"></i>
+          <span id="crmMainFilterLabel">Filter: All</span>
+        </button>
+        <button class="pill tag-filter-pill" id="crmTagFilter" type="button">
+          <i data-lucide="tags"></i>
+          <span>Filter Tags</span>
+          <span class="tag-filter-count" id="crmTagFilterCount" hidden></span>
+        </button>
       </div>
     </div>
 
@@ -120,6 +125,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-1930"></script>
-<script src="app.js?v=20261001-live-search-every-key"></script>
+<script src="app.js?v=20261002-outreach-filter-calendar"></script>
 </body>
 </html>
