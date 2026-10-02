@@ -134,6 +134,15 @@ function setupCopyButtons() {
 
 }
 
+function callcenterShuffle(items) {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 function setupOutreach() {
 
   const leadContainer = q('#crmLeadCards');
@@ -398,17 +407,7 @@ function setupOutreach() {
 
   const getFilteredQueue = () => originalOrder.filter(matchesFilter);
 
-  const rankedPool = () => {
-
-    const pool = getFilteredQueue();
-
-    return [...pool].sort((a, b) => {
-      const aStatus = callcenterCallStatus(a.dataset.phone || '', a.dataset.timezone || '');
-      const bStatus = callcenterCallStatus(b.dataset.phone || '', b.dataset.timezone || '');
-      return aStatus.score - bStatus.score;
-    });
-
-  };
+  const rankedPool = () => getFilteredQueue();
 
   const getOrderedCards = () => {
 
@@ -2089,12 +2088,10 @@ async function loadApprovedPreviewCRM(options = {}) {
       );
     }
 
-    leads.sort((a, b) =>
-      crmText(a.company)
-        .localeCompare(
-          crmText(b.company)
-        )
-    );
+    // Keep Outreach fast: randomize the already-loaded leads in memory
+    // instead of issuing extra database queries just to randomize their order.
+    const randomizedLeads = callcenterShuffle(leads);
+    leads.splice(0, leads.length, ...randomizedLeads);
 
     if (forcedRandom?.crm_id) {
       const index = leads.findIndex(
@@ -2102,10 +2099,10 @@ async function loadApprovedPreviewCRM(options = {}) {
           lead.id === forcedRandom.crm_id
       );
 
-      if (index > 0) {
-        const [randomLead] =
-          leads.splice(index, 1);
-
+      if (index >= 0) {
+        const [randomLead] = leads.splice(index, 1);
+        // The globally-selected Random lead stays first; every lead below it
+        // remains independently shuffled, including the 10 visible cards.
         leads.unshift(randomLead);
       }
 
