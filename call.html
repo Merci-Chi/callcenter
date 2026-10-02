@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#102945" />
   <title>Call</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20261001-leadworkspace" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -21,31 +21,23 @@
     <section class="call-identity">
       <div class="call-avatar"><i data-lucide="user-round"></i></div>
       <div class="call-number" id="callNumber">(000) 000-0000</div>
-      <div class="call-company" id="callCompany">Business</div><p style="color:#64748b;font-size:12px;text-align:center;margin:8px 20px">SIMULATION ONLY — no phone call is placed or recorded.</p>
-      <div class="call-status" data-state="calling"><i id="callStatusIcon" data-lucide="phone-call"></i><strong id="callStatusText">Calling…</strong><span id="callTimerWrap" hidden>· <span id="callTimer">00:00</span></span></div>
+      <div class="call-company" id="callCompany">Business</div>
+      <div class="call-status" data-state="idle"><i id="callStatusIcon" data-lucide="phone"></i><strong id="callStatusText">Ready</strong><span id="callTimerWrap" hidden>· <span id="callTimer">00:00</span></span></div>
     </section>
 
-    <section class="call-action-grid">
-      <button class="call-action-card" data-call-action="Alerts">
-        <span class="call-action-icon alert"><i data-lucide="bell"></i><b>2</b></span>
-        <span>Alerts</span>
-      </button>
-      <button class="call-action-card" data-call-action="Tags">
-        <span class="call-action-icon blue"><i data-lucide="tag"></i></span>
-        <span>Tags</span>
-      </button>
-      <button class="call-action-card" data-call-action="Notes">
-        <span class="call-action-icon green"><i data-lucide="notebook-pen"></i></span>
-        <span>Notes</span>
-      </button>
+    <section class="call-action-grid call-action-grid-six">
+      <button class="call-action-card" data-call-action="Alerts"><span class="call-action-icon"><i data-lucide="bell"></i></span><span>Alerts</span></button>
+      <button class="call-action-card" data-call-action="Tags"><span class="call-action-icon"><i data-lucide="tag"></i></span><span>Tags</span></button>
+      <button class="call-action-card" data-call-action="Notes"><span class="call-action-icon"><i data-lucide="notebook-pen"></i></span><span>Notes</span></button>
+      <button class="call-action-card" data-call-action="Send Site Preview"><span class="call-action-icon"><i data-lucide="send"></i></span><span>Send Site Preview</span></button>
+      <button class="call-action-card" data-call-action="Templates"><span class="call-action-icon"><i data-lucide="messages-square"></i></span><span>Templates</span></button>
+      <button class="call-action-card" data-call-action="Quick Info"><span class="call-action-icon"><i data-lucide="circle-dollar-sign"></i></span><span>Quick Info</span></button>
     </section>
-
     <section class="call-controls">
-      <button class="call-control small" data-call-action="More"><i data-lucide="ellipsis"></i><span>More</span></button>
-      <button class="call-control hangup" id="hangupBtn" aria-label="End call"><i data-lucide="phone-off"></i></button>
+      <button class="call-control small" id="muteBtn"><i data-lucide="mic"></i><span>Mute</span></button>
+      <button class="call-control start-call" id="hangupBtn" aria-label="Start call"><i data-lucide="phone"></i><span>Start Call</span></button>
       <button class="call-control small" id="holdBtn"><i data-lucide="pause"></i><span>Hold</span></button>
     </section>
-
     <section class="call-transcript-section transcript-waiting" id="transcriptSection">
       <h2>Transcript</h2>
       <div class="call-transcript-card">
@@ -65,14 +57,16 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
-<script src="user-data.js?v=20261001-1930"></script>
-<script src="app.js?v=20261001-1930"></script>
+<script src="user-data.js?v=20261001-leadworkspace"></script>
+<script src="app.js?v=20261001-leadworkspace"></script>
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
   const company = params.get('company') || 'Business';
   const contact = params.get('contact') || 'Prospect';
   const number = params.get('number') || '(000) 000-0000';
+  const previewUrl = params.get('preview') || '';
+  const crmId = params.get('crm_id') || '';
 
   const header = document.getElementById('callCompanyHeader');
   const companyEl = document.getElementById('callCompany');
@@ -93,7 +87,7 @@
     history.length > 1 ? history.back() : location.href='index.html';
   });
 
-  let callState = 'calling';
+  let callState = 'idle';
   let connectedSeconds = 0;
   let timerTick = null;
   let stateTimers = [];
@@ -102,6 +96,7 @@
   function setState(state){
     callState = state;
     const map = {
+      idle: 'Ready',
       calling: 'Calling…',
       ringing: 'Ringing…',
       connected: 'Connected',
@@ -127,11 +122,7 @@
     }
   }
 
-  // Demo call-state sequence. When real calling is connected, these state
-  // changes can be driven by the provider's actual call events instead.
-  setState('calling');
-  stateTimers.push(setTimeout(() => setState('ringing'), 900));
-  stateTimers.push(setTimeout(() => setState('connected'), 3000));
+  setState('idle');
 
   function stopCall(){
     stateTimers.forEach(clearTimeout);
@@ -141,11 +132,49 @@
     setState('ended');
   }
 
-  document.getElementById('hangupBtn').addEventListener('click', () => {
+  const mainCallButton = document.getElementById('hangupBtn');
+
+  function syncMainCallButton(){
+    const active = ['calling','ringing','connected'].includes(callState);
+    mainCallButton.classList.toggle('start-call', !active);
+    mainCallButton.classList.toggle('hangup', active);
+    mainCallButton.setAttribute('aria-label', active ? 'End call' : 'Start call');
+    mainCallButton.innerHTML = active
+      ? '<i data-lucide="phone-off"></i><span>End Call</span>'
+      : '<i data-lucide="phone"></i><span>Start Call</span>';
+    lucide.createIcons();
+  }
+
+  function startCall(){
+    stateTimers.forEach(clearTimeout);
+    stateTimers = [];
+    connectedSeconds = 0;
+    timer.textContent = '00:00';
+    setState('calling');
+    syncMainCallButton();
+    stateTimers.push(setTimeout(() => setState('ringing'), 900));
+    stateTimers.push(setTimeout(() => setState('connected'), 3000));
+  }
+
+  mainCallButton.addEventListener('click', () => {
     if(questionnaireOpen) return;
+    if(callState === 'idle' || callState === 'ended'){ startCall(); return; }
     stopCall();
+    syncMainCallButton();
     openPostCallFlow();
   });
+
+  document.getElementById('muteBtn').addEventListener('click', function(){
+    if(callState !== 'connected') return;
+    this.classList.toggle('active');
+    const span = this.querySelector('span');
+    span.textContent = this.classList.contains('active') ? 'Unmute' : 'Mute';
+    const icon = this.querySelector('i');
+    icon.setAttribute('data-lucide', this.classList.contains('active') ? 'mic-off' : 'mic');
+    lucide.createIcons();
+  });
+
+  syncMainCallButton();
 
   document.getElementById('holdBtn').addEventListener('click', function(){
     if(callState !== 'connected') return;
