@@ -1609,3 +1609,59 @@ input, textarea, select, [contenteditable="true"] {
 html, body {
   touch-action: manipulation;
 }
+
+
+/* Outreach main filter + separate tag filter */
+.outreach-filter-pill,
+.tag-filter-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.outreach-filter-pill svg,
+.tag-filter-pill svg{
+  width:14px;
+  height:14px;
+}
+.main-filter-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+}
+.main-filter-choice{
+  min-height:52px;
+  border:1px solid #d6e0ea;
+  background:#fff;
+  color:#41566e;
+  border-radius:13px;
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  font:inherit;
+  font-size:12px;
+  font-weight:850;
+  text-align:left;
+}
+.main-filter-choice svg{
+  width:18px;
+  height:18px;
+  flex:0 0 18px;
+}
+.main-filter-choice.selected{
+  background:#163f72;
+  border-color:#163f72;
+  color:#fff;
+}
+@media(max-width:430px){
+  .main-filter-grid{grid-template-columns:1fr 1fr}
+  .outreach-controls .filter-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    overflow:visible;
+  }
+  .outreach-controls .filter-row .pill{
+    min-width:0;
+    justify-content:center;
+  }
+}
