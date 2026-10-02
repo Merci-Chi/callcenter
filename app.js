@@ -1392,7 +1392,7 @@ function callcenterCallStatus(phone, storedTimezone, date = new Date()) {
 
   if (weekday && minutes >= CALLCENTER_CALL_WINDOW.start && minutes <= CALLCENTER_CALL_WINDOW.end) {
     state = 'good';
-    label = 'Good time to call now';
+    label = 'Good time to call now (Mon–Fri 9:00 AM–4:30 PM)';
     score = minutes - CALLCENTER_CALL_WINDOW.start;
   } else if (weekday && minutes < CALLCENTER_CALL_WINDOW.start) {
     state = 'wait';
@@ -1426,6 +1426,7 @@ function callcenterCompactLocalTimeText(phone, storedTimezone, date = new Date()
   const info = callcenterLeadZone(phone, storedTimezone);
   return new Intl.DateTimeFormat('en-US', {
     timeZone: info.zone,
+    weekday: 'long',
     hour: 'numeric',
     minute: '2-digit'
   }).format(date);
