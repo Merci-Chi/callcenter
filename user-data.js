@@ -290,89 +290,203 @@
 
   async function loadEarnings(session, profile) {
     if (document.title !== 'Earnings') return;
-    const c = client();
-    const main = document.querySelector('main.content');
-    if (!main) return;
 
-    const [{ data: commissions = [] }, { data: bonuses = [] }, { data: referred = [] }] = await Promise.all([
-      c.from('callcenter_commissions').select('*').eq('user_id', session.user.id).order('created_at', { ascending:false }),
-      c.from('callcenter_referral_bonuses').select('*').eq('referrer_user_id', session.user.id).order('created_at', { ascending:false }),
-      c.from('callcenter_profiles').select('user_id,display_name,email,last_call_at,created_at,disabled_at').eq('referred_by_user_id', session.user.id).order('created_at', { ascending:false })
+    const c = client();
+    const stateBox = document.getElementById('earningsState');
+
+    const [
+      { data: commissions = [], error: commissionsError },
+      { data: bonuses = [], error: bonusesError },
+      { data: referred = [], error: referredError }
+    ] = await Promise.all([
+      c.from('callcenter_commissions')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending:false }),
+      c.from('callcenter_referral_bonuses')
+        .select('*')
+        .eq('referrer_user_id', session.user.id)
+        .order('created_at', { ascending:false }),
+      c.from('callcenter_profiles')
+        .select('user_id,display_name,email,last_call_at,created_at,disabled_at')
+        .eq('referred_by_user_id', session.user.id)
+        .order('created_at', { ascending:false })
     ]);
 
-    const completed = commissions.filter(x => x.status === 'complete');
-    const pending = commissions.filter(x => x.status === 'pending');
-    const waiting = commissions.filter(x => x.status === 'waiting_client_payment');
-    const completedAmount = completed.reduce((s,x) => s + (Number(x.commission_amount_cents)||0), 0);
-    const pendingAmount = pending.reduce((s,x) => s + (Number(x.commission_amount_cents)||0), 0);
-    const referralComplete = bonuses.filter(x => x.status === 'complete').reduce((s,x) => s + Number(x.amount_cents||0),0);
-    const referralPending = bonuses.filter(x => x.status === 'pending').reduce((s,x) => s + Number(x.amount_cents||0),0);
-    const totalEarned = completedAmount + referralComplete;
+    const firstError = commissionsError || bonusesError || referredError;
+    if (firstError) {
+      console.error('Unable to load earnings data:', firstError);
+      if (stateBox) {
+        stateBox.style.display = '';
+        stateBox.innerHTML = '<strong>Unable to load earnings right now.</strong><div class="cc-muted" style="margin-top:6px">Please refresh and try again.</div>';
+      }
+      return;
+    }
 
-    const stageRows = [
-      ['Waiting on client payment','waiting',waiting],
-      ['Pending','pending',pending],
-      ['Complete','complete',completed]
-    ];
+    if (stateBox) stateBox.style.display = 'none';
 
-    main.innerHTML = `
-      <section class="earn-hero">
-        <div class="label">Total Completed Earnings</div>
-        <div class="earn-row"><div><span class="earn-total">${money(totalEarned)}</span></div></div>
-      </section>
+    const completed = commissions.filter(row => row.status === 'complete');
+    const pending = commissions.filter(row => row.status === 'pending');
+    const waiting = commissions.filter(row => row.status === 'waiting_client_payment');
 
-      <div class="cc-live-grid" style="margin-top:12px">
-        <div class="cc-live-stat"><strong>${waiting.length}</strong><span>Waiting on Client Payment</span></div>
-        <div class="cc-live-stat"><strong>${pending.length}</strong><span>Pending</span></div>
-        <div class="cc-live-stat"><strong>${completed.length}</strong><span>Complete</span></div>
-      </div>
+    const commissionComplete = completed.reduce((sum,row) => sum + (Number(row.commission_amount_cents) || 0), 0);
+    const commissionPending = pending.reduce((sum,row) => sum + (Number(row.commission_amount_cents) || 0), 0);
 
-      <div class="section-title">Commission Status</div>
-      ${stageRows.map(([label,cls,rows]) => `
-        <section class="cc-live-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-            <strong>${label}</strong><span class="cc-status ${cls}">${rows.length}</span>
-          </div>
-          ${rows.length ? rows.slice(0,8).map(row => `
-            <div class="cc-row">
-              <div class="cc-row-main"><strong>${esc(row.client_name || 'Client')}</strong><small>${new Date(row.created_at).toLocaleDateString()}</small></div>
-              <div class="cc-row-side"><strong>${money(row.commission_amount_cents)}</strong><span class="cc-status ${cls}">${label}</span></div>
-            </div>`).join('') : '<div class="cc-empty">Nothing here yet.</div>'}
-        </section>`).join('')}
+    const referralComplete = bonuses
+      .filter(row => row.status === 'complete')
+      .reduce((sum,row) => sum + (Number(row.amount_cents) || 0), 0);
 
-      <div class="section-title">Referrals</div>
-      <section class="cc-live-card">
-        <strong>Invite & Earn</strong>
-        <p class="cc-referral-rule">After referring someone, you get <strong>$50 from their first commission</strong>, and <strong>$10 per commission they receive after</strong>.</p>
-        <div class="cc-code"><span>${esc(profile.referral_code)}</span><button id="ccCopyReferral"><i data-lucide="copy"></i></button></div>
-      </section>
+    const referralPending = bonuses
+      .filter(row => row.status === 'pending')
+      .reduce((sum,row) => sum + (Number(row.amount_cents) || 0), 0);
 
-      <div class="cc-live-grid" style="margin-top:10px">
-        <div class="cc-live-stat"><strong>${referred.filter(x=>activityState(x).label==='Active').length}</strong><span>Active Referrals</span></div>
-        <div class="cc-live-stat"><strong>${money(referralPending)}</strong><span>Pending Referral Earnings</span></div>
-        <div class="cc-live-stat"><strong>${money(referralComplete)}</strong><span>Referral Earnings Complete</span></div>
-      </div>
+    const totalEarned = commissionComplete + referralComplete;
+    const totalPending = commissionPending + referralPending;
 
-      <div class="section-title">Referred Users</div>
-      <section class="cc-live-card">
-        ${referred.length ? referred.map(user => {
-          const state = activityState(user);
-          const earned = bonuses.filter(b => b.referred_user_id === user.user_id && b.status === 'complete').reduce((s,b)=>s+Number(b.amount_cents||0),0);
-          const pendingUser = bonuses.filter(b => b.referred_user_id === user.user_id && b.status === 'pending').reduce((s,b)=>s+Number(b.amount_cents||0),0);
-          return `<div class="cc-row">
-            <div class="cc-row-main"><strong>${esc(user.display_name || user.email || 'User')}</strong><small>Joined ${new Date(user.created_at).toLocaleDateString()}</small></div>
-            <div class="cc-row-side"><span class="cc-status ${state.cls}">${state.label}</span><small style="display:block;margin-top:5px;color:#77869a">${earned ? money(earned)+' earned' : pendingUser ? money(pendingUser)+' pending' : 'No referral earnings yet'}</small></div>
-          </div>`;
-        }).join('') : '<div class="cc-empty">No direct referrals yet.</div>'}
-      </section>
+    const allSalesValue = commissions.reduce(
+      (sum,row) => sum + (Number(row.sale_amount_cents) || 0),
+      0
+    );
 
-      <div class="cc-live-card"><span class="cc-muted">Commission dollar amounts stay blank until a commission amount is assigned. Client payment totals are never shown as if they were salesperson earnings.</span></div>
-    `;
+    const setText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value;
+    };
 
-    document.getElementById('ccCopyReferral')?.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(profile.referral_code); } catch {}
-      if (window.showToast) window.showToast('Referral code copied');
-    });
+    setText('earnTotal', money(totalEarned));
+    setText('commissionTotal', money(commissionComplete));
+    setText('pendingPayoutTotal', money(totalPending));
+    setText('closedDeals', commissions.length);
+    setText('pipelineValue', money(allSalesValue));
+    setText('referralCode', profile.referral_code || '—');
+    setText('activeReferralCount', referred.filter(user => activityState(user).label === 'Active').length);
+    setText('pendingReferralTotal', money(referralPending));
+    setText('referralEarnedTotal', money(referralComplete));
+
+    const chart = document.getElementById('weeklyEarningsChart');
+    if (chart) {
+      const labels = ['Mon','Tue','Wed','Thu','Fri'];
+      const now = new Date();
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      const monday = new Date(now);
+      monday.setHours(0,0,0,0);
+      monday.setDate(now.getDate() + diffToMonday);
+
+      const totals = labels.map((_, index) => {
+        const startDay = new Date(monday);
+        startDay.setDate(monday.getDate() + index);
+        const endDay = new Date(startDay);
+        endDay.setDate(startDay.getDate() + 1);
+
+        return completed
+          .filter(row => {
+            const when = new Date(row.completed_at || row.updated_at || row.created_at);
+            return when >= startDay && when < endDay;
+          })
+          .reduce((sum,row) => sum + (Number(row.commission_amount_cents) || 0), 0);
+      });
+
+      const max = Math.max(...totals, 1);
+      chart.innerHTML = totals.map((value,index) => {
+        const height = value ? Math.max(22, Math.round((value / max) * 88)) : 10;
+        return '<div class="bar-wrap"><div class="bar" style="height:' + height + 'px"><b>' + money(value) + '</b></div>' + labels[index] + '</div>';
+      }).join('');
+    }
+
+    const recent = document.getElementById('recentPayouts');
+    if (recent) {
+      const rows = [...commissions]
+        .sort((a,b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+        .slice(0,8);
+
+      recent.innerHTML = rows.length ? rows.map(row => {
+        const statusLabel = row.status === 'waiting_client_payment'
+          ? 'Waiting on client payment'
+          : row.status === 'pending'
+            ? 'Pending'
+            : 'Complete';
+
+        const badgeClass = row.status === 'complete'
+          ? 'paid'
+          : 'pending';
+
+        const iconClass = row.status === 'complete'
+          ? ''
+          : ' pending';
+
+        const icon = row.status === 'complete'
+          ? 'check'
+          : 'clock-3';
+
+        const amount = row.commission_amount_cents == null
+          ? '—'
+          : money(row.commission_amount_cents);
+
+        return '<div class="payout-row">' +
+          '<div class="payout-dot' + iconClass + '"><i data-lucide="' + icon + '"></i></div>' +
+          '<div class="payout-main"><strong>' + esc(row.client_name || 'Client') + '</strong><small>' + new Date(row.updated_at || row.created_at).toLocaleDateString() + '</small></div>' +
+          '<div class="payout-side"><strong>' + amount + '</strong><span class="badge ' + badgeClass + '">' + statusLabel + '</span></div>' +
+        '</div>';
+      }).join('') : '<div class="cc-empty">No sales or payouts yet.</div>';
+    }
+
+    const referredUsers = document.getElementById('referredUsers');
+    if (referredUsers) {
+      referredUsers.innerHTML = referred.length ? referred.map(user => {
+        const state = activityState(user);
+        const completeForUser = bonuses
+          .filter(b => b.referred_user_id === user.user_id && b.status === 'complete')
+          .reduce((sum,b) => sum + (Number(b.amount_cents) || 0), 0);
+
+        const pendingForUser = bonuses
+          .filter(b => b.referred_user_id === user.user_id && b.status === 'pending')
+          .reduce((sum,b) => sum + (Number(b.amount_cents) || 0), 0);
+
+        const display = user.display_name || user.email || 'User';
+        const initials = display
+          .split(/\\s+/)
+          .filter(Boolean)
+          .slice(0,2)
+          .map(part => part[0])
+          .join('')
+          .toUpperCase();
+
+        let moneyText = 'No referral earnings yet';
+        if (completeForUser) moneyText = money(completeForUser) + ' earned';
+        else if (pendingForUser) moneyText = money(pendingForUser) + ' pending';
+
+        return '<div class="user-row">' +
+          '<div class="user-avatar">' + esc(initials || 'U') + '</div>' +
+          '<div class="user-info"><strong>' + esc(display) + '</strong><small>Joined ' + new Date(user.created_at).toLocaleDateString() + '</small></div>' +
+          '<div class="user-side"><span class="badge ' + (state.label === 'Active' ? 'active' : state.label === 'Disabled' ? 'pending' : 'pending') + '">' + state.label + '</span><small>' + moneyText + '</small></div>' +
+        '</div>';
+      }).join('') : '<div class="cc-empty">No direct referrals yet.</div>';
+    }
+
+    const copyButton = document.getElementById('copyReferralCode');
+    if (copyButton) {
+      copyButton.onclick = async () => {
+        try { await navigator.clipboard.writeText(profile.referral_code || ''); } catch {}
+        if (window.showToast) window.showToast('Referral code copied');
+      };
+    }
+
+    const shareButton = document.getElementById('shareReferral');
+    if (shareButton) {
+      shareButton.onclick = async () => {
+        const text = 'Join with my referral code: ' + (profile.referral_code || '');
+        if (navigator.share) {
+          try {
+            await navigator.share({ title:'Invite & Earn', text });
+            return;
+          } catch {}
+        }
+        try { await navigator.clipboard.writeText(text); } catch {}
+        if (window.showToast) window.showToast('Invite copied');
+      };
+    }
+
     window.lucide?.createIcons();
   }
 
@@ -453,12 +567,21 @@
     if (!main) return;
     const page = document.title;
     if (!['Earnings','Account'].includes(page)) return;
+
+    if (page === 'Earnings') {
+      const state = document.getElementById('earningsState');
+      if (state) {
+        state.style.display = '';
+        state.innerHTML = '<strong>Live data is unavailable.</strong><div class="cc-muted" style="margin-top:6px">' + esc(error?.message || 'Unable to connect to the earnings tables.') + '</div>';
+      }
+      return;
+    }
+
     main.innerHTML = `
       <section class="cc-live-card" style="text-align:center;padding:24px 18px">
         <i data-lucide="database-zap" style="width:34px;height:34px;color:#d27b20"></i>
         <h3 style="margin:10px 0 6px">Live data setup required</h3>
-        <p class="cc-muted" style="margin:0">This page is connected to Supabase, but the call-center tables are not available yet. Run <strong>supabase-callcenter.sql</strong> in project <strong>glonbvrcudwuzjundrii</strong>.</p>
-        ${error?.message ? `<p class="cc-muted" style="margin-top:10px">Database message: ${esc(error.message)}</p>` : ''}
+        <p class="cc-muted" style="margin:0">This page is connected to Supabase, but the call-center tables are not available yet.</p>
       </section>`;
     window.lucide?.createIcons();
   }
