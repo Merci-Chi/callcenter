@@ -175,7 +175,7 @@
 
     const stage = overlay.querySelector('.post-call-stage');
     const progress = overlay.querySelector('.post-call-progress span');
-    const data = { rating:'', outcomes:[], reason:'', tags:[], notes:'' };
+    const data = { rating:'', outcomes:[], reason:'', tags:[], notes:'', route:'' };
     let screenIndex = 0;
     let screens = [];
 
@@ -223,8 +223,11 @@
         screens.push('outcome');
         if(data.outcomes.includes('Not Interested')) screens.push('reason');
         screens.push('tags');
+        screens.push('notes');
+        screens.push('route');
+      } else {
+        screens.push('notes');
       }
-      screens.push('notes');
     }
 
     function updateProgress(){
@@ -272,6 +275,7 @@
           if (data.rating !== btn.dataset.value) {
             data.outcomes = [];
             data.reason = '';
+            data.route = '';
             showMoreOutcomes = false;
           }
           data.rating = btn.dataset.value;
@@ -296,7 +300,12 @@
           const value = btn.dataset.value;
           if(data.outcomes.includes(value)) data.outcomes = data.outcomes.filter(x => x !== value);
           else data.outcomes.push(value);
+
           if(!data.outcomes.includes('Not Interested')) data.reason = '';
+
+          if (data.outcomes.includes('Not Interested')) data.route = 'notinterested';
+          else if (data.outcomes.some(x => /follow up|call back later|requested text|requested email|needs more info/i.test(x))) data.route = 'callback';
+
           btn.classList.toggle('selected', data.outcomes.includes(value));
           stage.querySelector('.pc-next').disabled = !data.outcomes.length;
         }));
@@ -337,10 +346,30 @@
 
       if(screen === 'notes'){
         stage.innerHTML = `
-          <div class="pc-heading"><span class="pc-kicker">Last step</span><h2>Anything else?</h2><p>Notes are optional. Add anything you’ll want to remember later.</p></div>
+          <div class="pc-heading"><span class="pc-kicker">Call notes</span><h2>Anything else?</h2><p>Notes are optional. Add anything you’ll want to remember later.</p></div>
           <textarea class="pc-notes" placeholder="Add notes (optional)…">${data.notes}</textarea>
-          ${navRow({nextLabel:'Save Call'})}`;
+          ${navRow({nextLabel: data.rating === "Didn't call" ? 'Save' : 'Continue'})}`;
         stage.querySelector('.pc-notes').addEventListener('input', e => data.notes = e.target.value);
+      }
+
+      if(screen === 'route'){
+        stage.innerHTML = `
+          <div class="pc-heading"><span class="pc-kicker">Last step</span><h2>Where should this lead go?</h2><p>Choose what should happen to this lead after this call.</p></div>
+          <div class="pc-option-grid">
+            <button class="pc-option ${data.route==='callback'?'selected':''}" data-route="callback" type="button">
+              <i data-lucide="phone-forwarded"></i><span>Call Back</span>
+            </button>
+            <button class="pc-option ${data.route==='notinterested'?'selected':''}" data-route="notinterested" type="button">
+              <i data-lucide="circle-x"></i><span>Not Interested</span>
+            </button>
+          </div>
+          ${navRow({nextLabel:'Save Call',nextDisabled:!data.route})}`;
+
+        stage.querySelectorAll('[data-route]').forEach(btn => btn.addEventListener('click', () => {
+          data.route = btn.dataset.route;
+          stage.querySelectorAll('[data-route]').forEach(x => x.classList.toggle('selected', x === btn));
+          stage.querySelector('.pc-next').disabled = false;
+        }));
       }
 
       const back = stage.querySelector('.pc-back');
@@ -352,7 +381,8 @@
       const next = stage.querySelector('.pc-next');
       if(next) next.addEventListener('click', () => {
         if(next.disabled) return;
-        if(screen === 'notes') return showConfirmation();
+        if(screen === 'notes' && data.rating === "Didn't call") return showConfirmation();
+        if(screen === 'route') return showConfirmation();
         rebuildScreens();
         screenIndex++;
         slideTo(render, 'forward');
@@ -377,14 +407,63 @@
           <button class="pc-done" type="button">Done</button>
         </div>`;
       stage.querySelector('.pc-done').addEventListener('click', async () => {
+        const crmId = new URLSearchParams(location.search).get('crm_id') || null;
+
         if (data.rating !== "Didn't call" && connectedSeconds > 0) {
-          const crmId = new URLSearchParams(location.search).get('crm_id') || null;
+          const client = window.steadyHandsCRMClient;
+
+          if (client && crmId && data.route) {
+            const { data: currentLead } = await client
+              .from('crm')
+              .select('notes')
+              .eq('id', crmId)
+              .maybeSingle();
+
+            const noteLine = data.notes.trim()
+              ? '[' + new Date().toLocaleString() + '] ' + data.notes.trim()
+              : '';
+
+            const currentNotes = (currentLead?.notes || '').trim();
+            const nextNotes = noteLine
+              ? [currentNotes, noteLine].filter(Boolean).join('\n')
+              : currentNotes;
+
+            const crmUpdate = data.route === 'notinterested'
+              ? {
+                  stage: 'notinterested',
+                  outcome: 'Not Interested',
+                  lastcalled: new Date().toISOString(),
+                  notes: nextNotes
+                }
+              : {
+                  stage: 'outreach',
+                  outcome: 'Call Back',
+                  lastcalled: new Date().toISOString(),
+                  notes: nextNotes
+                };
+
+            const { error } = await client
+              .from('crm')
+              .update(crmUpdate)
+              .eq('id', crmId);
+
+            if (error) {
+              console.error('Unable to update lead after call:', error);
+              return alert('The call was saved, but the lead could not be moved. Please try again.');
+            }
+          }
+
           await window.callcenterRecordCall?.({
             crmId,
             duration: connectedSeconds,
-            outcome: [data.rating, ...data.outcomes].filter(Boolean).join(' • ')
+            outcome: [
+              data.rating,
+              ...data.outcomes,
+              data.route === 'callback' ? 'Call Back' : data.route === 'notinterested' ? 'Not Interested' : ''
+            ].filter(Boolean).join(' • ')
           });
         }
+
         location.href='index.html';
       });
       lucide.createIcons();
