@@ -1142,3 +1142,15 @@ button:disabled {cursor:not-allowed}
   box-shadow:none !important;
   border-radius:0 !important;
 }
+
+
+/* Selected Outreach lead above controls */
+.selected-lead-top{
+  margin:0 0 14px;
+}
+.selected-lead-top:empty{
+  display:none;
+}
+.selected-lead-top > .lead-card{
+  margin-bottom:0 !important;
+}
