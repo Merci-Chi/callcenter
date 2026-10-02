@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#102945" />
   <title>Call</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261001-buttonfix" />
+  <link rel="stylesheet" href="styles.css?v=20261001-startupfix2" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -85,7 +85,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-leadworkspace"></script>
-<script src="app.js?v=20261001-buttonfix"></script>
+<script src="app.js?v=20261001-startupfix2"></script>
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
@@ -105,10 +105,10 @@
   const statusIcon = document.getElementById('callStatusIcon');
   const transcript = document.getElementById('transcriptSection');
 
-  header.textContent = company;
-  companyEl.textContent = company;
-  numberEl.textContent = number;
-  prospectEl.textContent = contact || 'Prospect';
+  if (header) header.textContent = company;
+  if (companyEl) companyEl.textContent = company;
+  if (numberEl) numberEl.textContent = number;
+  if (prospectEl) prospectEl.textContent = contact || 'Prospect';
 
   let staffFirstName = '____';
   const contactFirstName = (contact || '____').trim().split(/\s+/)[0] || '____';
