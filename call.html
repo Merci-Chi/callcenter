@@ -90,7 +90,7 @@
 (function(){
   const params = new URLSearchParams(location.search);
   const company = params.get('company') || 'Business';
-  const contact = params.get('contact') || 'Prospect';
+  const contact = params.get('contact') || '____';
   const number = params.get('number') || '(000) 000-0000';
   const previewUrl = params.get('preview') || '';
   const crmId = params.get('crm_id') || '';
@@ -108,7 +108,7 @@
   if (header) header.textContent = company;
   if (companyEl) companyEl.textContent = company;
   if (numberEl) numberEl.textContent = number;
-  if (prospectEl) prospectEl.textContent = contact || 'Prospect';
+  if (prospectEl) prospectEl.textContent = contact || '____';
 
   let staffFirstName = '____';
   const contactFirstName = (contact || '____').trim().split(/\s+/)[0] || '____';
@@ -872,7 +872,10 @@
           });
         }
 
-        location.href='index.html';
+        overlay.remove();
+        questionnaireOpen = false;
+        setState('ended');
+        syncMainCallButton();
       });
       lucide.createIcons();
     }
