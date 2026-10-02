@@ -27,11 +27,24 @@
   }
   .forgot-password:hover{opacity:1}
   .forgot-password:disabled{opacity:.45;cursor:not-allowed}
+
+  .login-brand-icon{
+    overflow:hidden;
+    background:#102945;
+    padding:0;
+  }
+  .login-brand-icon img{
+    width:100%;
+    height:100%;
+    display:block;
+    object-fit:cover;
+    border-radius:inherit;
+  }
 </style>
   <script src="app-update.js" defer></script>
 </head><body>
 <div class="login-page"><div class="login-panel">
-<div class="login-brand"><div class="login-brand-icon"><i data-lucide="handshake"></i></div><span>STEADY HANDS</span></div>
+<div class="login-brand"><div class="login-brand-icon"><img src="images/icon-192.png" alt="Steady Hands logo" /></div><span>STEADY HANDS</span></div>
 <div class="login-title"><h1 id="loginHeading">Welcome back</h1><p id="loginSubheading">Sign in to continue to Outreach.</p></div>
 <form id="loginForm" class="login-form">
 <label for="loginEmail">Email address</label><div class="login-field"><i data-lucide="mail"></i><input id="loginEmail" type="email" name="email" placeholder="name@steadyhandsop.com" autocomplete="username" required/></div>
