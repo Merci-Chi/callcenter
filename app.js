@@ -1534,7 +1534,7 @@ function crmDigits(value) {
 function crmIsPhoneSearch(query) {
   const raw = crmNormalizeSearch(query);
   const digits = crmDigits(raw);
-  return digits.length >= 2 && !/[a-z]/i.test(raw);
+  return digits.length >= 1 && !/[a-z]/i.test(raw);
 }
 
 function crmFindSearchMatch(lead, query) {
@@ -1648,6 +1648,31 @@ async function crmFetchPreviewURLs(client, ids) {
   return map;
 }
 
+function crmShowLiveSearchLoading(query) {
+  const box = q('#crmLeadCards');
+  const status = q('#crmStatus');
+  if (!box || !status) return;
+
+  q('#selectedLeadTop')?.replaceChildren();
+
+  status.style.display = '';
+  status.textContent = query ? `Searching for “${query}”…` : 'Loading leads...';
+
+  box.innerHTML = Array.from({ length: 4 }, () => `
+    <div class="skeleton-lead skeleton-compact search-live-skeleton" aria-hidden="true">
+      <div class="sk-row">
+        <div class="sk-shape sk-icon"></div>
+        <div class="sk-grow">
+          <div class="sk-shape sk-title"></div>
+          <div class="sk-shape sk-subtitle"></div>
+        </div>
+        <div class="sk-shape sk-star"></div>
+      </div>
+      <div class="sk-shape sk-phone"></div>
+    </div>
+  `).join('');
+}
+
 async function crmRunGlobalSearch() {
   const box = q('#crmLeadCards');
   const status = q('#crmStatus');
@@ -1657,15 +1682,14 @@ async function crmRunGlobalSearch() {
   const query = crmNormalizeSearch(q('#crmSearch')?.value);
   crmSearchState.query = query;
   const selectedTags = [...crmSearchState.tags];
+  const requestId = ++crmSearchState.requestId;
+
+  crmShowLiveSearchLoading(query);
 
   if (!query && !selectedTags.length) {
     await loadApprovedPreviewCRM({ preserveSearch: true });
     return;
   }
-
-  const requestId = ++crmSearchState.requestId;
-  status.style.display = '';
-  status.textContent = 'Searching all CRM leads…';
 
   let data = [];
   let error = null;
@@ -1766,7 +1790,7 @@ function crmSetupGlobalSearchControls() {
   if (input) {
     input.oninput = () => {
       clearTimeout(crmSearchState.timer);
-      crmSearchState.timer = setTimeout(crmRunGlobalSearch, 320);
+      crmRunGlobalSearch();
     };
   }
 
