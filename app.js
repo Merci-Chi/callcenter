@@ -1428,6 +1428,39 @@ window.callcenterCallStatus = callcenterCallStatus;
 window.callcenterLeadZone = callcenterLeadZone;
 window.callcenterZoneLabel = callcenterZoneLabel;
 
+function refreshLeadCallTimes(root = document) {
+  root.querySelectorAll('[data-live-call-time]').forEach(el => {
+    const phone = el.dataset.phone || '';
+    const timezone = el.dataset.timezone || '';
+    const timing = callcenterCallStatus(phone, timezone);
+    const time = callcenterLocalTimeText(phone, timezone);
+    const prefix = el.closest('.compact-lead-meta') ? 'For them: ' : '';
+    el.textContent = `${prefix}${time} · ${callcenterZoneLabel(timing.zone)}`;
+    if (!el.closest('.compact-lead-meta')) {
+      el.innerHTML = `<i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
+    } else {
+      el.innerHTML = `<i data-lucide="clock-3"></i> For them: ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
+    }
+  });
+
+  root.querySelectorAll('[data-live-call-status]').forEach(el => {
+    const phone = el.dataset.phone || '';
+    const timezone = el.dataset.timezone || '';
+    const timing = callcenterCallStatus(phone, timezone);
+    el.classList.remove('call-time-good', 'call-time-wait', 'call-time-late');
+    el.classList.add(`call-time-${timing.state}`);
+    el.innerHTML = `<i data-lucide="phone-call"></i> ${crmEscape(timing.label)}`;
+  });
+
+  refreshIcons();
+}
+
+function startLeadCallTimeTicker() {
+  refreshLeadCallTimes();
+  if (window.__steadyHandsCallTimeTicker) return;
+  window.__steadyHandsCallTimeTicker = window.setInterval(() => refreshLeadCallTimes(), 30000);
+}
+
 function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
@@ -1480,12 +1513,20 @@ function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
     ${searchMatch ? `<div class="search-match-reason"><i data-lucide="search-check"></i><span><strong>“${crmEscape(searchMatch.query)}”</strong> found in ${crmEscape(searchMatch.label)}: <strong>${crmEscape(searchMatch.value)}</strong></span></div>` : ''}
 
+    <div class="compact-lead-meta">
+      <div class="tag-row compact-tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
+      <div class="compact-call-row">
+        <span class="compact-local-time" data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> For them: ${crmEscape(theirLocalTime)} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span>
+        <span class="call-time-status call-time-${callTiming.state}" data-live-call-status data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</span>
+      </div>
+    </div>
+
     <div class="lead-details">
 
       <div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
 
-      <div class="time-row"><span><i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(theirLocalTime)} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span></div>
-      <div class="call-time-status call-time-${callTiming.state}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</div>
+      <div class="time-row"><span data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(theirLocalTime)} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span></div>
+      <div class="call-time-status call-time-${callTiming.state}" data-live-call-status data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</div>
       <div class="time-row"><span><i data-lucide="calendar"></i> ${dateText}</span></div>
 
       <div class="preview-links">${links}</div>
@@ -2100,6 +2141,7 @@ async function loadApprovedPreviewCRM(options = {}) {
 
     // User-specific Outreach stats are loaded from callcenter_call_activity in user-data.js.\n\n    setupCopyButtons();
     setupOutreach();
+    startLeadCallTimeTicker();
     refreshIcons();
     finishInitialOutreachLoad();
   } catch (error) {
