@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#102945" />
   <title>Call</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261001-starterscripts" />
+  <link rel="stylesheet" href="styles.css?v=20261001-live-transcript" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -55,18 +55,28 @@
       <p class="starter-script-text" id="starterScriptText"></p>
     </section>
 
-    <section class="call-transcript-section transcript-waiting" id="transcriptSection">
-      <h2>Transcript</h2>
+    <section class="call-transcript-section" id="transcriptSection">
+      <div class="live-transcript-head">
+        <div>
+          <h2>Transcript</h2>
+          <p>Uses your microphone to create a live transcript.</p>
+        </div>
+        <button class="live-transcript-enable" id="enableLiveTranscript" type="button"><i data-lucide="mic"></i> Enable Live Transcript</button>
+      </div>
+
+      <div class="live-transcript-permission" id="liveTranscriptPermission">
+        <strong>Enable live transcript?</strong>
+        <p>Tap the button above, then allow microphone access when your browser asks. If you previously blocked it, open your browser’s site settings and change Microphone to Allow, then try again.</p>
+        <small>This listens to your microphone only.</small>
+      </div>
+
       <div class="call-transcript-card">
-        <div class="transcript-entry">
-          <div class="transcript-meta"><span>00:08</span><strong>You</strong></div>
-          <div class="transcript-bubble muted">Hi, this is Alex. I’m calling because I wanted to show you a website preview I put together.</div>
+        <div class="live-transcript-list" id="liveTranscriptList">
+          <div class="live-transcript-empty" id="liveTranscriptEmpty">No transcript yet.</div>
         </div>
-        <div class="transcript-entry">
-          <div class="transcript-meta"><span>00:24</span><strong id="prospectLabel">Prospect</strong></div>
-          <div class="transcript-bubble prospect">Yeah, absolutely. I’m interested in hearing a little more about it.</div>
+        <div class="transcript-listening" id="liveTranscriptStatus">
+          <i data-lucide="mic"></i><span>Live transcript is off</span><i data-lucide="audio-lines"></i>
         </div>
-        <div class="transcript-listening"><i data-lucide="audio-lines"></i><span>Listening...</span><i data-lucide="ellipsis"></i></div>
       </div>
     </section>
   </main>
@@ -173,7 +183,6 @@
 
     if(state === 'connected'){
       timerWrap.hidden = false;
-      transcript.classList.remove('transcript-waiting');
       if(!timerTick){
         timerTick = setInterval(() => {
           connectedSeconds++;
@@ -184,7 +193,6 @@
       }
     } else {
       timerWrap.hidden = true;
-      if(state === 'calling' || state === 'ringing') transcript.classList.add('transcript-waiting');
     }
   }
 
@@ -282,22 +290,105 @@
     const lead = await loadLeadDetails();
 
     if(label === 'Alerts'){
-      const alerts = [];
-      if(lead?.callbackdate) alerts.push('Callback scheduled: ' + lead.callbackdate + (lead.callbackat ? ' at ' + lead.callbackat : ''));
-      if(/not interested/i.test(String(lead?.outcome || ''))) alerts.push('Previously marked Not Interested');
-      toolSheet('Alerts', alerts.length ? '<div class="call-tool-list">' + alerts.map(x => '<div class="call-tool-row"><i data-lucide="bell"></i><span>' + x + '</span></div>').join('') + '</div>' : '<div class="call-tool-empty">No alerts for this lead.</div>');
+      const c = window.steadyHandsCRMClient;
+      let existing = [];
+      if(c && crmId){
+        const { data } = await c
+          .from('outreach_notes_alerts')
+          .select('id,title,description,created_at')
+          .eq('crmid',crmId)
+          .eq('kind','alert')
+          .order('created_at',{ascending:false})
+          .limit(20);
+        existing = data || [];
+      }
+
+      const overlay = toolSheet('Alerts', `
+        <div class="call-alert-form">
+          <input class="call-tool-input" id="newAlertTitle" placeholder="Alert title" />
+          <textarea class="call-tool-textarea call-alert-textarea" id="newAlertDescription" placeholder="What should the rep know?"></textarea>
+          <button class="call-tool-primary" id="addLeadAlert" type="button"><i data-lucide="bell-plus"></i> Add Alert</button>
+        </div>
+        <div class="call-alert-list">
+          ${existing.length ? existing.map(item => `
+            <div class="call-tool-row call-alert-row">
+              <i data-lucide="bell"></i>
+              <span><strong>${item.title}</strong>${item.description ? '<small>'+item.description+'</small>' : ''}</span>
+            </div>`).join('') : '<div class="call-tool-empty">No alerts for this lead yet.</div>'}
+        </div>`);
+
+      overlay.querySelector('#addLeadAlert')?.addEventListener('click', async () => {
+        const title = overlay.querySelector('#newAlertTitle').value.trim();
+        const description = overlay.querySelector('#newAlertDescription').value.trim();
+        if(!title) return alert('Add an alert title first.');
+        const client = window.steadyHandsCRMClient;
+        if(!client || !crmId) return alert('Unable to save this alert.');
+
+        const { data: authData } = await client.auth.getSession();
+        const userId = authData?.session?.user?.id;
+        if(!userId) return alert('Please sign in again.');
+
+        const { error } = await client.from('outreach_notes_alerts').insert({
+          crmid: crmId,
+          userid: userId,
+          kind: 'alert',
+          title,
+          description,
+          icon: 'bi-bell-fill',
+          author_name: staffFirstName || ''
+        });
+
+        if(error){
+          console.error('Unable to add alert:',error);
+          return alert('Could not add alert.');
+        }
+        overlay.remove();
+        document.querySelector('[data-call-action="Alerts"]')?.click();
+      });
       return;
     }
 
     if(label === 'Tags'){
-      let tags = [];
-      for(const key of ['tags','sources']){
-        let value = lead?.[key];
-        if(typeof value === 'string'){ try { value = JSON.parse(value); } catch { value = []; } }
-        if(Array.isArray(value)) tags.push(...value.filter(x => typeof x === 'string'));
+      const tagOptions = [
+        'Broken Site','Outdated Site','Site Removed','Already have a website',
+        'Spanish?','Hot Lead','Interested','Call Back','Needs More Info','Skeptical',
+        'No Answer','Left Voicemail','Not Interested','Wrong Number','Conversion','Sold'
+      ];
+
+      let currentTags = [];
+      let value = lead?.tags;
+      if(typeof value === 'string'){
+        try { value = JSON.parse(value); } catch { value = []; }
       }
-      tags = [...new Set(tags)];
-      toolSheet('Tags', tags.length ? '<div class="call-tool-tags">' + tags.map(x => '<span>' + x + '</span>').join('') + '</div>' : '<div class="call-tool-empty">No tags on this lead.</div>');
+      if(Array.isArray(value)) currentTags = value.filter(x => typeof x === 'string');
+
+      const selected = new Set(currentTags);
+      const overlay = toolSheet('Tags', `
+        <p class="call-tool-help">Tap tags to turn them on or off for this lead.</p>
+        <div class="call-tool-tag-picker">
+          ${tagOptions.map(tag => `<button type="button" class="call-tag-choice ${selected.has(tag)?'selected':''}" data-tag-choice="${tag}"><i data-lucide="check"></i>${tag}</button>`).join('')}
+        </div>
+        <button class="call-tool-primary" id="saveLeadTags" type="button">Save Tags</button>`);
+
+      overlay.querySelectorAll('[data-tag-choice]').forEach(button => {
+        button.addEventListener('click', () => {
+          const tag = button.dataset.tagChoice;
+          if(selected.has(tag)) selected.delete(tag);
+          else selected.add(tag);
+          button.classList.toggle('selected',selected.has(tag));
+        });
+      });
+
+      overlay.querySelector('#saveLeadTags')?.addEventListener('click', async () => {
+        const client = window.steadyHandsCRMClient;
+        if(!client || !crmId) return alert('Unable to save tags.');
+        const { error } = await client.from('crm').update({tags:[...selected]}).eq('id',crmId);
+        if(error){
+          console.error('Unable to save tags:',error);
+          return alert('Could not save tags.');
+        }
+        overlay.remove();
+      });
       return;
     }
 
@@ -316,13 +407,27 @@
 
     if(label === 'Send Site Preview'){
       const message = previewUrl ? `Hi! Here is the website preview we made for ${company}: ${previewUrl}` : '';
-      const overlay = toolSheet('Send Site Preview', previewUrl ? `<div class="call-preview-link">${previewUrl}</div><button class="call-tool-primary" id="sharePreview" type="button"><i data-lucide="send"></i> Send / Share Preview</button><button class="call-tool-secondary" id="copyPreview" type="button">Copy Preview Message</button><a class="call-tool-secondary call-tool-link" href="${previewUrl}" target="_blank" rel="noopener noreferrer">Open Preview</a>` : '<div class="call-tool-empty">No site preview is connected to this lead.</div>');
+      const overlay = toolSheet('Send Site Preview', previewUrl ? `
+        <div class="call-preview-link">${previewUrl}</div>
+        <button class="call-tool-primary" id="sendPreviewSavedNumber" type="button"><i data-lucide="message-square"></i> Send to Saved Number</button>
+        <button class="call-tool-secondary" id="choosePreviewDestination" type="button"><i data-lucide="share-2"></i> Choose Where to Send</button>
+        <button class="call-tool-secondary" id="copyPreview" type="button"><i data-lucide="copy"></i> Copy Message</button>
+        <a class="call-tool-secondary call-tool-link" href="${previewUrl}" target="_blank" rel="noopener noreferrer">Open Preview</a>
+      ` : '<div class="call-tool-empty">No site preview is connected to this lead.</div>');
+
       if(previewUrl){
-        overlay.querySelector('#copyPreview').addEventListener('click', () => copyText(message, 'Preview message copied'));
-        overlay.querySelector('#sharePreview').addEventListener('click', async () => {
-          if(navigator.share){ try { await navigator.share({title: company + ' website preview', text: message, url: previewUrl}); } catch {} }
-          else await copyText(message, 'Preview message copied');
+        overlay.querySelector('#sendPreviewSavedNumber')?.addEventListener('click', () => {
+          const digits = number.replace(/[^+\d]/g,'');
+          location.href = 'sms:' + digits + '?body=' + encodeURIComponent(message);
         });
+        overlay.querySelector('#choosePreviewDestination')?.addEventListener('click', async () => {
+          if(navigator.share){
+            try { await navigator.share({title: company + ' website preview',text:message,url:previewUrl}); } catch {}
+          } else {
+            await copyText(message,'Preview message copied');
+          }
+        });
+        overlay.querySelector('#copyPreview')?.addEventListener('click', () => copyText(message,'Preview message copied'));
       }
       return;
     }
@@ -343,6 +448,124 @@
       toolSheet('Quick Info', '<div class="quick-info-pricing"><div><span>Website Development</span><strong>$100</strong><small>One-time</small></div><div><span>Standard Hosting</span><strong>$20</strong><small>per month</small></div><div><span>Hosting + Admin Site</span><strong>$30</strong><small>per month</small></div></div>');
     }
   }));
+
+  let speechRecognition = null;
+  let liveTranscriptEnabled = false;
+  let transcriptStartedAt = null;
+
+  function transcriptTime(){
+    if(!transcriptStartedAt) return '00:00';
+    const seconds = Math.max(0,Math.floor((Date.now()-transcriptStartedAt)/1000));
+    return String(Math.floor(seconds/60)).padStart(2,'0') + ':' + String(seconds%60).padStart(2,'0');
+  }
+
+  function addTranscriptLine(text, interim=false){
+    const list = document.getElementById('liveTranscriptList');
+    if(!list || !text.trim()) return;
+    document.getElementById('liveTranscriptEmpty')?.remove();
+
+    let row = interim ? list.querySelector('.live-transcript-row.interim') : null;
+    if(!row){
+      row = document.createElement('div');
+      row.className = 'live-transcript-row' + (interim ? ' interim' : '');
+      row.innerHTML = '<div class="transcript-meta"><span></span><strong>You</strong></div><div class="transcript-bubble muted"></div>';
+      list.appendChild(row);
+    }
+
+    row.querySelector('.transcript-meta span').textContent = transcriptTime();
+    row.querySelector('.transcript-bubble').textContent = text;
+
+    if(!interim) row.classList.remove('interim');
+    row.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+
+  function setTranscriptStatus(text,active=false){
+    const status = document.getElementById('liveTranscriptStatus');
+    if(!status) return;
+    status.classList.toggle('active',active);
+    const span = status.querySelector('span');
+    if(span) span.textContent = text;
+  }
+
+  async function enableLiveTranscript(){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SpeechRecognition){
+      alert('Live speech transcription is not supported by this browser.');
+      return;
+    }
+
+    try{
+      if(navigator.mediaDevices?.getUserMedia){
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      transcriptStartedAt = Date.now();
+      speechRecognition = new SpeechRecognition();
+      speechRecognition.continuous = true;
+      speechRecognition.interimResults = true;
+      speechRecognition.lang = 'en-US';
+
+      speechRecognition.onstart = () => {
+        liveTranscriptEnabled = true;
+        setTranscriptStatus('Listening to microphone…',true);
+        const button = document.getElementById('enableLiveTranscript');
+        if(button) button.innerHTML = '<i data-lucide="mic-off"></i> Stop Live Transcript';
+        lucide.createIcons();
+      };
+
+      speechRecognition.onresult = event => {
+        let interim = '';
+        for(let i=event.resultIndex;i<event.results.length;i++){
+          const text = event.results[i][0]?.transcript || '';
+          if(event.results[i].isFinal) addTranscriptLine(text,false);
+          else interim += text;
+        }
+        const existingInterim = document.querySelector('.live-transcript-row.interim');
+        if(interim) addTranscriptLine(interim,true);
+        else existingInterim?.remove();
+      };
+
+      speechRecognition.onerror = event => {
+        console.warn('Live transcript error:',event.error);
+        if(event.error === 'not-allowed' || event.error === 'service-not-allowed'){
+          setTranscriptStatus('Microphone permission is blocked');
+          alert('Microphone access is blocked. Open your browser site settings, set Microphone to Allow, then tap Enable Live Transcript again.');
+        } else {
+          setTranscriptStatus('Live transcript stopped');
+        }
+      };
+
+      speechRecognition.onend = () => {
+        if(liveTranscriptEnabled){
+          liveTranscriptEnabled = false;
+          setTranscriptStatus('Live transcript is off');
+          const button = document.getElementById('enableLiveTranscript');
+          if(button) button.innerHTML = '<i data-lucide="mic"></i> Enable Live Transcript';
+          lucide.createIcons();
+        }
+      };
+
+      speechRecognition.start();
+    }catch(error){
+      console.error('Unable to enable microphone:',error);
+      setTranscriptStatus('Microphone permission is blocked');
+      alert('Microphone access is required. Allow microphone access for this site in your browser settings, then try again.');
+    }
+  }
+
+  document.getElementById('enableLiveTranscript')?.addEventListener('click', () => {
+    if(liveTranscriptEnabled && speechRecognition){
+      liveTranscriptEnabled = false;
+      try{ speechRecognition.stop(); }catch{}
+      setTranscriptStatus('Live transcript is off');
+      const button = document.getElementById('enableLiveTranscript');
+      if(button) button.innerHTML = '<i data-lucide="mic"></i> Enable Live Transcript';
+      lucide.createIcons();
+      return;
+    }
+    enableLiveTranscript();
+  });
 
   function openPostCallFlow(){
     questionnaireOpen = true;
