@@ -92,9 +92,16 @@
 
   function activityState(profile) {
     if (!profile) return { label:'Unknown', cls:'inactive', days:Infinity };
-    const since = profile.last_call_at || profile.created_at;
-    const days = ageDays(since);
-    if (profile.disabled_at || days >= 90) return { label:'Disabled', cls:'disabled', days };
+    if (profile.disabled_at) return { label:'Disabled', cls:'disabled', days:Infinity };
+
+    if (!profile.last_call_at) {
+      const accountAge = ageDays(profile.created_at);
+      if (accountAge >= 90) return { label:'Disabled', cls:'disabled', days:accountAge };
+      return { label:'Inactive', cls:'inactive', days:Infinity };
+    }
+
+    const days = ageDays(profile.last_call_at);
+    if (days >= 90) return { label:'Disabled', cls:'disabled', days };
     if (days <= 30) return { label:'Active', cls:'active', days };
     return { label:'Inactive', cls:'inactive', days };
   }
