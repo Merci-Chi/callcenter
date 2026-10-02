@@ -1298,22 +1298,6 @@ function setupEarnings() {
 
   });
 
-  q('.share-btn')?.addEventListener('click', async () => {
-
-    const text = 'Join with my referral code: SALESBOOST23';
-
-    if (navigator.share) {
-
-      try { await navigator.share({ title: 'Invite & Earn', text }); return; } catch {}
-
-    }
-
-    try { await navigator.clipboard.writeText(text); } catch {}
-
-    showToast('Invite copied');
-
-  });
-
 }
 
 function setupAccount() {
