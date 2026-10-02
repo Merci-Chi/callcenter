@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#102945" />
   <title>Call</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261001-leadworkspace" />
+  <link rel="stylesheet" href="styles.css?v=20261001-starterscripts" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -38,6 +38,23 @@
       <button class="call-control start-call" id="hangupBtn" aria-label="Start call"><i data-lucide="phone"></i><span>Start Call</span></button>
       <button class="call-control small" id="holdBtn"><i data-lucide="pause"></i><span>Hold</span></button>
     </section>
+    <section class="starter-script-card" id="starterScriptCard">
+      <div class="starter-script-head">
+        <div>
+          <span>Starter Script</span>
+          <strong>Choose what fits this lead</strong>
+        </div>
+        <button class="starter-copy" id="copyStarterScript" type="button" aria-label="Copy starter script"><i data-lucide="copy"></i></button>
+      </div>
+      <div class="starter-script-tabs" id="starterScriptTabs">
+        <button class="starter-script-tab active" type="button" data-script="no-site">No Site</button>
+        <button class="starter-script-tab" type="button" data-script="broken">Broken Site</button>
+        <button class="starter-script-tab" type="button" data-script="old-site">Old Site</button>
+        <button class="starter-script-tab" type="button" data-script="spanish">Spanish</button>
+      </div>
+      <p class="starter-script-text" id="starterScriptText"></p>
+    </section>
+
     <section class="call-transcript-section transcript-waiting" id="transcriptSection">
       <h2>Transcript</h2>
       <div class="call-transcript-card">
@@ -58,7 +75,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-leadworkspace"></script>
-<script src="app.js?v=20261001-leadworkspace"></script>
+<script src="app.js?v=20261001-starterscripts"></script>
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
@@ -82,6 +99,55 @@
   companyEl.textContent = company;
   numberEl.textContent = number;
   prospectEl.textContent = contact || 'Prospect';
+
+  let staffFirstName = '____';
+  const contactFirstName = (contact || '____').trim().split(/\s+/)[0] || '____';
+  let activeStarterScript = 'no-site';
+
+  const starterScripts = {
+    'no-site': () => `Hey ${contactFirstName}, this is ${staffFirstName}. I was looking into your business earlier and I couldn’t find a website. I help businesses get set up with a professional site. Is that something you’re considering?`,
+    'old-site': () => `Hey ${contactFirstName}, this is ${staffFirstName}. I was looking at your website earlier and noticed it seems dated. I help businesses redesign and upgrade older sites. Would you be open to talking about it?`,
+    'broken': () => `Hey ${contactFirstName}, this is ${staffFirstName}. I noticed parts of your website weren’t working properly. I can help get it fixed or rebuild it. Would you be interested?`,
+    'spanish': () => 'No hay problema. Un miembro de mi equipo habla español. Puedo pedirle que le llame?'
+  };
+
+  function renderStarterScript(){
+    const target = document.getElementById('starterScriptText');
+    if(target) target.textContent = starterScripts[activeStarterScript]?.() || '';
+  }
+
+  document.querySelectorAll('.starter-script-tab').forEach(button => {
+    button.addEventListener('click', () => {
+      activeStarterScript = button.dataset.script || 'no-site';
+      document.querySelectorAll('.starter-script-tab').forEach(item => item.classList.toggle('active', item === button));
+      renderStarterScript();
+    });
+  });
+
+  document.getElementById('copyStarterScript')?.addEventListener('click', async () => {
+    const text = starterScripts[activeStarterScript]?.() || '';
+    try { await navigator.clipboard.writeText(text); }
+    catch { prompt('Copy this:', text); }
+  });
+
+  async function loadStarterStaffName(){
+    const c = window.steadyHandsCRMClient;
+    if(!c) { renderStarterScript(); return; }
+    try {
+      const { data: sessionData } = await c.auth.getSession();
+      const userId = sessionData?.session?.user?.id;
+      if(!userId) { renderStarterScript(); return; }
+      const { data } = await c.from('callcenter_profiles').select('display_name,email').eq('user_id',userId).maybeSingle();
+      const source = String(data?.display_name || data?.email || '').trim();
+      if(source) staffFirstName = source.split(/[\s@]+/)[0] || '____';
+    } catch(error) {
+      console.warn('Unable to load starter script name:', error);
+    }
+    renderStarterScript();
+  }
+
+  renderStarterScript();
+  setTimeout(loadStarterStaffName, 0);
 
   document.getElementById('callBack').addEventListener('click', () => {
     history.length > 1 ? history.back() : location.href='index.html';
