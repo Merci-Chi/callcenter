@@ -1742,31 +1742,7 @@ async function loadApprovedPreviewCRM() {
     status.textContent =
       `${leads.length.toLocaleString()} leads ready`;
 
-    const today =
-      new Date().toDateString();
-
-    q('#statCalls').textContent =
-      leads.filter(lead =>
-        lead.lastcalled &&
-        new Date(lead.lastcalled)
-          .toDateString() === today
-      ).length;
-
-    q('#statCallbacks').textContent =
-      leads.filter(lead =>
-        !!lead.callbackdate ||
-        !!lead.callbackat
-      ).length;
-
-    q('#statInterested').textContent =
-      leads.filter(lead =>
-        crmTags(lead).some(tag =>
-          /^interested$|^hot lead$/i
-            .test(tag)
-        )
-      ).length;
-
-    setupCopyButtons();
+    // User-specific Outreach stats are loaded from callcenter_call_activity in user-data.js.\n\n    setupCopyButtons();
     setupOutreach();
     refreshIcons();
   } catch (error) {
