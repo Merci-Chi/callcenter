@@ -72,7 +72,13 @@
 
   try {
     if (!window.supabase) throw new Error('Authentication library unavailable');
-    client = window.supabase.createClient(url, key);
+    client = window.supabase.createClient(url, key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
 
     client.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
