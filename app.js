@@ -626,11 +626,11 @@ function setupOutreach() {
 
   };
 
-  qa('.pill').forEach(btn => {
+  qa('.pill:not(.tag-filter-pill)').forEach(btn => {
 
-    btn.addEventListener('click', () => {
+    btn.onclick = () => {
 
-      qa('.pill').forEach(x => x.classList.remove('active'));
+      qa('.pill:not(.tag-filter-pill)').forEach(x => x.classList.remove('active'));
 
       btn.classList.add('active');
 
@@ -638,7 +638,7 @@ function setupOutreach() {
 
       showToast(btn.textContent.trim());
 
-    });
+    };
 
   });
 
@@ -1205,16 +1205,6 @@ function setupOutreach() {
 
   });
 
-  let searchTimer;
-
-  q('#crmSearch')?.addEventListener('input', () => {
-
-    clearTimeout(searchTimer);
-
-    searchTimer = setTimeout(() => changeLeads(() => { selectedCard = null; renderQueue(false); }), 240);
-
-  });
-
   renderQueue(false);
 
 }
@@ -1496,13 +1486,205 @@ function makeCRMLinkCard(lead, siteURLs) {
 
 }
 
-async function loadApprovedPreviewCRM() {
+
+const CRM_SEARCH_TAGS = [
+  'Interested','Call Back','Needs More Info','Send Preview','Requested Email',
+  'Requested Text','Decision Maker','Hot Lead','Conversion','Sold',
+  'Not Interested','No Answer','Left Voicemail','Busy','Wrong Number',
+  'Already Has Someone','Bad Timing','Price Concern','Skeptical','Do Not Call',
+  'Broken Site','Outdated Site','Site Removed','Already have a website',
+  'No Website','Spanish?'
+];
+
+const crmSearchState = {
+  query: '',
+  tags: new Set(),
+  timer: null,
+  requestId: 0
+};
+
+function crmNormalizeSearch(value) {
+  return crmText(value || '').trim();
+}
+
+function crmSafeOrTerm(value) {
+  return crmNormalizeSearch(value).replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+async function crmFetchPreviewURLs(client, ids) {
+  const map = new Map();
+  if (!ids.length) return map;
+
+  for (let i = 0; i < ids.length; i += 80) {
+    const { data, error } = await client
+      .from('preview_inventory')
+      .select('url,crm_id')
+      .in('crm_id', ids.slice(i, i + 80))
+      .order('url', { ascending: true });
+
+    if (error) {
+      console.warn('Unable to load search preview links:', error);
+      continue;
+    }
+
+    for (const row of data || []) {
+      const url = crmUrl(row.url);
+      if (!row.crm_id || !url) continue;
+      const urls = map.get(row.crm_id) || [];
+      if (!urls.includes(url)) urls.push(url);
+      map.set(row.crm_id, urls);
+    }
+  }
+
+  return map;
+}
+
+async function crmRunGlobalSearch() {
+  const box = q('#crmLeadCards');
+  const status = q('#crmStatus');
+  const client = window.steadyHandsCRMClient;
+  if (!box || !status || !client) return;
+
+  const query = crmNormalizeSearch(q('#crmSearch')?.value);
+  crmSearchState.query = query;
+  const selectedTags = [...crmSearchState.tags];
+
+  if (!query && !selectedTags.length) {
+    await loadApprovedPreviewCRM({ preserveSearch: true });
+    return;
+  }
+
+  const requestId = ++crmSearchState.requestId;
+  status.style.display = '';
+  status.textContent = 'Searching all CRM leads…';
+
+  let db = client
+    .from('crm')
+    .select('id,company,name,phone,email,website,notes,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
+    .neq('stage', 'notinterested')
+    .limit(100);
+
+  if (query) {
+    const safe = crmSafeOrTerm(query);
+    const digits = query.replace(/\D/g, '');
+    const terms = [
+      `company.ilike.%${safe}%`,
+      `name.ilike.%${safe}%`,
+      `phone.ilike.%${safe}%`,
+      `email.ilike.%${safe}%`,
+      `website.ilike.%${safe}%`,
+      `notes.ilike.%${safe}%`,
+      `issue.ilike.%${safe}%`,
+      `concerns.ilike.%${safe}%`,
+      `domain.ilike.%${safe}%`,
+      `origin.ilike.%${safe}%`,
+      `assigned.ilike.%${safe}%`
+    ];
+    if (digits && digits !== safe) terms.push(`phone.ilike.%${digits}%`);
+    db = db.or(terms.join(','));
+  }
+
+  if (selectedTags.length) {
+    db = db.contains('tags', selectedTags);
+  }
+
+  const { data, error } = await db;
+  if (requestId !== crmSearchState.requestId) return;
+
+  if (error) {
+    console.error('Full CRM search failed:', error);
+    status.textContent = 'Search failed. Try again.';
+    box.replaceChildren();
+    return;
+  }
+
+  const leads = (data || []).filter(lead => {
+    const values = [lead.stage, lead.outcome, ...crmTags(lead)]
+      .map(value => crmText(value).toLowerCase());
+    return !values.some(value => value === 'notinterested' || value.includes('not interested'));
+  });
+
+  const siteMap = await crmFetchPreviewURLs(client, leads.map(lead => lead.id));
+  if (requestId !== crmSearchState.requestId) return;
+
+  box.replaceChildren(...leads.map(lead => {
+    const urls = siteMap.get(lead.id) || [crmUrl(lead.previewurl)].filter(Boolean);
+    return makeCRMLinkCard(lead, urls);
+  }));
+
+  status.style.display = leads.length ? 'none' : '';
+  status.textContent = leads.length ? '' : 'No matching active leads found.';
+
+  setupCopyButtons();
+  setupOutreach();
+  refreshIcons();
+}
+
+function crmSetupGlobalSearchControls() {
+  const input = q('#crmSearch');
+  if (input) {
+    input.oninput = () => {
+      clearTimeout(crmSearchState.timer);
+      crmSearchState.timer = setTimeout(crmRunGlobalSearch, 320);
+    };
+  }
+
+  const tagButton = q('#crmTagFilter');
+  if (tagButton) {
+    tagButton.onclick = () => {
+      const body = `
+        <div class="tag-filter-sheet">
+          <p class="tag-filter-help">Select one or more CRM tags. Search and tag filters work together.</p>
+          <div class="tag-filter-grid">
+            ${CRM_SEARCH_TAGS.map(tag => `<button type="button" class="tag-filter-choice ${crmSearchState.tags.has(tag) ? 'selected' : ''}" data-filter-tag="${crmEscape(tag)}">${crmEscape(tag)}</button>`).join('')}
+          </div>
+          <div class="tag-filter-actions">
+            <button type="button" class="tag-filter-clear">Clear</button>
+            <button type="button" class="tag-filter-apply">Apply</button>
+          </div>
+        </div>`;
+
+      const overlay = modal('Filter by tags', body, []);
+      const staged = new Set(crmSearchState.tags);
+
+      qa('[data-filter-tag]', overlay).forEach(btn => {
+        btn.onclick = () => {
+          const tag = btn.dataset.filterTag;
+          if (staged.has(tag)) staged.delete(tag);
+          else staged.add(tag);
+          btn.classList.toggle('selected', staged.has(tag));
+        };
+      });
+
+      q('.tag-filter-clear', overlay).onclick = () => {
+        staged.clear();
+        qa('[data-filter-tag]', overlay).forEach(btn => btn.classList.remove('selected'));
+      };
+
+      q('.tag-filter-apply', overlay).onclick = () => {
+        crmSearchState.tags = staged;
+        overlay.remove();
+
+        const count = q('#crmTagFilterCount');
+        if (count) {
+          count.hidden = !staged.size;
+          count.textContent = staged.size ? String(staged.size) : '';
+        }
+        tagButton.classList.toggle('active', staged.size > 0);
+        crmRunGlobalSearch();
+      };
+    };
+  }
+}
+
+async function loadApprovedPreviewCRM(options = {}) {
   const status = q('#crmStatus');
   const box = q('#crmLeadCards');
 
   if (!status || !box) return;
 
   q('#crmReload')?.addEventListener('click', () => location.reload());
+  crmSetupGlobalSearchControls();
 
   if (!window.supabase) {
     status.textContent = 'Unable to connect. Please try again.';
