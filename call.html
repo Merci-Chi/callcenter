@@ -168,6 +168,50 @@
   let timerTick = null;
   let stateTimers = [];
   let questionnaireOpen = false;
+  let leadBlockedNotInterested = false;
+
+  function showNotInterestedWarning() {
+    alert('This client is listed as not interested');
+  }
+
+  async function refreshNotInterestedStatus() {
+    const client = window.steadyHandsCRMClient;
+    if (!client || !crmId) return false;
+
+    const { data, error } = await client
+      .from('crm')
+      .select('stage,outcome,tags')
+      .eq('id', crmId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Unable to verify Not Interested status:', error);
+      return false;
+    }
+
+    const tags = Array.isArray(data?.tags)
+      ? data.tags
+      : typeof data?.tags === 'string'
+        ? [data.tags]
+        : [];
+
+    leadBlockedNotInterested = [
+      data?.stage,
+      data?.outcome,
+      ...tags
+    ].some(value => /not\s*interested|notinterested/i.test(String(value || '')));
+
+    if (leadBlockedNotInterested && mainCallButton) {
+      mainCallButton.disabled = true;
+      mainCallButton.classList.remove('hangup');
+      mainCallButton.classList.add('start-call');
+      mainCallButton.setAttribute('aria-label', 'Client is listed as not interested');
+      mainCallButton.innerHTML = '<i data-lucide="phone-off"></i><span>Not Interested</span>';
+      lucide.createIcons();
+    }
+
+    return leadBlockedNotInterested;
+  }
 
   function setState(state){
     callState = state;
@@ -231,13 +275,25 @@
     stateTimers.push(setTimeout(() => setState('connected'), 3000));
   }
 
-  mainCallButton?.addEventListener('click', () => {
+  mainCallButton?.addEventListener('click', async () => {
     if(questionnaireOpen) return;
+
+    if (leadBlockedNotInterested || await refreshNotInterestedStatus()) {
+      showNotInterestedWarning();
+      return;
+    }
+
     if(callState === 'idle' || callState === 'ended'){ startCall(); return; }
     stopCall();
     syncMainCallButton();
     openPostCallFlow();
   });
+
+  setTimeout(async () => {
+    if (await refreshNotInterestedStatus()) {
+      showNotInterestedWarning();
+    }
+  }, 0);
 
   document.getElementById('muteBtn')?.addEventListener('click', function(){
     if(callState !== 'connected') return;
@@ -711,8 +767,31 @@
 
           if(!data.outcomes.includes('Not Interested')) data.reason = '';
 
-          if (data.outcomes.includes('Not Interested')) data.route = 'notinterested';
-          else if (data.outcomes.some(x => /follow up|call back later|requested text|requested email|needs more info/i.test(x))) data.route = 'callback';
+          if (data.outcomes.includes('Not Interested')) {
+            data.route = 'notinterested';
+
+            const client = window.steadyHandsCRMClient;
+            if (client && crmId) {
+              client
+                .from('crm')
+                .update({
+                  stage: 'notinterested',
+                  outcome: 'Not Interested',
+                  lastcalled: new Date().toISOString()
+                })
+                .eq('id', crmId)
+                .then(({ error }) => {
+                  if (error) {
+                    console.error('Unable to mark client Not Interested:', error);
+                    alert('Could not save Not Interested to the CRM. Please try again.');
+                    return;
+                  }
+                  leadBlockedNotInterested = true;
+                });
+            }
+          } else if (data.outcomes.some(x => /follow up|call back later|requested text|requested email|needs more info/i.test(x))) {
+            data.route = 'callback';
+          }
 
           btn.classList.toggle('selected', data.outcomes.includes(value));
           stage.querySelector('.pc-next').disabled = !data.outcomes.length;
@@ -872,10 +951,22 @@
           });
         }
 
+        if (data.route === 'notinterested') {
+          leadBlockedNotInterested = true;
+          window.callcenterClearResumeLocation?.();
+        }
+
         overlay.remove();
         questionnaireOpen = false;
         setState('ended');
         syncMainCallButton();
+
+        if (leadBlockedNotInterested && mainCallButton) {
+          mainCallButton.disabled = true;
+          mainCallButton.setAttribute('aria-label', 'Client is listed as not interested');
+          mainCallButton.innerHTML = '<i data-lucide="phone-off"></i><span>Not Interested</span>';
+          lucide.createIcons();
+        }
       });
       lucide.createIcons();
     }
