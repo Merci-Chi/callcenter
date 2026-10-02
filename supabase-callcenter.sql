@@ -354,7 +354,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $
+as $func$
 declare
   v_user uuid;
   v_payment public.payments;
@@ -391,7 +391,8 @@ begin
     end,
     pending_at=coalesce(public.callcenter_commissions.pending_at,excluded.pending_at),
     updated_at=now();
-end $;
+end
+$func$;
 
 -- Existing client/sold rows are seeded into Waiting/Pending without inventing a commission rate.
 do $$
