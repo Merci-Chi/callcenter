@@ -144,6 +144,10 @@ function setupOutreach() {
 
   const leadContainer = leadCards[0].parentElement;
   const selectedLeadTop = q('#selectedLeadTop');
+  const isSearchMode = () => {
+    const query = (q('#crmSearch')?.value || '').trim();
+    return !!query || (typeof crmSearchState !== 'undefined' && crmSearchState.tags?.size > 0);
+  };
 
   let activeFilter = 'All Previews';
 
@@ -406,6 +410,13 @@ function setupOutreach() {
 
     if (!pool.length) { selectedCard = null; return []; }
 
+    if (isSearchMode()) {
+      if (selectedCard && !pool.includes(selectedCard)) selectedCard = null;
+      return selectedCard
+        ? [selectedCard, ...pool.filter(card => card !== selectedCard)]
+        : pool;
+    }
+
     if (!selectedCard || !pool.includes(selectedCard)) selectedCard = pool[0];
 
     const remaining = pool.filter(card => card !== selectedCard);
@@ -417,48 +428,48 @@ function setupOutreach() {
   const renderQueue = (shouldScroll = false) => {
 
     const orderedCards = getOrderedCards();
+    const searching = isSearchMode();
 
     const visibleCards = orderedCards.slice(0, MAX_FOLLOWING + 1);
-    const selected = visibleCards[0] || null;
-    const following = visibleCards.slice(1);
 
     originalOrder.forEach(card => {
-
       card.classList.remove('selected-lead');
-
       card.style.display = 'none';
-
       card.style.order = '';
-
     });
 
-    if (selected && selectedLeadTop) {
-      selected.style.display = '';
-      selected.classList.add('selected-lead');
-      selectedLeadTop.replaceChildren(selected);
-    } else if (selectedLeadTop) {
-      selectedLeadTop.replaceChildren();
+    if (searching) {
+      if (selectedLeadTop) selectedLeadTop.replaceChildren();
+
+      visibleCards.forEach((card, index) => {
+        card.style.display = '';
+        card.style.order = String(index + 1);
+        if (card === selectedCard) card.classList.add('selected-lead');
+        leadContainer.appendChild(card);
+      });
+    } else {
+      const selected = visibleCards[0] || null;
+      const following = visibleCards.slice(1);
+
+      if (selected && selectedLeadTop) {
+        selected.style.display = '';
+        selected.classList.add('selected-lead');
+        selectedLeadTop.replaceChildren(selected);
+      } else if (selectedLeadTop) {
+        selectedLeadTop.replaceChildren();
+      }
+
+      following.forEach((card, index) => {
+        card.style.display = '';
+        card.style.order = String(index + 1);
+        leadContainer.appendChild(card);
+      });
     }
 
-    following.forEach((card, index) => {
-
-      card.style.display = '';
-
-      card.style.order = String(index + 1);
-
-      leadContainer.appendChild(card);
-
-    });
-
     originalOrder.filter(card => !visibleCards.includes(card))
-
       .forEach(card => leadContainer.appendChild(card));
 
     refreshIcons();
-
-    if (shouldScroll && selected) {
-
-    }
 
   };
 
@@ -1594,6 +1605,8 @@ async function crmRunGlobalSearch() {
     box.replaceChildren();
     return;
   }
+
+  q('#selectedLeadTop')?.replaceChildren();
 
   const leads = (data || []).filter(lead => {
     const values = [lead.stage, lead.outcome, ...crmTags(lead)]
