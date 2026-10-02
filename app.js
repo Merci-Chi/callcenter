@@ -392,13 +392,13 @@ function setupOutreach() {
 
   const matchesFilter = card => {
 
+    if (card.dataset.notInterested === 'true') return false;
+
     const query = (q('#crmSearch')?.value || '').trim().toLowerCase();
 
     if (query && !card.textContent.toLowerCase().includes(query)) return false;
 
     if (activeFilter === 'Call Backs') return card.dataset.followup === 'true';
-
-    if (activeFilter === 'Not Interested') return card.dataset.notInterested === 'true';
 
     if (activeFilter === 'High Priority') return starredNames.has(starKey(card));
 
@@ -1148,6 +1148,11 @@ function setupOutreach() {
 
       const card = btn.closest('.lead-card');
 
+      if (card?.dataset.notInterested === 'true') {
+        showToast('This client is listed as not interested');
+        return;
+      }
+
       const company = companyName(card);
 
       const contact = q('.lead-title .name', card)?.textContent?.trim() || '';
@@ -1712,8 +1717,22 @@ async function loadApprovedPreviewCRM() {
         forcedRandom.crm_id;
     }
 
+    const activeLeads = leads.filter(lead => {
+      const values = [
+        lead.stage,
+        lead.outcome,
+        ...crmTags(lead)
+      ].map(value => crmText(value).toLowerCase());
+
+      return !values.some(value =>
+        value === 'notinterested' ||
+        value === 'not interested' ||
+        value.includes('not interested')
+      );
+    });
+
     box.replaceChildren(
-      ...leads.map(lead =>
+      ...activeLeads.map(lead =>
         makeCRMLinkCard(
           lead,
           byCRM.get(lead.id) || []
