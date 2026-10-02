@@ -629,166 +629,222 @@
     const requestedUserId = new URLSearchParams(location.search).get('user');
     const selectedUserId = isManager && requestedUserId ? requestedUserId : session.user.id;
 
-    let activityQuery = c
-      .from('callcenter_call_activity')
-      .select('id,user_id,crm_id,duration_seconds,outcome,created_at')
-      .order('created_at', { ascending:false })
-      .limit(1000);
+    const [{ data: activities = [], error: activityError }, { data: selectedProfiles = [], error: profileError }] = await Promise.all([
+      c
+        .from('callcenter_call_activity')
+        .select('id,user_id,crm_id,duration_seconds,outcome,created_at')
+        .eq('user_id', selectedUserId)
+        .order('created_at', { ascending:false })
+        .limit(1000),
+      c
+        .from('callcenter_profiles')
+        .select('user_id,display_name,email,last_call_at,created_at,disabled_at')
+        .eq('user_id', selectedUserId)
+        .limit(1)
+    ]);
 
-    if (!isManager || requestedUserId) {
-      activityQuery = activityQuery.eq('user_id', selectedUserId);
-    }
-
-    let profilesQuery = c
-      .from('callcenter_profiles')
-      .select('user_id,display_name,email,last_call_at,created_at,disabled_at')
-      .order('display_name', { ascending:true });
-
-    if (!isManager) {
-      profilesQuery = profilesQuery.eq('user_id', session.user.id);
-    }
-
-    const [
-      { data: activities = [], error: activityError },
-      { data: profiles = [], error: profilesError }
-    ] = await Promise.all([activityQuery, profilesQuery]);
-
-    if (activityError || profilesError) {
-      console.error('Unable to load Activity:', activityError || profilesError);
-      main.innerHTML = '<section class="card light-card"><strong>Unable to load activity.</strong><p class="cc-muted">The admin Activity permission may still need to be applied in Supabase.</p></section>';
+    if (activityError || profileError) {
+      console.error('Unable to load Activity:', activityError || profileError);
+      main.innerHTML = '<section class="card light-card"><strong>Unable to load activity.</strong><p class="cc-muted">Please refresh and try again.</p></section>';
       return;
     }
+
+    const selectedProfile = selectedProfiles[0] || (selectedUserId === session.user.id ? ownProfile : null);
 
     const crmIds = [...new Set(activities.map(row => row.crm_id).filter(Boolean))];
     let leads = [];
     if (crmIds.length) {
       const { data } = await c
         .from('crm')
-        .select('id,company,name,phone,callbackdate,callbackat,notes,stage')
+        .select('id,company,name,phone,callbackdate,callbackat,notes,stage,outcome')
         .in('id', crmIds.slice(0,500));
       leads = data || [];
     }
     const leadMap = new Map(leads.map(lead => [lead.id, lead]));
 
-    const allCalledUsers = new Set(activities.map(row => row.user_id));
-    const selectedProfile = profiles.find(p => p.user_id === selectedUserId) ||
-      (selectedUserId === session.user.id ? ownProfile : null);
-
     const formatDuration = seconds => {
       const total = Number(seconds) || 0;
       const min = Math.floor(total / 60);
       const sec = total % 60;
-      return min ? min + 'm ' + sec + 's' : sec + 's';
+      return min ? min + 'm ' + String(sec).padStart(2,'0') + 's' : sec + 's';
     };
 
-    const userRows = userId => activities.filter(row => row.user_id === userId);
+    const formatTime = value => {
+      try { return new Date(value).toLocaleTimeString([], { hour:'numeric', minute:'2-digit' }); }
+      catch (_) { return ''; }
+    };
+
+    const formatDate = value => {
+      try { return new Date(value).toLocaleDateString([], { month:'short', day:'numeric' }); }
+      catch (_) { return ''; }
+    };
+
+    const normalizedOutcome = row => String(row.outcome || '').toLowerCase();
     const isCallback = row => /follow up|call back|callback|requested text|requested email/i.test(row.outcome || '');
+    const isNotInterested = row => /not interested/i.test(row.outcome || '');
 
-    if (isManager && !requestedUserId) {
-      const profileById = new Map(profiles.map(p => [p.user_id,p]));
-      const callers = [...new Set(activities.map(row => row.user_id))];
+    const totalCalls = activities.length;
+    const callbacks = activities.filter(isCallback);
+    const notInterested = activities.filter(isNotInterested);
+    const totalSeconds = activities.reduce((sum,row) => sum + (Number(row.duration_seconds)||0),0);
 
-      main.innerHTML = `
-        <div class="cc-live-grid">
-          <div class="cc-live-stat"><strong>${callers.length}</strong><span>Users Called</span></div>
-          <div class="cc-live-stat"><strong>${activities.length}</strong><span>Total Calls</span></div>
-          <div class="cc-live-stat"><strong>${activities.filter(isCallback).length}</strong><span>Callbacks</span></div>
+    const initialsFor = lead => {
+      const label = lead?.company || lead?.name || 'Lead';
+      return label.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase() || 'L';
+    };
+
+    const outcomeMeta = row => {
+      const text = String(row.outcome || 'Call completed');
+      const lower = text.toLowerCase();
+      if (/sale|sold|closed/.test(lower)) return { cls:'sale', icon:'circle-dollar-sign', label:'Sale' };
+      if (/not interested/.test(lower)) return { cls:'notinterested', icon:'ban', label:'Not Interested' };
+      if (/follow up/.test(lower)) return { cls:'followup', icon:'users', label:'Follow Up' };
+      if (/call back|callback|requested text|requested email/.test(lower)) return { cls:'callback', icon:'calendar-clock', label:'Call Back' };
+      if (/no answer|voicemail|didn.t answer/.test(lower)) return { cls:'noanswer', icon:'phone-missed', label:/voicemail/.test(lower)?'Voicemail':'No Answer' };
+      return { cls:'noanswer', icon:'phone', label:text.length > 18 ? 'Called' : text };
+    };
+
+    const recentRows = activities.slice(0, 30);
+
+    const followups = activities
+      .filter(isCallback)
+      .map(row => ({ row, lead: leadMap.get(row.crm_id) }))
+      .sort((a,b) => {
+        const aDate = a.lead?.callbackdate || a.row.created_at;
+        const bDate = b.lead?.callbackdate || b.row.created_at;
+        return new Date(aDate) - new Date(bDate);
+      })
+      .slice(0, 12);
+
+    const renderRecent = rows => rows.length ? rows.map(row => {
+      const lead = leadMap.get(row.crm_id);
+      const meta = outcomeMeta(row);
+      const label = lead?.company || lead?.name || 'Lead';
+      return `<div class="activity-call-row" data-activity-text="${esc((label+' '+(lead?.phone||'')+' '+(row.outcome||'')).toLowerCase())}" data-outcome="${esc(meta.cls)}">
+        <div class="activity-avatar">${esc(initialsFor(lead))}</div>
+        <div class="activity-call-main">
+          <strong>${esc(label)}</strong>
+          <small>${lead?.phone ? esc(lead.phone) + ' · ' : ''}${formatDuration(row.duration_seconds)}</small>
         </div>
+        <div class="activity-call-side">
+          <time>${formatDate(row.created_at)} · ${formatTime(row.created_at)}</time>
+          <span class="activity-outcome ${meta.cls}"><i data-lucide="${meta.icon}"></i>${esc(meta.label)}</span>
+        </div>
+      </div>`;
+    }).join('') : '<div class="activity-empty">No call history yet.</div>';
 
-        <div class="section-title">Users</div>
-        <section class="card light-card">
-          ${profiles.length ? profiles.map(user => {
-            const rows = userRows(user.user_id);
-            const state = activityState(user);
-            const display = user.display_name || user.email || 'User';
-            const initials = display.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
-            return `<a class="user-row" href="activity.html?user=${encodeURIComponent(user.user_id)}">
-              <div class="user-avatar">${esc(initials || 'U')}</div>
-              <div class="user-info">
-                <strong>${esc(display)}</strong>
-                <small>${rows.length} call${rows.length===1?'':'s'} · ${rows.filter(isCallback).length} callback${rows.filter(isCallback).length===1?'':'s'}</small>
-              </div>
-              <div class="user-side">
-                <span class="badge ${state.label==='Active'?'active':'pending'}">${state.label}</span>
-                <i data-lucide="chevron-right" style="width:16px;height:16px;margin-top:6px"></i>
-              </div>
-            </a>`;
-          }).join('') : '<div class="cc-empty">No user accounts found.</div>'}
-        </section>
-
-        <div class="section-title">Recent History</div>
-        <section class="card light-card">
-          ${activities.length ? activities.slice(0,30).map(row => {
-            const user = profileById.get(row.user_id);
-            const lead = leadMap.get(row.crm_id);
-            return `<div class="cc-row">
-              <div class="cc-row-main">
-                <strong>${esc(user?.display_name || user?.email || 'User')} · ${esc(lead?.company || lead?.name || 'Lead')}</strong>
-                <small>${new Date(row.created_at).toLocaleString()} · ${formatDuration(row.duration_seconds)}</small>
-                <small>${esc(row.outcome || 'Call completed')}</small>
-              </div>
-            </div>`;
-          }).join('') : '<div class="cc-empty">No calls have been recorded yet.</div>'}
-        </section>
-      `;
-
-      window.lucide?.createIcons();
-      return;
-    }
-
-    const rows = activities.filter(row => row.user_id === selectedUserId);
-    const callbacks = rows.filter(isCallback);
-    const display = selectedProfile?.display_name || selectedProfile?.email || 'User';
-    const state = activityState(selectedProfile || ownProfile);
+    const renderFollowups = rows => rows.length ? rows.map(item => {
+      const { row, lead } = item;
+      const label = lead?.company || lead?.name || 'Lead';
+      const dateValue = lead?.callbackdate || row.created_at;
+      const date = new Date(dateValue);
+      const month = date.toLocaleDateString([], {month:'short'}).toUpperCase();
+      const day = date.getDate();
+      const callbackTime = lead?.callbackat || formatTime(row.created_at);
+      return `<div class="activity-followup-row">
+        <div class="activity-datebox"><small>${esc(month)}</small><strong>${esc(day)}</strong></div>
+        <div class="activity-followup-main">
+          <strong>${esc(label)}</strong>
+          <small>${lead?.phone ? esc(lead.phone) + ' · ' : ''}Call back</small>
+        </div>
+        <div class="activity-followup-side">
+          <time>${esc(callbackTime || '')}</time>
+          ${row.crm_id ? '<a class="activity-call-btn" href="index.html?crm_id=' + encodeURIComponent(row.crm_id) + '">Call</a>' : ''}
+        </div>
+      </div>`;
+    }).join('') : '<div class="activity-empty">No upcoming call backs.</div>';
 
     main.innerHTML = `
-      ${isManager ? '<a href="activity.html" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:900;color:#2579cf;margin:2px 2px 12px"><i data-lucide="chevron-left" style="width:15px;height:15px"></i> All users</a>' : ''}
+      ${isManager && requestedUserId ? '<a href="activity.html" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:900;color:#2579cf;margin:2px 2px 12px"><i data-lucide="chevron-left" style="width:15px;height:15px"></i> My Activity</a>' : ''}
 
-      <section class="card profile-card">
-        <div class="profile-avatar">${esc(display.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase() || 'U')}</div>
-        <div class="profile-info"><strong>${esc(display)}</strong><small>${esc(selectedProfile?.email || '')}</small></div>
-        <span class="cc-status ${state.cls}">${state.label}</span>
-      </section>
-
-      <div class="cc-live-grid" style="margin-top:12px">
-        <div class="cc-live-stat"><strong>${rows.length}</strong><span>Total Calls</span></div>
-        <div class="cc-live-stat"><strong>${callbacks.length}</strong><span>Call Backs</span></div>
-        <div class="cc-live-stat"><strong>${rows.length ? new Date(rows[0].created_at).toLocaleDateString() : '—'}</strong><span>Last Call</span></div>
+      <div class="activity-stats">
+        <div class="activity-stat">
+          <div class="activity-stat-icon blue"><i data-lucide="phone"></i></div>
+          <strong>${totalCalls}</strong><span>Total Calls</span>
+        </div>
+        <div class="activity-stat">
+          <div class="activity-stat-icon orange"><i data-lucide="calendar-clock"></i></div>
+          <strong>${callbacks.length}</strong><span>Call Backs</span>
+        </div>
+        <div class="activity-stat">
+          <div class="activity-stat-icon red"><i data-lucide="ban"></i></div>
+          <strong>${notInterested.length}</strong><span>Not Interested</span>
+        </div>
       </div>
 
-      <div class="section-title">Call Backs</div>
-      <section class="card light-card">
-        ${rows.length ? rows.map(row => {
-          const lead = leadMap.get(row.crm_id);
-          return `<div class="cc-row">
-            <div class="cc-row-main">
-              <strong>${esc(lead?.company || lead?.name || 'Lead')}</strong>
-              <small>${lead?.phone ? esc(lead.phone) + ' · ' : ''}${new Date(row.created_at).toLocaleString()}</small>
-              <small>${esc(row.outcome || 'Called')}</small>
-            </div>
-            ${row.crm_id ? '<a href="index.html?crm_id=' + encodeURIComponent(row.crm_id) + '" class="cc-status pending">Open Lead</a>' : ''}
-          </div>`;
-        }).join('') : '<div class="cc-empty">No called leads yet.</div>'}
+      <div class="activity-tools">
+        <label class="activity-search">
+          <i data-lucide="search"></i>
+          <input id="activitySearch" type="search" placeholder="Search business or phone number…" />
+        </label>
+        <div class="activity-filter-row" id="activityFilters">
+          <button class="activity-filter active" type="button" data-filter="all">All</button>
+          <button class="activity-filter" type="button" data-filter="callback">Call Backs</button>
+          <button class="activity-filter" type="button" data-filter="notinterested">Not Interested</button>
+          <button class="activity-filter" type="button" data-filter="sale">Sales</button>
+          <button class="activity-filter" type="button" data-filter="noanswer">No Answer</button>
+        </div>
+      </div>
+
+      <div class="activity-section-head">
+        <h2>Recent Calls</h2>
+        <button type="button" id="activityViewAll">View All</button>
+      </div>
+      <section class="card light-card activity-list" id="activityRecentList">
+        ${renderRecent(recentRows.slice(0,8))}
       </section>
 
-      <div class="section-title">History</div>
-      <section class="card light-card">
-        ${rows.length ? rows.map(row => {
-          const lead = leadMap.get(row.crm_id);
-          return `<div class="cc-row">
-            <div class="cc-row-main">
-              <strong>${esc(lead?.company || lead?.name || 'Lead')}</strong>
-              <small>${new Date(row.created_at).toLocaleString()} · ${formatDuration(row.duration_seconds)}</small>
-              <small>${esc(row.outcome || 'Call completed')}</small>
-            </div>
-          </div>`;
-        }).join('') : '<div class="cc-empty">No call history yet.</div>'}
+      <div class="activity-section-head">
+        <h2>Follow-Up Queue</h2>
+        <button type="button" id="followupViewAll">View All</button>
+      </div>
+      <section class="card light-card activity-list" id="activityFollowupList">
+        ${renderFollowups(followups.slice(0,4))}
       </section>
     `;
 
+    let currentFilter = 'all';
+    let showAllRecent = false;
+    let showAllFollowups = false;
+
+    const refreshRecent = () => {
+      const search = String(document.getElementById('activitySearch')?.value || '').trim().toLowerCase();
+      const filtered = recentRows.filter(row => {
+        const lead = leadMap.get(row.crm_id);
+        const meta = outcomeMeta(row);
+        const haystack = [lead?.company,lead?.name,lead?.phone,row.outcome].join(' ').toLowerCase();
+        return (!search || haystack.includes(search)) && (currentFilter === 'all' || meta.cls === currentFilter);
+      });
+      const list = document.getElementById('activityRecentList');
+      if (list) list.innerHTML = renderRecent(showAllRecent ? filtered : filtered.slice(0,8));
+      window.lucide?.createIcons();
+    };
+
+    document.getElementById('activitySearch')?.addEventListener('input', refreshRecent);
+    document.querySelectorAll('#activityFilters .activity-filter').forEach(button => {
+      button.addEventListener('click', () => {
+        currentFilter = button.dataset.filter || 'all';
+        document.querySelectorAll('#activityFilters .activity-filter').forEach(item => item.classList.toggle('active', item === button));
+        refreshRecent();
+      });
+    });
+
+    document.getElementById('activityViewAll')?.addEventListener('click', event => {
+      showAllRecent = !showAllRecent;
+      event.currentTarget.textContent = showAllRecent ? 'Show Less' : 'View All';
+      refreshRecent();
+    });
+
+    document.getElementById('followupViewAll')?.addEventListener('click', event => {
+      showAllFollowups = !showAllFollowups;
+      event.currentTarget.textContent = showAllFollowups ? 'Show Less' : 'View All';
+      const list = document.getElementById('activityFollowupList');
+      if (list) list.innerHTML = renderFollowups(showAllFollowups ? followups : followups.slice(0,4));
+      window.lucide?.createIcons();
+    });
+
     window.lucide?.createIcons();
   }
-
   async function loadPersonalOutreachStats(session) {
     if (document.title !== 'Outreach') return;
     const c = client();
