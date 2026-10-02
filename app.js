@@ -389,7 +389,7 @@ function setupOutreach() {
 
   syncStars();
 
-  const SCHEDULE_KEY = 'steadyhands-outreach-scheduled-calls';
+  const SCHEDULE_KEY = `steadyhands-outreach-scheduled-calls:${window.steadyHandsOutreachUserId || 'device'}`;
   let scheduledCalls = {};
   try {
     const savedSchedules = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '{}');
@@ -2002,6 +2002,8 @@ async function loadApprovedPreviewCRM(options = {}) {
       window.location.replace('login.html');
       return;
     }
+
+    window.steadyHandsOutreachUserId = outreachSession.user.id;
 
     const { data: callRows = [], error: callRowsError } = await client
       .from('callcenter_call_activity')
