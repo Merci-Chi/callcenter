@@ -1410,7 +1410,7 @@ function makeCRMLinkCard(lead, siteURLs) {
 
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
 
-  const name = crmEscape(lead.name || 'Contact not listed');
+  const name = crmEscape(lead.name || '____');
 
   const phone = crmText(lead.phone || '').trim();
 
