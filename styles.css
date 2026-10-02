@@ -1423,3 +1423,28 @@ button:disabled {cursor:not-allowed}
 .call-alert-row small{display:block;margin-top:3px;color:#7e8d9f;font-size:9px;line-height:1.35}
 #sendPreviewSavedNumber{background:#20b86b}
 #choosePreviewDestination{border-color:#bdd7ef;background:#f7fbff;color:#275b89}
+
+
+/* Button click safety */
+.call-content,
+.call-action-grid,
+.call-controls,
+.starter-script-card,
+.call-transcript-section{
+  position:relative;
+}
+.call-action-grid,
+.call-controls,
+.starter-script-card{
+  z-index:2;
+}
+.call-action-card,
+.call-control,
+.starter-script-tab,
+.starter-copy,
+.live-transcript-enable{
+  pointer-events:auto!important;
+}
+.call-transcript-section{
+  z-index:1;
+}
