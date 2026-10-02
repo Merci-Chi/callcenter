@@ -64,7 +64,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="auth-guard.js"></script>
+<script src="auth-guard.js"></script>\n<script src="user-data.js"></script>
 <script src="app.js"></script>
 <script>
 (function(){
@@ -375,7 +375,17 @@
           </div>
           <button class="pc-done" type="button">Done</button>
         </div>`;
-      stage.querySelector('.pc-done').addEventListener('click', () => location.href='index.html');
+      stage.querySelector('.pc-done').addEventListener('click', async () => {
+        if (data.rating !== "Didn't call" && connectedSeconds > 0) {
+          const crmId = new URLSearchParams(location.search).get('crm_id') || null;
+          await window.callcenterRecordCall?.({
+            crmId,
+            duration: connectedSeconds,
+            outcome: [data.rating, ...data.outcomes].filter(Boolean).join(' • ')
+          });
+        }
+        location.href='index.html';
+      });
       lucide.createIcons();
     }
 
