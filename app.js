@@ -164,7 +164,7 @@ function setupOutreach() {
     return !!query || (typeof crmSearchState !== 'undefined' && crmSearchState.tags?.size > 0);
   };
 
-  let activeFilter = 'All Previews';
+  let activeFilter = crmSearchState?.mainFilter || 'All';
 
   let selectedCard = originalOrder.find(card => card.dataset.crmId === window.steadyHandsForcedCRMId) || null;
   window.steadyHandsForcedCRMId = null;
@@ -389,6 +389,31 @@ function setupOutreach() {
 
   syncStars();
 
+  const SCHEDULE_KEY = 'steadyhands-outreach-scheduled-calls';
+  let scheduledCalls = {};
+  try {
+    const savedSchedules = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '{}');
+    scheduledCalls = savedSchedules && typeof savedSchedules === 'object' ? savedSchedules : {};
+  } catch {
+    scheduledCalls = {};
+  }
+
+  const syncScheduledCards = () => {
+    originalOrder.forEach(card => {
+      const key = starKey(card);
+      card.dataset.scheduled = scheduledCalls[key] ? 'true' : 'false';
+    });
+  };
+
+  const saveScheduledCall = (card, details) => {
+    const key = starKey(card);
+    scheduledCalls[key] = details;
+    localStorage.setItem(SCHEDULE_KEY, JSON.stringify(scheduledCalls));
+    card.dataset.scheduled = 'true';
+  };
+
+  syncScheduledCards();
+
   const matchesFilter = card => {
 
     if (card.dataset.notInterested === 'true') return false;
@@ -397,9 +422,14 @@ function setupOutreach() {
 
     if (query && !card.textContent.toLowerCase().includes(query)) return false;
 
-    if (activeFilter === 'Call Backs') return card.dataset.followup === 'true';
+    if (activeFilter === 'Call Backs') {
+      return window.steadyHandsCalledCRMIds instanceof Set &&
+        window.steadyHandsCalledCRMIds.has(String(card.dataset.crmId || ''));
+    }
 
-    if (activeFilter === 'High Priority') return starredNames.has(starKey(card));
+    if (activeFilter === 'Starred') return starredNames.has(starKey(card));
+
+    if (activeFilter === 'Scheduled') return card.dataset.scheduled === 'true';
 
     return true;
 
@@ -505,21 +535,54 @@ function setupOutreach() {
 
   };
 
-  qa('.pill:not(.tag-filter-pill)').forEach(btn => {
+  const mainFilterButton = q('#crmMainFilter');
+  const mainFilterLabel = q('#crmMainFilterLabel');
 
-    btn.onclick = () => {
+  const updateMainFilterLabel = () => {
+    if (mainFilterLabel) mainFilterLabel.textContent = `Filter: ${activeFilter}`;
+    mainFilterButton?.classList.toggle('active', activeFilter !== 'All');
+  };
 
-      qa('.pill:not(.tag-filter-pill)').forEach(x => x.classList.remove('active'));
+  updateMainFilterLabel();
 
-      btn.classList.add('active');
+  if (mainFilterButton) {
+    mainFilterButton.onclick = () => {
+      const choices = [
+        { value:'All', icon:'list' },
+        { value:'Starred', icon:'star' },
+        { value:'Scheduled', icon:'calendar-clock' },
+        { value:'Call Backs', icon:'phone-call' }
+      ];
 
-      applyFilter(btn.textContent.trim());
+      const body = `
+        <div class="tag-filter-sheet">
+          <p class="tag-filter-help">Choose which outreach leads you want to see.</p>
+          <div class="main-filter-grid">
+            ${choices.map(choice => `
+              <button type="button"
+                class="main-filter-choice ${activeFilter === choice.value ? 'selected' : ''}"
+                data-main-filter="${choice.value}">
+                <i data-lucide="${choice.icon}"></i>
+                <span>${choice.value}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>`;
 
-      showToast(btn.textContent.trim());
+      const overlay = modal('Filter outreach', body, []);
 
+      qa('[data-main-filter]', overlay).forEach(btn => {
+        btn.onclick = () => {
+          activeFilter = btn.dataset.mainFilter || 'All';
+          crmSearchState.mainFilter = activeFilter;
+          overlay.remove();
+          updateMainFilterLabel();
+          applyFilter(activeFilter);
+          showToast(activeFilter === 'All' ? 'Showing all previews' : `Showing ${activeFilter.toLowerCase()}`);
+        };
+      });
     };
-
-  });
+  }
 
   originalOrder.forEach(card => {
 
@@ -861,37 +924,35 @@ function setupOutreach() {
 
       const url = URL.createObjectURL(blob);
 
+      const scheduleDetails = {
+        crmId: card.dataset.crmId || '',
+        company: name,
+        date: `${months[state.month]} ${state.day}, ${state.year}`,
+        time: `${pad(state.hour)}:${pad(state.minute)} ${state.ampm}`,
+        startsAt: start.toISOString(),
+        note
+      };
+
+      saveScheduledCall(card, scheduleDetails);
+
       const a = document.createElement('a');
-
       a.href = url;
-
-      a.download = `follow-up-${name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'lead'}.ics`;
-
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.type = 'text/calendar';
       document.body.appendChild(a);
 
-      a.click();
-
-      a.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-
-      card.dataset.followup = 'true';
-
-      localStorage.setItem(`followup:${name}`, JSON.stringify({
-
-        date: `${months[state.month]} ${state.day}, ${state.year}`,
-
-        time: `${pad(state.hour)}:${pad(state.minute)} ${state.ampm}`,
-
-        note
-
-      }));
-
       close();
+      showToast('Opening device calendar');
 
-      showToast('Calendar event ready');
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
 
-      if (activeFilter === 'Due for Follow Up') { selectedCard = card; renderQueue(false); }
+      if (activeFilter === 'Scheduled') {
+        selectedCard = card;
+        renderQueue(false);
+      }
 
     });
 
@@ -1569,6 +1630,7 @@ const CRM_SEARCH_TAGS = [
 const crmSearchState = {
   query: '',
   tags: new Set(),
+  mainFilter: 'All',
   timer: null,
   requestId: 0
 };
@@ -1925,6 +1987,8 @@ async function loadApprovedPreviewCRM(options = {}) {
 
   window.steadyHandsCRMClient = client;
 
+  let outreachSession = null;
+
   try {
     const authResult = await client.auth.getSession();
 
@@ -1932,9 +1996,27 @@ async function loadApprovedPreviewCRM(options = {}) {
       throw authResult.error;
     }
 
-    if (!authResult.data.session) {
+    outreachSession = authResult.data.session;
+
+    if (!outreachSession) {
       window.location.replace('login.html');
       return;
+    }
+
+    const { data: callRows = [], error: callRowsError } = await client
+      .from('callcenter_call_activity')
+      .select('crm_id')
+      .eq('user_id', outreachSession.user.id)
+      .not('crm_id', 'is', null)
+      .limit(5000);
+
+    if (callRowsError) {
+      console.warn('Unable to load personal call history:', callRowsError);
+      window.steadyHandsCalledCRMIds = new Set();
+    } else {
+      window.steadyHandsCalledCRMIds = new Set(
+        callRows.map(row => String(row.crm_id)).filter(Boolean)
+      );
     }
   } catch (error) {
     console.error('Authentication check failed:', error);
