@@ -1556,3 +1556,39 @@ button:disabled {cursor:not-allowed}
 .lead-card:not(.selected-lead) .search-match-reason{
   margin-left:54px;
 }
+
+
+/* Always-visible compact lead metadata */
+.compact-lead-meta { display:none; }
+.lead-card:not(.selected-lead) .compact-lead-meta {
+  display:block;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid #edf1f5;
+}
+.lead-card:not(.selected-lead) .compact-tag-row {
+  margin:0 0 8px;
+}
+.lead-card:not(.selected-lead) .compact-call-row {
+  display:grid;
+  gap:7px;
+}
+.lead-card:not(.selected-lead) .compact-local-time {
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  color:#647389;
+  font-size:11px;
+  line-height:1.35;
+  font-weight:750;
+}
+.lead-card:not(.selected-lead) .compact-local-time svg {
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
+  margin-top:1px;
+}
+.lead-card:not(.selected-lead) .compact-call-row .call-time-status {
+  margin:0;
+}
+.lead-card.selected-lead .compact-lead-meta { display:none; }
