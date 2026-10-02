@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#102945" />
   <title>Outreach</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261001-outreach-top" />
+  <link rel="stylesheet" href="styles.css?v=20261001-search-all" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -20,12 +20,12 @@
 
   <main class="content">
     <div id="selectedLeadTop" class="crm-leads selected-lead-top" aria-live="polite"></div>
-    <div class="crm-toolbar"><input type="search" id="crmSearch" aria-label="Search business previews" placeholder="Search business, phone, or notes…" autocomplete="off" /><button id="crmReload" type="button" title="Refresh"><i data-lucide="refresh-cw"></i></button></div>
+    <div class="crm-toolbar"><input type="search" id="crmSearch" aria-label="Search all leads" placeholder="Search name, company, phone, email, notes…" autocomplete="off" /><button id="crmReload" type="button" title="Refresh"><i data-lucide="refresh-cw"></i></button></div>
     <div class="filter-row">
       <button class="pill active">All Previews</button>
       <button class="pill">Call Backs</button>
-      <button class="pill">Not Interested</button>
       <button class="pill">High Priority</button>
+      <button class="pill tag-filter-pill" id="crmTagFilter" type="button"><i data-lucide="tags"></i><span>Tags</span><span class="tag-filter-count" id="crmTagFilterCount" hidden></span></button>
     </div>
 
     <section class="crm-state card" id="crmStatus" aria-live="polite">Connecting to CRM…</section>
@@ -43,6 +43,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-1930"></script>
-<script src="app.js?v=20261001-outreach-top"></script>
+<script src="app.js?v=20261001-search-all"></script>
 </body>
 </html>
