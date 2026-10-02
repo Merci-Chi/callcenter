@@ -1422,6 +1422,15 @@ function callcenterLocalTimeText(phone, storedTimezone, date = new Date()) {
   }).format(date);
 }
 
+function callcenterCompactLocalTimeText(phone, storedTimezone, date = new Date()) {
+  const info = callcenterLeadZone(phone, storedTimezone);
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: info.zone,
+    hour: 'numeric',
+    minute: '2-digit'
+  }).format(date);
+}
+
 window.callcenterLocalTimeText = callcenterLocalTimeText;
 window.callcenterCallStatus = callcenterCallStatus;
 window.callcenterLeadZone = callcenterLeadZone;
@@ -1432,13 +1441,13 @@ function refreshLeadCallTimes(root = document) {
     const phone = el.dataset.phone || '';
     const timezone = el.dataset.timezone || '';
     const timing = callcenterCallStatus(phone, timezone);
-    const time = callcenterLocalTimeText(phone, timezone);
-    const prefix = el.closest('.compact-lead-meta') ? 'For them: ' : '';
-    el.textContent = `${prefix}${time} · ${callcenterZoneLabel(timing.zone)}`;
-    if (!el.closest('.compact-lead-meta')) {
-      el.innerHTML = `<i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
+
+    if (el.closest('.compact-lead-meta')) {
+      const time = callcenterCompactLocalTimeText(phone, timezone);
+      el.innerHTML = `<i data-lucide="clock-3"></i> ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
     } else {
-      el.innerHTML = `<i data-lucide="clock-3"></i> For them: ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
+      const time = callcenterLocalTimeText(phone, timezone);
+      el.innerHTML = `<i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
     }
   });
 
@@ -1464,7 +1473,8 @@ function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
 
-  const name = crmEscape(lead.name || '____');
+  const rawName = crmText(lead.name || '').trim();
+  const name = crmEscape(rawName);
 
   const phone = crmText(lead.phone || '').trim();
 
@@ -1502,7 +1512,7 @@ function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
     <div class="lead-head"><div class="company-icon"><i data-lucide="building-2"></i></div>
 
-      <div class="lead-title"><h2>${company}</h2><div class="name">${name}</div><div class="role">${urls.length} approved preview${urls.length === 1 ? '' : 's'}</div></div>
+      <div class="lead-title"><h2>${company}</h2>${rawName ? `<div class="name">${name}</div>` : ''}</div>
 
       <button class="star-button" type="button" aria-label="Star company" aria-pressed="false"><i data-lucide="star"></i></button>
 
@@ -1513,16 +1523,16 @@ function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
     ${searchMatch ? `<div class="search-match-reason"><i data-lucide="search-check"></i><span><strong>“${crmEscape(searchMatch.query)}”</strong> found in ${crmEscape(searchMatch.label)}: <strong>${crmEscape(searchMatch.value)}</strong></span></div>` : ''}
 
     <div class="compact-lead-meta">
-      <div class="tag-row compact-tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
+      ${tags.length ? `<div class="tag-row compact-tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('')}</div>` : ''}
       <div class="compact-call-row">
-        <span class="compact-local-time" data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> For them: ${crmEscape(theirLocalTime)} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span>
         <span class="call-time-status call-time-${callTiming.state}" data-live-call-status data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</span>
+        <span class="compact-local-time" data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> ${crmEscape(callcenterCompactLocalTimeText(phone, lead.timezone))} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span>
       </div>
     </div>
 
     <div class="lead-details">
 
-      <div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
+      ${tags.length ? `<div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('')}</div>` : ''}
 
       <div class="time-row"><span data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(theirLocalTime)} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span></div>
       <div class="call-time-status call-time-${callTiming.state}" data-live-call-status data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</div>
