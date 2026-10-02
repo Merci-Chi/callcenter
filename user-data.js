@@ -423,14 +423,22 @@
     const c = client();
     const start = new Date();
     start.setHours(0,0,0,0);
-    const { count, error } = await c
+    const { data = [], error } = await c
       .from('callcenter_call_activity')
-      .select('id', { count:'exact', head:true })
+      .select('outcome,created_at')
       .eq('user_id', session.user.id)
-      .gte('created_at', start.toISOString());
-    if (!error && document.getElementById('statCalls')) {
-      document.getElementById('statCalls').textContent = count ?? 0;
-    }
+      .order('created_at', { ascending:false })
+      .limit(1000);
+
+    if (error) return;
+
+    const callsToday = data.filter(row => new Date(row.created_at) >= start).length;
+    const callbacks = data.filter(row => /follow up|call back|callback/i.test(row.outcome || '')).length;
+    const interested = data.filter(row => /interested/i.test(row.outcome || '')).length;
+
+    if (document.getElementById('statCalls')) document.getElementById('statCalls').textContent = callsToday;
+    if (document.getElementById('statCallbacks')) document.getElementById('statCallbacks').textContent = callbacks;
+    if (document.getElementById('statInterested')) document.getElementById('statInterested').textContent = interested;
   }
 
   async function init() {
