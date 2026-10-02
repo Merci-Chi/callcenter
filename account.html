@@ -11,21 +11,10 @@
 <body>
 <div class="app">
   <header class="topbar"><div class="topbar-row"><h1>Account</h1></div></header>
-  <main class="content">
-    <section class="card profile-card"><div class="profile-avatar">AH</div><div class="profile-info"><strong>Alex Harper</strong><small>alex@company.com</small></div><i class="chev" data-lucide="chevron-right"></i></section>
-
-    <section class="card settings-group">
-      <div class="group-title">Account</div>
-      <a class="setting-row" href="#"><i data-lucide="user-round"></i><span>Profile Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
-      <a class="setting-row logout" href="#"><i data-lucide="log-out"></i><span>Log Out</span><i class="chev" data-lucide="chevron-right"></i></a>
-    </section>
-
-    <section class="card settings-group">
-      <div class="group-title">Calling &amp; Audio</div>
-      <a class="setting-row" href="#"><i data-lucide="phone"></i><span>Phone Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
-      <a class="setting-row" href="#"><i data-lucide="headphones"></i><span>Audio Devices</span><i class="chev" data-lucide="chevron-right"></i></a>
-      <div class="setting-row"><i data-lucide="badge-dot"></i><span>Call Recording</span><div class="toggle"></div></div>
-      <a class="setting-row" href="#"><i data-lucide="bell"></i><span>Notifications</span><i class="chev" data-lucide="chevron-right"></i></a>
+  <main class="content" id="accountContent">
+    <section class="card light-card" id="accountLoading" style="text-align:center;padding:28px 18px">
+      <div style="font-weight:900;margin-bottom:6px">Loading your account…</div>
+      <div style="font-size:12px;color:#738196">Your profile and activity status will appear here.</div>
     </section>
   </main>
 
