@@ -32,6 +32,140 @@ function showToast(message) {
 
 }
 
+
+function callcenterPadCalendar(value) {
+  return String(value).padStart(2, '0');
+}
+
+function callcenterCalendarICS(details = {}) {
+  const start = new Date(details.startsAt || Date.now());
+  const end = new Date(start.getTime() + 30 * 60000);
+  const fmt = date =>
+    `${date.getFullYear()}${callcenterPadCalendar(date.getMonth()+1)}${callcenterPadCalendar(date.getDate())}T${callcenterPadCalendar(date.getHours())}${callcenterPadCalendar(date.getMinutes())}00`;
+  const esc = value => String(value || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+
+  const description = [
+    details.contact,
+    details.number,
+    details.note
+  ].filter(Boolean).join('\n');
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Steady Hands//Outreach//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${esc(`Follow up with ${details.company || 'lead'}`)}`,
+    `DESCRIPTION:${esc(description)}`,
+    `UID:${details.crmId || Date.now()}-${start.getTime()}@steadyhandsop.com`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+}
+
+async function callcenterOpenDeviceCalendar(details = {}) {
+  const ics = callcenterCalendarICS(details);
+  const safeName = String(details.company || 'lead')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'lead';
+
+  try {
+    const file = new File([ics], `follow-up-${safeName}.ics`, {
+      type: 'text/calendar'
+    });
+
+    if (navigator.share && navigator.canShare?.({ files:[file] })) {
+      await navigator.share({
+        title: `Follow up with ${details.company || 'lead'}`,
+        text: 'Add this scheduled call to your calendar.',
+        files: [file]
+      });
+      return true;
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') return false;
+    console.warn('Native calendar share unavailable:', error);
+  }
+
+  try {
+    const blob = new Blob([ics], { type:'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `follow-up-${safeName}.ics`;
+    anchor.type = 'text/calendar';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    return true;
+  } catch (error) {
+    console.error('Unable to open calendar event:', error);
+    showToast('Could not open the device calendar');
+    return false;
+  }
+}
+
+async function callcenterRequestNotifications() {
+  if (!('Notification' in window)) {
+    showToast('Notifications are not supported on this device');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    showToast('Notifications are blocked in device settings');
+    return false;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      showToast('Notifications enabled');
+      return true;
+    }
+  } catch (error) {
+    console.warn('Notification permission failed:', error);
+  }
+  return false;
+}
+
+async function callcenterShowScheduledNotification(schedule, urgent = false) {
+  if (!schedule || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const startsAt = new Date(schedule.startsAt);
+  const body = urgent
+    ? `It's time to call ${schedule.company || 'this lead'}.`
+    : `Scheduled today at ${startsAt.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}.`;
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(
+        urgent ? 'Scheduled call is due' : 'Call scheduled for today',
+        {
+          body,
+          icon:'images/icon-192.png',
+          badge:'images/icon-192.png',
+          tag:`scheduled-call-${schedule.crmId || schedule.startsAt}`,
+          renotify:urgent,
+          data:{ url: schedule.crmId ? `index.html?crm_id=${encodeURIComponent(schedule.crmId)}` : 'index.html' }
+        }
+      );
+      return;
+    }
+    new Notification(urgent ? 'Scheduled call is due' : 'Call scheduled for today', { body });
+  } catch (error) {
+    console.warn('Unable to show scheduled notification:', error);
+  }
+}
+
 function modal(title, body, actions = [{ label: 'Done', primary: true }]) {
 
   q('.app-modal-overlay')?.remove();
@@ -413,6 +547,104 @@ function setupOutreach() {
   };
 
   syncScheduledCards();
+
+  const scheduledCallKey = schedule =>
+    `${schedule.crmId || schedule.company || 'lead'}:${schedule.startsAt || ''}`;
+
+  const sameLocalDay = (a, b) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  const findTodaySchedules = () => {
+    const now = new Date();
+    return Object.values(scheduledCalls)
+      .filter(schedule => {
+        const when = new Date(schedule?.startsAt);
+        return schedule?.startsAt && !Number.isNaN(when.getTime()) && sameLocalDay(now, when);
+      })
+      .sort((a,b) => new Date(a.startsAt) - new Date(b.startsAt));
+  };
+
+  const openTodaySchedulePopup = schedule => {
+    if (!schedule) return;
+    const when = new Date(schedule.startsAt);
+    const now = new Date();
+    const minutesAway = Math.round((when - now) / 60000);
+    const urgent = minutesAway <= 15 && minutesAway >= -30;
+    const timeText = when.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+    const timingText = urgent
+      ? (minutesAway > 1 ? `Your scheduled call is in ${minutesAway} minutes.` : minutesAway >= -1 ? 'Your scheduled call is due now.' : 'Your scheduled call time just passed.')
+      : `You have a call scheduled for today at ${timeText}.`;
+
+    const body = `
+      <div class="scheduled-call-alert ${urgent ? 'urgent' : ''}">
+        <div class="scheduled-call-alert-icon"><i data-lucide="${urgent ? 'bell-ring' : 'calendar-clock'}"></i></div>
+        <strong>${crmEscape(timingText)}</strong>
+        <p>${crmEscape(schedule.company || 'Scheduled lead')}</p>
+        ${schedule.note ? `<small>${crmEscape(schedule.note)}</small>` : ''}
+      </div>`;
+
+    const actions = [
+      {
+        label:'Add to Calendar',
+        onClick: async (close) => {
+          await callcenterOpenDeviceCalendar(schedule);
+          close();
+        }
+      }
+    ];
+
+    if (schedule.crmId) {
+      actions.push({
+        label:'Open Lead',
+        primary:true,
+        onClick:(close) => {
+          close();
+          window.location.href = `index.html?crm_id=${encodeURIComponent(schedule.crmId)}`;
+        }
+      });
+    }
+
+    if ('Notification' in window && Notification.permission === 'default') {
+      actions.unshift({
+        label:'Enable Notifications',
+        onClick: async () => {
+          const enabled = await callcenterRequestNotifications();
+          if (enabled) callcenterShowScheduledNotification(schedule, urgent);
+        }
+      });
+    }
+
+    modal(
+      urgent ? 'Scheduled call is due' : 'You have a call scheduled for today',
+      body,
+      actions
+    );
+  };
+
+  const checkScheduledCalls = ({ showPopup = true } = {}) => {
+    const today = findTodaySchedules();
+    if (!today.length) return;
+
+    const now = new Date();
+    const next = today.find(schedule => new Date(schedule.startsAt) >= new Date(now.getTime() - 30 * 60000)) || today[0];
+    const when = new Date(next.startsAt);
+    const minutesAway = Math.round((when - now) / 60000);
+    const urgent = minutesAway <= 15 && minutesAway >= -30;
+    const noticeKey = `steadyhands-schedule-notice:${scheduledCallKey(next)}:${urgent ? 'urgent' : 'today'}`;
+
+    if (!sessionStorage.getItem(noticeKey)) {
+      sessionStorage.setItem(noticeKey, '1');
+      if (showPopup) openTodaySchedulePopup(next);
+      callcenterShowScheduledNotification(next, urgent);
+    }
+  };
+
+  checkScheduledCalls();
+  if (!window.__steadyHandsScheduleTicker) {
+    window.__steadyHandsScheduleTicker = setInterval(() => checkScheduledCalls({ showPopup:true }), 60000);
+  }
 
   const matchesFilter = card => {
 
@@ -902,31 +1134,11 @@ function setupOutreach() {
 
       const esc = v => String(v).replace(/**\\\\\\**/g,'\\\\\\\\\\\\\\\\').replace(/\n/g,'\\\\\n').replace(/,/g,'\\\\\\\\,').replace(/;/g,'\\\\\\\\;');
 
-      const description = [contact, number, note].filter(Boolean).join('\n');
-
-      const ics = [
-
-        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Sales Call Pro//Outreach//EN','CALSCALE:GREGORIAN',
-
-        'BEGIN:VEVENT',`DTSTART:${fmt(start)}`,`DTEND:${fmt(end)}`,
-
-        `SUMMARY:${esc(`Follow up with ${name}`)}`,
-
-        `DESCRIPTION:${esc(description)}`,
-
-        `UID:${Date.now()}-${Math.random().toString(36).slice(2)}@salescallpro.local`,
-
-        'END:VEVENT','END:VCALENDAR'
-
-      ].join('\r\n');
-
-      const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
-
-      const url = URL.createObjectURL(blob);
-
       const scheduleDetails = {
         crmId: card.dataset.crmId || '',
         company: name,
+        contact,
+        number,
         date: `${months[state.month]} ${state.day}, ${state.year}`,
         time: `${pad(state.hour)}:${pad(state.minute)} ${state.ampm}`,
         startsAt: start.toISOString(),
@@ -935,19 +1147,13 @@ function setupOutreach() {
 
       saveScheduledCall(card, scheduleDetails);
 
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.type = 'text/calendar';
-      document.body.appendChild(a);
+      if ('Notification' in window && Notification.permission === 'default') {
+        callcenterRequestNotifications();
+      }
 
       close();
       showToast('Opening device calendar');
-
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      callcenterOpenDeviceCalendar(scheduleDetails);
 
       if (activeFilter === 'Scheduled') {
         selectedCard = card;
