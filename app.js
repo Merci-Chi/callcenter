@@ -330,14 +330,10 @@ function setupOutreach() {
 
   orderToggle.innerHTML = `
 
-    <span class="lead-sort-caption"><i data-lucide="list-filter"></i> Sort next leads</span>
+    <span class="lead-sort-caption"><i data-lucide="clock-3"></i> Ordered by best time to call</span>
 
     <div class="lead-sort-options">
-
-      <button type="button" class="lead-sort-option active" data-sort="hours" aria-pressed="true">Best Hours to Call</button>
-
-      <button type="button" class="lead-sort-option" data-sort="website" aria-pressed="false">Website Opportunity</button>
-
+      <span class="lead-sort-option active" aria-current="true">Best Local Time</span>
     </div>`;
 
   const companyName = card => q('.lead-title h2', card)?.textContent?.trim() || 'Business';
@@ -408,100 +404,14 @@ function setupOutreach() {
 
   const getFilteredQueue = () => originalOrder.filter(matchesFilter);
 
-  const getTimeZone = card => {
-
-    const text = card.dataset.timezone || q('.time-row', card)?.textContent || '';
-
-    const phone = q('.contact-line span', card)?.textContent || '';
-
-    if (/\b(EST|EDT)\b/i.test(text)) return 'America/New_York';
-
-    if (/\b(CST|CDT)\b/i.test(text)) return 'America/Chicago';
-
-    if (/\b(MST|MDT)\b/i.test(text)) return 'America/Denver';
-
-    if (/\b(PST|PDT)\b/i.test(text)) return 'America/Los_Angeles';
-
-    if (/(?:702|725|415|206|503|619|916)/.test(phone)) return 'America/Los_Angeles';
-
-    if (/(?:480|520|602|623|928)/.test(phone)) return 'America/Phoenix';
-
-    if (/(?:212|305|404|617|718|813|917)/.test(phone)) return 'America/New_York';
-
-    if (/(?:214|312|469|713|832)/.test(phone)) return 'America/Chicago';
-
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles';
-
-  };
-
-  const localHour = card => {
-
-    try {
-
-      const parts = new Intl.DateTimeFormat('en-US', {
-
-        timeZone: getTimeZone(card), hour: 'numeric', hourCycle: 'h23'
-
-      }).formatToParts(new Date());
-
-      return Number(parts.find(p => p.type === 'hour')?.value ?? 12);
-
-    } catch { return 12; }
-
-  };
-
-  const hourScore = card => {
-
-    const hour = localHour(card);
-
-    const preferred = 10;
-
-    if (hour >= 9 && hour < 17) return 100 - Math.abs(hour - preferred);
-
-    if (hour < 9) return 50 - (9 - hour);
-
-    return 50 - (hour - 17);
-
-  };
-
-  const websiteScore = card => {
-
-    const notes = q('.notes p', card)?.textContent || '';
-
-    const tags = q('.tag-row', card)?.textContent || '';
-
-    const details = `${notes} ${tags}`.toLowerCase();
-
-    let score = 0;
-
-    if (/no website|without a website|doesn't have a website|does not have a website/.test(details)) score += 4;
-
-    if (/outdated|old website|old site|broken site/.test(details)) score += 3;
-
-    if (/website preview|preview concept|send preview|asked to see a website|wants online booking/.test(details)) score += 2;
-
-    if (/interested|asked about pricing|high priority/.test(details)) score += 1;
-
-    return score;
-
-  };
-
   const rankedPool = () => {
 
     const pool = getFilteredQueue();
 
-    const sourceIndex = new Map(originalOrder.map((card, i) => [card, i]));
-
-    const rank = card => leadSort === 'website' ? websiteScore(card) : hourScore(card);
-
     return [...pool].sort((a, b) => {
-
-      const starDiff = Number(starredNames.has(starKey(b))) - Number(starredNames.has(starKey(a)));
-
-      if (starDiff) return starDiff;
-
-      return rank(b) - rank(a) || sourceIndex.get(a) - sourceIndex.get(b);
-
+      const aStatus = callcenterCallStatus(a.dataset.phone || '', a.dataset.timezone || '');
+      const bStatus = callcenterCallStatus(b.dataset.phone || '', b.dataset.timezone || '');
+      return aStatus.score - bStatus.score;
     });
 
   };
@@ -519,30 +429,6 @@ function setupOutreach() {
     return [selectedCard, ...remaining];
 
   };
-
-  const updateSortButtons = () => {
-
-    qa('.lead-sort-option', orderToggle).forEach(btn => {
-
-      const active = btn.dataset.sort === leadSort;
-
-      btn.classList.toggle('active', active);
-
-      btn.setAttribute('aria-pressed', String(active));
-
-    });
-
-  };
-
-  qa('.lead-sort-option', orderToggle).forEach(btn => btn.addEventListener('click', () => {
-
-    leadSort = btn.dataset.sort;
-
-    updateSortButtons();
-
-    changeLeads(() => renderQueue(false));
-
-  }));
 
   const renderQueue = (shouldScroll = false) => {
 
@@ -1164,7 +1050,13 @@ function setupOutreach() {
       const preview = card.dataset.previewUrl || q('.preview-link', card)?.href || '';
 
       const params = new URLSearchParams({
-        company, contact, number, role, preview, crm_id: card.dataset.crmId || ''
+        company,
+        contact,
+        number,
+        role,
+        preview,
+        crm_id: card.dataset.crmId || '',
+        timezone: card.dataset.timezone || ''
       });
 
       const callHref = `call.html?${params.toString()}`;
@@ -1419,6 +1311,129 @@ function crmTags(data) {
 
 }
 
+
+const CALLCENTER_AREA_CODE_ZONES = {};
+function callcenterAddAreaCodes(zone, codes) {
+  String(codes).trim().split(/\s+/).filter(Boolean).forEach(code => CALLCENTER_AREA_CODE_ZONES[code] = zone);
+}
+callcenterAddAreaCodes('America/Los_Angeles', `206 209 213 253 279 310 323 341 360 369 408 415 424 425 442 458 503 509 510 530 541 559 562 619 626 628 650 657 661 669 702 707 714 725 747 760 775 805 818 820 831 840 858 909 916 925 949 951 971 986`);
+callcenterAddAreaCodes('America/Phoenix', `480 520 602 623 928`);
+callcenterAddAreaCodes('America/Denver', `303 307 385 406 435 505 575 719 720 801 970 983`);
+callcenterAddAreaCodes('America/Boise', `208 986`);
+callcenterAddAreaCodes('America/Chicago', `205 210 214 217 224 225 228 251 254 262 281 308 309 312 314 316 318 319 320 325 331 334 346 361 409 417 430 432 447 469 479 501 504 507 512 515 534 539 563 573 580 601 605 608 612 615 618 620 630 636 641 651 660 662 682 701 708 712 713 715 726 737 763 769 779 785 806 815 816 817 830 832 847 850 870 872 903 913 918 920 936 940 945 956 972 975 979 985`);
+callcenterAddAreaCodes('America/New_York', `201 202 203 207 212 215 216 220 223 227 229 231 234 239 240 248 252 267 269 272 276 301 302 304 305 313 315 321 330 332 336 339 347 351 352 380 386 401 404 407 410 412 413 419 423 434 440 445 448 470 475 478 484 502 508 513 516 517 518 540 551 561 567 570 571 574 582 585 586 603 606 607 609 610 614 616 617 631 640 646 656 659 667 678 680 681 689 703 704 706 716 717 724 727 732 734 740 743 754 757 762 765 770 772 774 781 786 802 803 804 810 813 814 826 828 835 843 845 848 850 854 856 857 859 860 862 863 864 878 904 908 910 912 914 917 919 929 930 934 937 941 943 947 948 954 959 980 984 989`);
+callcenterAddAreaCodes('America/Anchorage', `907`);
+callcenterAddAreaCodes('Pacific/Honolulu', `808`);
+
+const CALLCENTER_CALL_WINDOW = {
+  start: 9 * 60,
+  end: 16 * 60 + 30,
+  label: 'Monday–Friday · 9:00 AM–4:30 PM local'
+};
+
+function callcenterPhoneAreaCode(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('1')) return digits.slice(1, 4);
+  if (digits.length >= 10) return digits.slice(0, 3);
+  return '';
+}
+
+function callcenterNormalizedZone(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.includes('/')) return raw;
+  const key = raw.toLowerCase().replace(/\s+/g, '');
+  if (/pacific|pst|pdt/.test(key)) return 'America/Los_Angeles';
+  if (/mountain|mst|mdt/.test(key)) return 'America/Denver';
+  if (/central|cst|cdt/.test(key)) return 'America/Chicago';
+  if (/eastern|est|edt/.test(key)) return 'America/New_York';
+  if (/arizona/.test(key)) return 'America/Phoenix';
+  if (/alaska|akst|akdt/.test(key)) return 'America/Anchorage';
+  if (/hawai|hst/.test(key)) return 'Pacific/Honolulu';
+  return '';
+}
+
+function callcenterLeadZone(phone, storedTimezone) {
+  const area = callcenterPhoneAreaCode(phone);
+  const areaZone = CALLCENTER_AREA_CODE_ZONES[area];
+  if (areaZone) return { zone: areaZone, area, source: 'area' };
+  const stored = callcenterNormalizedZone(storedTimezone);
+  if (stored) return { zone: stored, area, source: 'crm' };
+  return { zone: 'America/Los_Angeles', area, source: 'fallback' };
+}
+
+function callcenterZoneLabel(zone) {
+  return ({
+    'America/Los_Angeles': 'Pacific Time',
+    'America/Phoenix': 'Arizona Time',
+    'America/Denver': 'Mountain Time',
+    'America/Boise': 'Mountain Time',
+    'America/Chicago': 'Central Time',
+    'America/New_York': 'Eastern Time',
+    'America/Anchorage': 'Alaska Time',
+    'Pacific/Honolulu': 'Hawaii Time'
+  })[zone] || String(zone || '').replace(/_/g, ' ');
+}
+
+function callcenterClockParts(zone, date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: zone,
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(date);
+  const get = type => parts.find(p => p.type === type)?.value || '';
+  return { weekday: get('weekday'), hour: Number(get('hour')) % 24, minute: Number(get('minute')) };
+}
+
+function callcenterCallStatus(phone, storedTimezone, date = new Date()) {
+  const info = callcenterLeadZone(phone, storedTimezone);
+  const p = callcenterClockParts(info.zone, date);
+  const minutes = p.hour * 60 + p.minute;
+  const weekdayIndex = ({ Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 })[p.weekday] ?? 0;
+  const weekday = weekdayIndex >= 1 && weekdayIndex <= 5;
+  let state = 'late';
+  let label = 'Outside best hours';
+  let score = 5000;
+
+  if (weekday && minutes >= CALLCENTER_CALL_WINDOW.start && minutes <= CALLCENTER_CALL_WINDOW.end) {
+    state = 'good';
+    label = 'Good time to call now';
+    score = minutes - CALLCENTER_CALL_WINDOW.start;
+  } else if (weekday && minutes < CALLCENTER_CALL_WINDOW.start) {
+    state = 'wait';
+    label = 'Best later today at 9:00 AM';
+    score = 1000 + (CALLCENTER_CALL_WINDOW.start - minutes);
+  } else {
+    const days = weekdayIndex === 5 ? 3 : weekdayIndex === 6 ? 2 : weekdayIndex === 0 ? 1 : 1;
+    state = 'late';
+    label = days === 1 ? 'Best next weekday at 9:00 AM' : 'Best Monday at 9:00 AM';
+    score = 2000 + (days * 1440) + (CALLCENTER_CALL_WINDOW.start - minutes);
+  }
+
+  return { ...info, ...p, minutes, state, label, score };
+}
+
+function callcenterLocalTimeText(phone, storedTimezone, date = new Date()) {
+  const info = callcenterLeadZone(phone, storedTimezone);
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: info.zone,
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  }).format(date);
+}
+
+window.callcenterLocalTimeText = callcenterLocalTimeText;
+window.callcenterCallStatus = callcenterCallStatus;
+window.callcenterLeadZone = callcenterLeadZone;
+window.callcenterZoneLabel = callcenterZoneLabel;
+
 function makeCRMLinkCard(lead, siteURLs) {
 
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
@@ -1450,8 +1465,11 @@ function makeCRMLinkCard(lead, siteURLs) {
   card.dataset.notInterested=String(isNotInterested);
 
   card.dataset.timezone=crmText(lead.timezone||'');
+  card.dataset.phone=phone;
   card.dataset.previewUrl=urls[0] || '';
 
+  const callTiming = callcenterCallStatus(phone, lead.timezone);
+  const theirLocalTime = callcenterLocalTimeText(phone, lead.timezone);
   const dateText=lead.callbackdate ? `Callback: ${crmEscape(lead.callbackdate)}` : (lead.lastcalled ? 'Previously contacted' : 'Not yet contacted');
 
   card.innerHTML=`
@@ -1470,6 +1488,8 @@ function makeCRMLinkCard(lead, siteURLs) {
 
       <div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
 
+      <div class="time-row"><span><i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(theirLocalTime)} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span></div>
+      <div class="call-time-status call-time-${callTiming.state}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</div>
       <div class="time-row"><span><i data-lucide="calendar"></i> ${dateText}</span></div>
 
       <div class="preview-links">${links}</div>
