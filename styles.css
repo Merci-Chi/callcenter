@@ -1665,3 +1665,48 @@ html, body {
     justify-content:center;
   }
 }
+
+
+/* Scheduled call reminder popup */
+.scheduled-call-alert{
+  display:grid;
+  justify-items:center;
+  text-align:center;
+  gap:8px;
+  padding:6px 2px 2px;
+}
+.scheduled-call-alert-icon{
+  width:54px;
+  height:54px;
+  border-radius:17px;
+  display:grid;
+  place-items:center;
+  background:#eef5ff;
+  color:#1677e8;
+}
+.scheduled-call-alert-icon svg{
+  width:26px;
+  height:26px;
+}
+.scheduled-call-alert strong{
+  color:#17314d;
+  font-size:16px;
+  line-height:1.35;
+}
+.scheduled-call-alert p{
+  margin:0;
+  color:#41566e;
+  font-size:13px;
+  font-weight:850;
+}
+.scheduled-call-alert small{
+  color:#7a8999;
+  line-height:1.45;
+}
+.scheduled-call-alert.urgent .scheduled-call-alert-icon{
+  background:#fff0ed;
+  color:#b94b3f;
+}
+.scheduled-call-alert.urgent strong{
+  color:#9d3f36;
+}
