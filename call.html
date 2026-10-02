@@ -186,9 +186,96 @@
     lucide.createIcons();
   });
 
-  document.querySelectorAll('[data-call-action]').forEach(btn => btn.addEventListener('click', () => {
+  function toolSheet(title, body){
+    document.querySelector('.call-tool-overlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'call-tool-overlay';
+    overlay.innerHTML = `<section class="call-tool-sheet" role="dialog" aria-modal="true"><div class="call-tool-grabber"></div><div class="call-tool-head"><h2>${title}</h2><button class="call-tool-close" type="button" aria-label="Close"><i data-lucide="x"></i></button></div><div class="call-tool-body">${body}</div></section>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('.call-tool-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', e => { if(e.target === overlay) overlay.remove(); });
+    lucide.createIcons();
+    return overlay;
+  }
+
+  async function loadLeadDetails(){
+    const c = window.steadyHandsCRMClient;
+    if(!c || !crmId) return null;
+    const { data, error } = await c.from('crm').select('notes,tags,sources,outcome,stage,callbackdate,callbackat').eq('id',crmId).maybeSingle();
+    if(error) console.warn('Unable to load selected lead tools:', error);
+    return data || null;
+  }
+
+  async function copyText(value, message='Copied'){
+    try { await navigator.clipboard.writeText(value); alert(message); }
+    catch { prompt('Copy this:', value); }
+  }
+
+  document.querySelectorAll('[data-call-action]').forEach(btn => btn.addEventListener('click', async () => {
     const label = btn.dataset.callAction;
-    alert(label + ' panel can open here.');
+    const lead = await loadLeadDetails();
+
+    if(label === 'Alerts'){
+      const alerts = [];
+      if(lead?.callbackdate) alerts.push('Callback scheduled: ' + lead.callbackdate + (lead.callbackat ? ' at ' + lead.callbackat : ''));
+      if(/not interested/i.test(String(lead?.outcome || ''))) alerts.push('Previously marked Not Interested');
+      toolSheet('Alerts', alerts.length ? '<div class="call-tool-list">' + alerts.map(x => '<div class="call-tool-row"><i data-lucide="bell"></i><span>' + x + '</span></div>').join('') + '</div>' : '<div class="call-tool-empty">No alerts for this lead.</div>');
+      return;
+    }
+
+    if(label === 'Tags'){
+      let tags = [];
+      for(const key of ['tags','sources']){
+        let value = lead?.[key];
+        if(typeof value === 'string'){ try { value = JSON.parse(value); } catch { value = []; } }
+        if(Array.isArray(value)) tags.push(...value.filter(x => typeof x === 'string'));
+      }
+      tags = [...new Set(tags)];
+      toolSheet('Tags', tags.length ? '<div class="call-tool-tags">' + tags.map(x => '<span>' + x + '</span>').join('') + '</div>' : '<div class="call-tool-empty">No tags on this lead.</div>');
+      return;
+    }
+
+    if(label === 'Notes'){
+      const overlay = toolSheet('Notes', `<textarea class="call-tool-textarea" id="callLeadNotes" placeholder="Add notes…">${lead?.notes || ''}</textarea><button class="call-tool-primary" id="saveCallLeadNotes" type="button">Save Notes</button>`);
+      overlay.querySelector('#saveCallLeadNotes').addEventListener('click', async () => {
+        const c = window.steadyHandsCRMClient;
+        const value = overlay.querySelector('#callLeadNotes').value.trim();
+        if(!c || !crmId) return;
+        const { error } = await c.from('crm').update({notes:value}).eq('id',crmId);
+        if(error) return alert('Could not save notes.');
+        overlay.remove();
+      });
+      return;
+    }
+
+    if(label === 'Send Site Preview'){
+      const message = previewUrl ? `Hi! Here is the website preview we made for ${company}: ${previewUrl}` : '';
+      const overlay = toolSheet('Send Site Preview', previewUrl ? `<div class="call-preview-link">${previewUrl}</div><button class="call-tool-primary" id="sharePreview" type="button"><i data-lucide="send"></i> Send / Share Preview</button><button class="call-tool-secondary" id="copyPreview" type="button">Copy Preview Message</button><a class="call-tool-secondary call-tool-link" href="${previewUrl}" target="_blank" rel="noopener noreferrer">Open Preview</a>` : '<div class="call-tool-empty">No site preview is connected to this lead.</div>');
+      if(previewUrl){
+        overlay.querySelector('#copyPreview').addEventListener('click', () => copyText(message, 'Preview message copied'));
+        overlay.querySelector('#sharePreview').addEventListener('click', async () => {
+          if(navigator.share){ try { await navigator.share({title: company + ' website preview', text: message, url: previewUrl}); } catch {} }
+          else await copyText(message, 'Preview message copied');
+        });
+      }
+      return;
+    }
+
+    if(label === 'Templates'){
+      const templates = [
+        ['Site Preview Ready', `Hi! I put together a website preview for ${company}. You can view it here: ${previewUrl || '[preview link]'}`],
+        ['Pricing', 'Website development is $100 one-time. Hosting is $20/month, or $30/month with the admin site.'],
+        ['Follow Up', `Hi! Just following up about the website preview for ${company}. Let me know if you have any questions.`],
+        ['Ready to Move Forward', `Hi! If you would like to move forward with the website for ${company}, I can help you get everything set up.`]
+      ];
+      const overlay = toolSheet('Templates', '<div class="call-template-list">' + templates.map((t,i) => `<button class="call-template" type="button" data-template="${i}"><strong>${t[0]}</strong><span>${t[1]}</span><i data-lucide="copy"></i></button>`).join('') + '</div>');
+      overlay.querySelectorAll('[data-template]').forEach(item => item.addEventListener('click', () => copyText(templates[Number(item.dataset.template)][1], 'Template copied')));
+      return;
+    }
+
+    if(label === 'Quick Info'){
+      toolSheet('Quick Info', '<div class="quick-info-pricing"><div><span>Website Development</span><strong>$100</strong><small>One-time</small></div><div><span>Standard Hosting</span><strong>$20</strong><small>per month</small></div><div><span>Hosting + Admin Site</span><strong>$30</strong><small>per month</small></div></div>');
+    }
   }));
 
   function openPostCallFlow(){
