@@ -1320,8 +1320,8 @@ callcenterAddAreaCodes('Pacific/Honolulu', `808`);
 
 const CALLCENTER_CALL_WINDOW = {
   start: 9 * 60,
-  end: 16 * 60 + 30,
-  label: 'Monday–Friday · 9:00 AM–4:30 PM local'
+  end: 17 * 60,
+  label: 'Monday–Friday · 9:00 AM–5:00 PM local'
 };
 
 function callcenterPhoneAreaCode(phone) {
@@ -1392,7 +1392,7 @@ function callcenterCallStatus(phone, storedTimezone, date = new Date()) {
 
   if (weekday && minutes >= CALLCENTER_CALL_WINDOW.start && minutes <= CALLCENTER_CALL_WINDOW.end) {
     state = 'good';
-    label = 'Good time to call now · Best times between Mon–Friday 9:00 AM–4:30 PM';
+    label = 'Good time to call now · Best times between Mon–Friday 9:00 AM–5:00 PM';
     score = minutes - CALLCENTER_CALL_WINDOW.start;
   } else if (weekday && minutes < CALLCENTER_CALL_WINDOW.start) {
     state = 'wait';
