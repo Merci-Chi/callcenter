@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#102945" />
   <title>Call</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261001-live-transcript" />
+  <link rel="stylesheet" href="styles.css?v=20261001-buttonfix" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -85,7 +85,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-leadworkspace"></script>
-<script src="app.js?v=20261001-starterscripts"></script>
+<script src="app.js?v=20261001-buttonfix"></script>
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
@@ -159,7 +159,7 @@
   renderStarterScript();
   setTimeout(loadStarterStaffName, 0);
 
-  document.getElementById('callBack').addEventListener('click', () => {
+  document.getElementById('callBack')?.addEventListener('click', () => {
     history.length > 1 ? history.back() : location.href='index.html';
   });
 
@@ -210,6 +210,7 @@
 
   function syncMainCallButton(){
     const active = ['calling','ringing','connected'].includes(callState);
+    if(!mainCallButton) return;
     mainCallButton.classList.toggle('start-call', !active);
     mainCallButton.classList.toggle('hangup', active);
     mainCallButton.setAttribute('aria-label', active ? 'End call' : 'Start call');
@@ -230,7 +231,7 @@
     stateTimers.push(setTimeout(() => setState('connected'), 3000));
   }
 
-  mainCallButton.addEventListener('click', () => {
+  mainCallButton?.addEventListener('click', () => {
     if(questionnaireOpen) return;
     if(callState === 'idle' || callState === 'ended'){ startCall(); return; }
     stopCall();
@@ -238,7 +239,7 @@
     openPostCallFlow();
   });
 
-  document.getElementById('muteBtn').addEventListener('click', function(){
+  document.getElementById('muteBtn')?.addEventListener('click', function(){
     if(callState !== 'connected') return;
     this.classList.toggle('active');
     const span = this.querySelector('span');
@@ -250,7 +251,7 @@
 
   syncMainCallButton();
 
-  document.getElementById('holdBtn').addEventListener('click', function(){
+  document.getElementById('holdBtn')?.addEventListener('click', function(){
     if(callState !== 'connected') return;
     this.classList.toggle('active');
     const span = this.querySelector('span');
@@ -287,9 +288,9 @@
 
   document.querySelectorAll('[data-call-action]').forEach(btn => btn.addEventListener('click', async () => {
     const label = btn.dataset.callAction;
-    const lead = await loadLeadDetails();
 
     if(label === 'Alerts'){
+      const lead = await loadLeadDetails();
       const c = window.steadyHandsCRMClient;
       let existing = [];
       if(c && crmId){
@@ -349,6 +350,7 @@
     }
 
     if(label === 'Tags'){
+      const lead = await loadLeadDetails();
       const tagOptions = [
         'Broken Site','Outdated Site','Site Removed','Already have a website',
         'Spanish?','Hot Lead','Interested','Call Back','Needs More Info','Skeptical',
@@ -393,6 +395,7 @@
     }
 
     if(label === 'Notes'){
+      const lead = await loadLeadDetails();
       const overlay = toolSheet('Notes', `<textarea class="call-tool-textarea" id="callLeadNotes" placeholder="Add notes…">${lead?.notes || ''}</textarea><button class="call-tool-primary" id="saveCallLeadNotes" type="button">Save Notes</button>`);
       overlay.querySelector('#saveCallLeadNotes').addEventListener('click', async () => {
         const c = window.steadyHandsCRMClient;
