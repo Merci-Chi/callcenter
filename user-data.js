@@ -85,9 +85,9 @@
       .maybeSingle();
     if (profileError) {
       console.warn('Call center profile unavailable:', profileError.message);
-      return { session, profile:null, schemaReady:false };
+      return { session, profile:null, schemaReady:false, schemaError:profileError };
     }
-    return { session, profile, schemaReady:true };
+    return { session, profile, schemaReady:true, schemaError:null };
   }
 
   function activityState(profile) {
@@ -441,10 +441,29 @@
     if (document.getElementById('statInterested')) document.getElementById('statInterested').textContent = interested;
   }
 
+  function renderSetupRequired(error) {
+    const main = document.querySelector('main.content');
+    if (!main) return;
+    const page = document.title;
+    if (!['Earnings','Account'].includes(page)) return;
+    main.innerHTML = `
+      <section class="cc-live-card" style="text-align:center;padding:24px 18px">
+        <i data-lucide="database-zap" style="width:34px;height:34px;color:#d27b20"></i>
+        <h3 style="margin:10px 0 6px">Live data setup required</h3>
+        <p class="cc-muted" style="margin:0">This page is connected to Supabase, but the call-center tables are not available yet. Run <strong>supabase-callcenter.sql</strong> in project <strong>glonbvrcudwuzjundrii</strong>.</p>
+        ${error?.message ? `<p class="cc-muted" style="margin-top:10px">Database message: ${esc(error.message)}</p>` : ''}
+      </section>`;
+    window.lucide?.createIcons();
+  }
+
   async function init() {
     addStyles();
-    const { session, profile, schemaReady } = await getSessionAndProfile();
-    if (!session || !schemaReady || !profile) return;
+    const { session, profile, schemaReady, schemaError } = await getSessionAndProfile();
+    if (!session) return;
+    if (!schemaReady || !profile) {
+      renderSetupRequired(schemaError);
+      return;
+    }
 
     const state = activityState(profile);
     if (state.label === 'Disabled') {
