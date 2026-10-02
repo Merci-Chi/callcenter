@@ -40,6 +40,52 @@
     object-fit:cover;
     border-radius:inherit;
   }
+
+  .save-email-option{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    width:max-content;
+    max-width:100%;
+    margin:2px 0 8px;
+    color:#53677c;
+    font-size:12px;
+    font-weight:750;
+    cursor:pointer;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .save-email-option input{
+    position:absolute;
+    opacity:0;
+    pointer-events:none;
+  }
+  .save-email-check{
+    width:19px;
+    height:19px;
+    flex:0 0 19px;
+    border:1.5px solid #b8c6d5;
+    border-radius:6px;
+    background:#fff;
+    display:grid;
+    place-items:center;
+    color:transparent;
+    transition:.15s ease;
+  }
+  .save-email-check svg{
+    width:13px;
+    height:13px;
+    stroke-width:3;
+  }
+  .save-email-option input:checked + .save-email-check{
+    background:#1677e8;
+    border-color:#1677e8;
+    color:#fff;
+  }
+  .save-email-option input:focus-visible + .save-email-check{
+    outline:2px solid rgba(22,119,232,.25);
+    outline-offset:2px;
+  }
 </style>
   <script src="app-update.js" defer></script>
 </head><body>
@@ -49,6 +95,11 @@
 <form id="loginForm" class="login-form">
 <label for="loginEmail">Email address</label><div class="login-field"><i data-lucide="mail"></i><input id="loginEmail" type="email" name="email" placeholder="name@steadyhandsop.com" autocomplete="username" required/></div>
 <label for="loginPassword">Password</label><div class="login-field"><i data-lucide="lock-keyhole"></i><input id="loginPassword" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required/><button type="button" id="showPassword" aria-label="Show password"><i data-lucide="eye"></i></button></div>
+<label class="save-email-option" for="saveEmailToDevice">
+  <input id="saveEmailToDevice" type="checkbox" checked />
+  <span class="save-email-check" aria-hidden="true"><i data-lucide="check"></i></span>
+  <span>Save email to this device</span>
+</label>
 <button type="button" id="forgotPassword" class="forgot-password">Forgot password?</button>
 <div id="loginMessage" class="login-message" role="status" aria-live="polite"></div>
 <button type="submit" id="signInButton" class="login-submit">Sign in <i data-lucide="arrow-right"></i></button>
