@@ -320,22 +320,6 @@ function setupOutreach() {
 
   const MAX_FOLLOWING = 10;
 
-  const orderToggle = document.createElement('div');
-
-  orderToggle.className = 'lead-sort-control';
-
-  orderToggle.setAttribute('role', 'group');
-
-  orderToggle.setAttribute('aria-label', 'Sort companies');
-
-  orderToggle.innerHTML = `
-
-    <span class="lead-sort-caption"><i data-lucide="clock-3"></i> Ordered by best time to call</span>
-
-    <div class="lead-sort-options">
-      <span class="lead-sort-option active" aria-current="true">Best Local Time</span>
-    </div>`;
-
   const companyName = card => q('.lead-title h2', card)?.textContent?.trim() || 'Business';
 
   const starKey = card => card?.dataset.crmId || companyName(card);
@@ -448,19 +432,12 @@ function setupOutreach() {
 
     });
 
-    orderToggle.remove();
-
     if (selected && selectedLeadTop) {
       selected.style.display = '';
       selected.classList.add('selected-lead');
       selectedLeadTop.replaceChildren(selected);
     } else if (selectedLeadTop) {
       selectedLeadTop.replaceChildren();
-    }
-
-    if (following.length) {
-      orderToggle.style.order = '0';
-      leadContainer.appendChild(orderToggle);
     }
 
     following.forEach((card, index) => {
