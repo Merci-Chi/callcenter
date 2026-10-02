@@ -365,7 +365,7 @@
 
     const chart = document.getElementById('weeklyEarningsChart');
     if (chart) {
-      const labels = ['Mon','Tue','Wed','Thu','Fri'];
+      const labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
       const now = new Date();
       const day = now.getDay();
       const diffToMonday = day === 0 ? -6 : 1 - day;
