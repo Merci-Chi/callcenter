@@ -407,3 +407,31 @@ begin
     perform private.callcenter_sync_sale_row(r);
   end loop;
 end $$;
+
+
+-- Activity page: admins and moderators can read all call-center profiles and call history.
+drop policy if exists "callcenter profiles admin read all" on public.callcenter_profiles;
+create policy "callcenter profiles admin read all" on public.callcenter_profiles
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.team_permissions tp
+    where tp.user_id = (select auth.uid())
+      and tp.role in ('ADMIN','MOD')
+      and tp.active = true
+  )
+);
+
+drop policy if exists "call activity admin read all" on public.callcenter_call_activity;
+create policy "call activity admin read all" on public.callcenter_call_activity
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.team_permissions tp
+    where tp.user_id = (select auth.uid())
+      and tp.role in ('ADMIN','MOD')
+      and tp.active = true
+  )
+);
