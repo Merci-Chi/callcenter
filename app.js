@@ -143,6 +143,7 @@ function setupOutreach() {
   const originalOrder = [...leadCards];
 
   const leadContainer = leadCards[0].parentElement;
+  const selectedLeadTop = q('#selectedLeadTop');
 
   let activeFilter = 'All Previews';
 
@@ -548,6 +549,8 @@ function setupOutreach() {
     const orderedCards = getOrderedCards();
 
     const visibleCards = orderedCards.slice(0, MAX_FOLLOWING + 1);
+    const selected = visibleCards[0] || null;
+    const following = visibleCards.slice(1);
 
     originalOrder.forEach(card => {
 
@@ -561,23 +564,26 @@ function setupOutreach() {
 
     orderToggle.remove();
 
-    visibleCards.forEach((card, index) => {
+    if (selected && selectedLeadTop) {
+      selected.style.display = '';
+      selected.classList.add('selected-lead');
+      selectedLeadTop.replaceChildren(selected);
+    } else if (selectedLeadTop) {
+      selectedLeadTop.replaceChildren();
+    }
+
+    if (following.length) {
+      orderToggle.style.order = '0';
+      leadContainer.appendChild(orderToggle);
+    }
+
+    following.forEach((card, index) => {
 
       card.style.display = '';
 
-      card.style.order = String(index * 2);
-
-      card.classList.toggle('selected-lead', index === 0);
+      card.style.order = String(index + 1);
 
       leadContainer.appendChild(card);
-
-      if (index === 0) {
-
-        orderToggle.style.order = '1';
-
-        leadContainer.appendChild(orderToggle);
-
-      }
 
     });
 
@@ -587,7 +593,7 @@ function setupOutreach() {
 
     refreshIcons();
 
-    if (shouldScroll && visibleCards[0]) {
+    if (shouldScroll && selected) {
 
     }
 
@@ -1692,8 +1698,8 @@ async function loadApprovedPreviewCRM() {
       )
     );
 
-    status.textContent =
-      `${leads.length.toLocaleString()} leads ready`;
+    status.textContent = '';
+    status.style.display = 'none';
 
     // User-specific Outreach stats are loaded from callcenter_call_activity in user-data.js.\n\n    setupCopyButtons();
     setupOutreach();
