@@ -1526,3 +1526,33 @@ button:disabled {cursor:not-allowed}
   display: block;
   margin-top: 0;
 }
+
+
+/* Search match explanation shown on every matching result */
+.search-match-reason{
+  margin:9px 0 2px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#eef6ff;
+  color:#345d89;
+  display:flex;
+  align-items:flex-start;
+  gap:7px;
+  font-size:11px;
+  line-height:1.4;
+  font-weight:700;
+}
+.search-match-reason svg{
+  width:14px;
+  height:14px;
+  flex:0 0 auto;
+  margin-top:1px;
+  color:#1688ff;
+}
+.search-match-reason strong{
+  color:#173f6b;
+  font-weight:900;
+}
+.lead-card:not(.selected-lead) .search-match-reason{
+  margin-left:54px;
+}

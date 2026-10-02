@@ -1428,7 +1428,7 @@ window.callcenterCallStatus = callcenterCallStatus;
 window.callcenterLeadZone = callcenterLeadZone;
 window.callcenterZoneLabel = callcenterZoneLabel;
 
-function makeCRMLinkCard(lead, siteURLs) {
+function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
 
@@ -1478,6 +1478,8 @@ function makeCRMLinkCard(lead, siteURLs) {
 
     <div class="contact-line"><i data-lucide="phone"></i><span>${crmEscape(phone || 'No phone listed')}</span>${phone ? `<button class="copy-btn" type="button" data-copy="${crmEscape(phone)}" aria-label="Copy phone"><i data-lucide="copy"></i></button>` : ''}</div>
 
+    ${searchMatch ? `<div class="search-match-reason"><i data-lucide="search-check"></i><span><strong>“${crmEscape(searchMatch.query)}”</strong> found in ${crmEscape(searchMatch.label)}: <strong>${crmEscape(searchMatch.value)}</strong></span></div>` : ''}
+
     <div class="lead-details">
 
       <div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('') || '<span class="tag blue">Approved preview</span>'}</div>
@@ -1523,6 +1525,99 @@ function crmNormalizeSearch(value) {
 
 function crmSafeOrTerm(value) {
   return crmNormalizeSearch(value).replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function crmDigits(value) {
+  return crmText(value || '').replace(/\D/g, '');
+}
+
+function crmIsPhoneSearch(query) {
+  const raw = crmNormalizeSearch(query);
+  const digits = crmDigits(raw);
+  return digits.length >= 2 && !/[a-z]/i.test(raw);
+}
+
+function crmFindSearchMatch(lead, query) {
+  const raw = crmNormalizeSearch(query);
+  if (!raw) return null;
+
+  const queryDigits = crmDigits(raw);
+
+  if (crmIsPhoneSearch(raw)) {
+    const phoneFields = [
+      ['Phone', lead.phone],
+      ['Alternate Phone', lead.altphone]
+    ];
+
+    for (const [label, value] of phoneFields) {
+      const shown = crmText(value || '').trim();
+      if (shown && crmDigits(shown).includes(queryDigits)) {
+        return { query: raw, label, value: shown };
+      }
+    }
+    return null;
+  }
+
+  const needle = raw.toLowerCase();
+  const fields = [
+    ['Name', lead.name],
+    ['Company', lead.company],
+    ['Phone', lead.phone],
+    ['Alternate Phone', lead.altphone],
+    ['Email', lead.email],
+    ['Website', lead.website],
+    ['Domain', lead.domain],
+    ['Notes', lead.notes],
+    ['Issue', lead.issue],
+    ['Concerns', lead.concerns],
+    ['Origin', lead.origin],
+    ['Assigned', lead.assigned]
+  ];
+
+  for (const [label, value] of fields) {
+    const shown = crmText(value || '').trim();
+    if (shown && shown.toLowerCase().includes(needle)) {
+      return { query: raw, label, value: shown };
+    }
+  }
+
+  for (const [label, values] of [['Tag', lead.tags], ['Source', lead.sources]]) {
+    let list = values;
+    if (typeof list === 'string') {
+      try { list = JSON.parse(list); } catch { list = [list]; }
+    }
+    if (!Array.isArray(list)) continue;
+
+    const found = list.find(value => crmText(value).toLowerCase().includes(needle));
+    if (found) return { query: raw, label, value: crmText(found) };
+  }
+
+  return null;
+}
+
+async function crmFetchAllForPhoneSearch(client, selectedTags = []) {
+  const rows = [];
+  const PAGE_SIZE = 1000;
+
+  for (let from = 0; ; from += PAGE_SIZE) {
+    let page = client
+      .from('crm')
+      .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
+      .neq('stage', 'notinterested')
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (selectedTags.length) {
+      page = page.contains('tags', selectedTags);
+    }
+
+    const { data, error } = await page;
+    if (error) throw error;
+
+    rows.push(...(data || []));
+    if (!data || data.length < PAGE_SIZE) break;
+  }
+
+  return rows;
 }
 
 async function crmFetchPreviewURLs(client, ids) {
@@ -1572,37 +1667,56 @@ async function crmRunGlobalSearch() {
   status.style.display = '';
   status.textContent = 'Searching all CRM leads…';
 
-  let db = client
-    .from('crm')
-    .select('id,company,name,phone,email,website,notes,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
-    .neq('stage', 'notinterested')
-    .limit(100);
+  let data = [];
+  let error = null;
 
-  if (query) {
-    const safe = crmSafeOrTerm(query);
-    const digits = query.replace(/\D/g, '');
-    const terms = [
-      `company.ilike.%${safe}%`,
-      `name.ilike.%${safe}%`,
-      `phone.ilike.%${safe}%`,
-      `email.ilike.%${safe}%`,
-      `website.ilike.%${safe}%`,
-      `notes.ilike.%${safe}%`,
-      `issue.ilike.%${safe}%`,
-      `concerns.ilike.%${safe}%`,
-      `domain.ilike.%${safe}%`,
-      `origin.ilike.%${safe}%`,
-      `assigned.ilike.%${safe}%`
-    ];
-    if (digits && digits !== safe) terms.push(`phone.ilike.%${digits}%`);
-    db = db.or(terms.join(','));
+  if (query && crmIsPhoneSearch(query)) {
+    try {
+      const allRows = await crmFetchAllForPhoneSearch(client, selectedTags);
+      const queryDigits = crmDigits(query);
+
+      data = allRows.filter(lead =>
+        [lead.phone, lead.altphone]
+          .some(value => crmDigits(value).includes(queryDigits))
+      );
+    } catch (phoneError) {
+      error = phoneError;
+    }
+  } else {
+    let db = client
+      .from('crm')
+      .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
+      .neq('stage', 'notinterested')
+      .limit(100);
+
+    if (query) {
+      const safe = crmSafeOrTerm(query);
+      const terms = [
+        `company.ilike.%${safe}%`,
+        `name.ilike.%${safe}%`,
+        `phone.ilike.%${safe}%`,
+        `altphone.ilike.%${safe}%`,
+        `email.ilike.%${safe}%`,
+        `website.ilike.%${safe}%`,
+        `domain.ilike.%${safe}%`,
+        `notes.ilike.%${safe}%`,
+        `issue.ilike.%${safe}%`,
+        `concerns.ilike.%${safe}%`,
+        `origin.ilike.%${safe}%`,
+        `assigned.ilike.%${safe}%`
+      ];
+      db = db.or(terms.join(','));
+    }
+
+    if (selectedTags.length) {
+      db = db.contains('tags', selectedTags);
+    }
+
+    const result = await db;
+    data = result.data || [];
+    error = result.error || null;
   }
 
-  if (selectedTags.length) {
-    db = db.contains('tags', selectedTags);
-  }
-
-  const { data, error } = await db;
   if (requestId !== crmSearchState.requestId) return;
 
   if (error) {
@@ -1614,20 +1728,29 @@ async function crmRunGlobalSearch() {
 
   q('#selectedLeadTop')?.replaceChildren();
 
-  const leads = (data || []).filter(lead => {
+  let leads = (data || []).filter(lead => {
     const values = [lead.stage, lead.outcome, ...crmTags(lead)]
       .map(value => crmText(value).toLowerCase());
     return !values.some(value => value === 'notinterested' || value.includes('not interested'));
   });
 
+  const matches = new Map();
+  if (query) {
+    leads = leads.filter(lead => {
+      const match = crmFindSearchMatch(lead, query);
+      if (!match) return false;
+      matches.set(String(lead.id), match);
+      return true;
+    });
+  }
+
   const siteMap = await crmFetchPreviewURLs(client, leads.map(lead => lead.id));
   if (requestId !== crmSearchState.requestId) return;
 
-  // Search results belong only in crmLeadCards, below the search controls.
   q('#selectedLeadTop')?.replaceChildren();
   box.replaceChildren(...leads.map(lead => {
     const urls = siteMap.get(lead.id) || [crmUrl(lead.previewurl)].filter(Boolean);
-    return makeCRMLinkCard(lead, urls);
+    return makeCRMLinkCard(lead, urls, matches.get(String(lead.id)) || null);
   }));
 
   status.style.display = leads.length ? 'none' : '';
