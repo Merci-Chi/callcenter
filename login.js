@@ -11,6 +11,22 @@
   const email = document.getElementById('loginEmail');
   const heading = document.getElementById('loginHeading');
   const subheading = document.getElementById('loginSubheading');
+  const saveEmail = document.getElementById('saveEmailToDevice');
+  const SAVED_EMAIL_KEY = 'steadyhands-saved-login-email';
+
+  try {
+    const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY) || '';
+    if (savedEmail) {
+      email.value = savedEmail;
+      if (saveEmail) saveEmail.checked = true;
+    }
+  } catch {}
+
+  saveEmail?.addEventListener('change', () => {
+    if (!saveEmail.checked) {
+      try { localStorage.removeItem(SAVED_EMAIL_KEY); } catch {}
+    }
+  });
 
   window.lucide?.createIcons();
 
@@ -178,11 +194,21 @@
     message.textContent = 'Signing in...';
 
     try {
+      const loginEmail = form.elements.email.value.trim();
       const { error } = await client.auth.signInWithPassword({
-        email: form.elements.email.value.trim(),
+        email: loginEmail,
         password: password.value
       });
       if (error) throw error;
+
+      try {
+        if (saveEmail?.checked) {
+          localStorage.setItem(SAVED_EMAIL_KEY, loginEmail);
+        } else {
+          localStorage.removeItem(SAVED_EMAIL_KEY);
+        }
+      } catch {}
+
       location.replace('index.html');
     } catch (error) {
       console.error('Sign-in failed:', error);
