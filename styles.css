@@ -1503,3 +1503,14 @@ button:disabled {cursor:not-allowed}
 .call-time-confirm-wait{background:#fff6df;color:#8a6417}
 .call-time-confirm-late{background:#fff0ed;color:#a24a3e}
 .call-time-confirm-hours{margin:12px 0 0;color:#8491a0;font-size:11px;line-height:1.45}
+
+
+/* Outreach controls stay together at the top */
+.outreach-controls{
+  position:relative;
+  z-index:5;
+  margin-bottom:12px;
+}
+.outreach-controls .crm-toolbar{margin-bottom:10px}
+.outreach-controls .filter-row{margin-bottom:0}
+.selected-lead-top{margin-top:2px}
