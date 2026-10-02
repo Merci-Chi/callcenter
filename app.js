@@ -1392,7 +1392,7 @@ function callcenterCallStatus(phone, storedTimezone, date = new Date()) {
 
   if (weekday && minutes >= CALLCENTER_CALL_WINDOW.start && minutes <= CALLCENTER_CALL_WINDOW.end) {
     state = 'good';
-    label = 'Good time to call now (Mon–Fri 9:00 AM–4:30 PM)';
+    label = 'Good time to call now · Best times between Mon–Friday 9:00 AM–4:30 PM';
     score = minutes - CALLCENTER_CALL_WINDOW.start;
   } else if (weekday && minutes < CALLCENTER_CALL_WINDOW.start) {
     state = 'wait';
@@ -1446,6 +1446,9 @@ function refreshLeadCallTimes(root = document) {
     if (el.closest('.compact-lead-meta')) {
       const time = callcenterCompactLocalTimeText(phone, timezone);
       el.innerHTML = `<i data-lucide="clock-3"></i> ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
+    } else if (el.classList.contains('selected-local-time')) {
+      const time = callcenterCompactLocalTimeText(phone, timezone);
+      el.innerHTML = `<i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
     } else {
       const time = callcenterLocalTimeText(phone, timezone);
       el.innerHTML = `<i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(time)} · ${crmEscape(callcenterZoneLabel(timing.zone))}`;
@@ -1535,8 +1538,8 @@ function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
       ${tags.length ? `<div class="tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('')}</div>` : ''}
 
-      <div class="time-row"><span data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(theirLocalTime)} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span></div>
       <div class="call-time-status call-time-${callTiming.state}" data-live-call-status data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</div>
+      <div class="time-row"><span class="selected-local-time" data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> <strong>For them:</strong> ${crmEscape(callcenterCompactLocalTimeText(phone, lead.timezone))} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span></div>
       <div class="time-row"><span><i data-lucide="calendar"></i> ${dateText}</span></div>
 
       <div class="preview-links">${links}</div>
