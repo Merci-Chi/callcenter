@@ -1020,11 +1020,40 @@ button:disabled {cursor:not-allowed}
   min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
   border:1px solid rgba(255,255,255,.04)
 }
-.activity-stat-icon{width:30px;height:30px;display:grid;place-items:center;margin-bottom:2px;background:transparent!important;border:0!important;border-radius:0!important}
-.activity-stat-icon i{width:17px;height:17px}
-.activity-stat-icon.blue{background:transparent;color:#5ea8ff}
-.activity-stat-icon.orange{background:transparent;color:#ffb05a}
-.activity-stat-icon.red{background:transparent;color:#ff7d89}
+.activity-stat-icon{
+  width:auto;
+  height:auto;
+  min-width:0;
+  min-height:0;
+  display:grid;
+  place-items:center;
+  margin-bottom:2px;
+  padding:0 !important;
+  background:none !important;
+  background-color:transparent !important;
+  background-image:none !important;
+  border:0 !important;
+  outline:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+.activity-stat-icon i,
+.activity-stat-icon svg{
+  width:24px;
+  height:24px;
+  padding:0 !important;
+  margin:0 !important;
+  background:none !important;
+  background-color:transparent !important;
+  background-image:none !important;
+  border:0 !important;
+  outline:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+.activity-stat-icon.blue{background:none !important;color:#5ea8ff !important}
+.activity-stat-icon.orange{background:none !important;color:#ffb05a !important}
+.activity-stat-icon.red{background:none !important;color:#ff7d89 !important}
 .activity-stat strong{font-size:22px;line-height:1}
 .activity-stat span{font-size:10px;color:#d8e5f2;font-weight:800}
 .activity-tools{margin-top:14px}
@@ -1088,4 +1117,28 @@ button:disabled {cursor:not-allowed}
   .activity-stat strong{font-size:19px}
   .activity-call-row{grid-template-columns:34px minmax(0,1fr) auto;gap:8px}
   .activity-call-side{min-width:82px}
+}
+
+/* FINAL ACTIVITY ICON OVERRIDE — icon only, no colored box */
+.activity-stat .activity-stat-icon,
+.activity-stat .activity-stat-icon.blue,
+.activity-stat .activity-stat-icon.orange,
+.activity-stat .activity-stat-icon.red{
+  background:none !important;
+  background-color:transparent !important;
+  background-image:none !important;
+  border:none !important;
+  outline:none !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
+  padding:0 !important;
+}
+.activity-stat .activity-stat-icon svg{
+  background:none !important;
+  background-color:transparent !important;
+  background-image:none !important;
+  border:none !important;
+  outline:none !important;
+  box-shadow:none !important;
+  border-radius:0 !important;
 }
