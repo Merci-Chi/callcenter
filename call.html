@@ -85,7 +85,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-leadworkspace"></script>
-<script src="app.js?v=20261001-startupfix2"></script>
+<script src="app.js?v=20261001-calltime"></script>
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
@@ -94,6 +94,7 @@
   const number = params.get('number') || '(000) 000-0000';
   const previewUrl = params.get('preview') || '';
   const crmId = params.get('crm_id') || '';
+  const storedTimezone = params.get('timezone') || '';
 
   const header = document.getElementById('callCompanyHeader');
   const companyEl = document.getElementById('callCompany');
@@ -275,6 +276,44 @@
     stateTimers.push(setTimeout(() => setState('connected'), 3000));
   }
 
+  function confirmCallTime() {
+    const theirTime = window.callcenterLocalTimeText
+      ? window.callcenterLocalTimeText(number, storedTimezone)
+      : new Date().toLocaleString();
+
+    const timing = window.callcenterCallStatus
+      ? window.callcenterCallStatus(number, storedTimezone)
+      : { state: 'good', label: 'Check their local time before calling', zone: storedTimezone };
+
+    const zoneLabel = window.callcenterZoneLabel
+      ? window.callcenterZoneLabel(timing.zone)
+      : (storedTimezone || 'Local time');
+
+    const area = window.callcenterLeadZone
+      ? window.callcenterLeadZone(number, storedTimezone).area
+      : '';
+
+    return new Promise(resolve => {
+      const body = `
+        <div class="call-time-confirm">
+          <div class="call-time-confirm-icon"><i data-lucide="clock-3"></i></div>
+          <p class="call-time-confirm-question">It's currently</p>
+          <strong class="call-time-confirm-time">${theirTime}</strong>
+          <p class="call-time-confirm-zone">${zoneLabel}${area ? ' · area code ' + area : ''}</p>
+          <div class="call-time-confirm-status call-time-confirm-${timing.state}">
+            <i data-lucide="${timing.state === 'good' ? 'circle-check' : 'triangle-alert'}"></i>
+            <span>${timing.label}</span>
+          </div>
+          <p class="call-time-confirm-hours">Best calling hours: Monday–Friday · 9:00 AM–4:30 PM their local time.</p>
+        </div>`;
+
+      modal('Are you sure?', body, [
+        { label: 'Cancel', onClick: close => { close(); resolve(false); } },
+        { label: timing.state === 'good' ? 'Call Now' : 'Call Anyway', primary: true, onClick: close => { close(); resolve(true); } }
+      ]);
+    });
+  }
+
   mainCallButton?.addEventListener('click', async () => {
     if(questionnaireOpen) return;
 
@@ -283,7 +322,13 @@
       return;
     }
 
-    if(callState === 'idle' || callState === 'ended'){ startCall(); return; }
+    if(callState === 'idle' || callState === 'ended'){
+      const confirmed = await confirmCallTime();
+      if (!confirmed) return;
+      startCall();
+      return;
+    }
+
     stopCall();
     syncMainCallButton();
     openPostCallFlow();
