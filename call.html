@@ -643,23 +643,14 @@
     let screenIndex = 0;
     let screens = [];
 
-    const outcomeOptions = [
-      ['Interested','sparkles'],
-      ['Follow Up','calendar-clock'],
-      ['Needs More Info','circle-help'],
-      ['Not Interested','circle-x'],
-      ['No Answer','phone-missed'],
-      ['Voicemail','voicemail'],
-      ['Busy','phone-call'],
-      ['Wrong Number','ban']
-    ];
     const reasonOptions = ['Too expensive','Already has someone','Not a priority','Doesn’t want a website','Bad timing','Not a fit','Other'];
-    const tagOptions = ['Interested','Follow Up','Send Preview','Requested Text','Requested Email','Price Concern','Decision Maker','No Website','Busy','Do Not Call'];
-    // Show the relevant five outcomes on What happened?; More opens the rest.
+
+    // These are real CRM tags used as the call result.
+    // Keep the most common options visible and put the rest under More.
     const outcomeChoices = {
       Good: [
         ['Interested', 'sparkles'],
-        ['Follow Up', 'calendar-clock'],
+        ['Call Back', 'phone-forwarded'],
         ['Needs More Info', 'circle-help'],
         ['Send Preview', 'monitor'],
         ['Requested Email', 'mail']
@@ -667,17 +658,41 @@
       Bad: [
         ['Not Interested', 'circle-x'],
         ['No Answer', 'phone-missed'],
-        ['Voicemail', 'voicemail'],
+        ['Left Voicemail', 'voicemail'],
         ['Busy', 'phone-call'],
         ['Wrong Number', 'ban']
       ]
     };
-    const extraOutcomes = [
-      ['Already Has Someone', 'users'],
-      ['Bad Timing', 'clock'],
-      ['Price Concern', 'badge-dollar-sign'],
-      ['Requested Text', 'message-square'],
-      ['Call Back Later', 'calendar-days']
+
+    const extraOutcomeChoices = {
+      Good: [
+        ['Requested Text', 'message-square'],
+        ['Decision Maker', 'user-check'],
+        ['Hot Lead', 'flame'],
+        ['Conversion', 'badge-check'],
+        ['Sold', 'circle-dollar-sign']
+      ],
+      Bad: [
+        ['Already Has Someone', 'users'],
+        ['Bad Timing', 'clock'],
+        ['Price Concern', 'badge-dollar-sign'],
+        ['Skeptical', 'circle-help'],
+        ['Do Not Call', 'phone-off']
+      ]
+    };
+
+    // Extra descriptive tags only. Do not duplicate Good/Bad call-result tags here.
+    const tagOptions = [
+      'Broken Site',
+      'Outdated Site',
+      'Site Removed',
+      'Already have a website',
+      'No Website',
+      'Spanish?',
+      'Requested Text',
+      'Requested Email',
+      'Decision Maker',
+      'Price Concern'
     ];
     let showMoreOutcomes = false;
 
@@ -751,8 +766,8 @@
 
       if(screen === 'outcome'){
         const choices = outcomeChoices[data.rating] || outcomeChoices.Good;
-        // More is the sixth card, styled exactly like the other outcome cards.
-        const visible = showMoreOutcomes ? [...choices, ...extraOutcomes] : choices;
+        const extras = extraOutcomeChoices[data.rating] || [];
+        const visible = showMoreOutcomes ? [...choices, ...extras] : choices;
         stage.innerHTML = `
           <div class="pc-heading"><span class="pc-kicker">Call details</span><h2>What happened?</h2><p>Select everything that applies to this call.</p></div>
           <div class="pc-option-grid">
@@ -767,29 +782,9 @@
 
           if(!data.outcomes.includes('Not Interested')) data.reason = '';
 
-          if (data.outcomes.includes('Not Interested')) {
+          if (data.outcomes.includes('Not Interested') || data.outcomes.includes('Do Not Call')) {
             data.route = 'notinterested';
-
-            const client = window.steadyHandsCRMClient;
-            if (client && crmId) {
-              client
-                .from('crm')
-                .update({
-                  stage: 'notinterested',
-                  outcome: 'Not Interested',
-                  lastcalled: new Date().toISOString()
-                })
-                .eq('id', crmId)
-                .then(({ error }) => {
-                  if (error) {
-                    console.error('Unable to mark client Not Interested:', error);
-                    alert('Could not save Not Interested to the CRM. Please try again.');
-                    return;
-                  }
-                  leadBlockedNotInterested = true;
-                });
-            }
-          } else if (data.outcomes.some(x => /follow up|call back later|requested text|requested email|needs more info/i.test(x))) {
+          } else if (data.outcomes.some(x => /call back|requested text|requested email|needs more info|interested|send preview/i.test(x))) {
             data.route = 'callback';
           }
 
@@ -818,7 +813,7 @@
 
       if(screen === 'tags'){
         stage.innerHTML = `
-          <div class="pc-heading"><span class="pc-kicker">Organize the call</span><h2>Add tags</h2><p>Select any that apply. You can choose more than one.</p></div>
+          <div class="pc-heading"><span class="pc-kicker">Extra details</span><h2>Add other tags</h2><p>Add any extra details that were not already captured by the call result.</p></div>
           <div class="pc-tag-options">
             ${tagOptions.map(label => `<button class="pc-tag ${data.tags.includes(label)?'selected':''}" data-value="${label}">${label}</button>`).join('')}
           </div>
@@ -902,7 +897,7 @@
           if (client && crmId && data.route) {
             const { data: currentLead } = await client
               .from('crm')
-              .select('notes')
+              .select('notes,tags')
               .eq('id', crmId)
               .maybeSingle();
 
@@ -915,18 +910,33 @@
               ? [currentNotes, noteLine].filter(Boolean).join('\n')
               : currentNotes;
 
+            let existingTags = currentLead?.tags || [];
+            if (typeof existingTags === 'string') {
+              try { existingTags = JSON.parse(existingTags); }
+              catch { existingTags = [existingTags]; }
+            }
+            if (!Array.isArray(existingTags)) existingTags = [];
+
+            const mergedTags = [...new Set([
+              ...existingTags.filter(tag => typeof tag === 'string' && tag.trim()),
+              ...data.outcomes,
+              ...data.tags
+            ])];
+
             const crmUpdate = data.route === 'notinterested'
               ? {
                   stage: 'notinterested',
                   outcome: 'Not Interested',
                   lastcalled: new Date().toISOString(),
-                  notes: nextNotes
+                  notes: nextNotes,
+                  tags: mergedTags
                 }
               : {
                   stage: 'outreach',
-                  outcome: 'Call Back',
+                  outcome: data.outcomes[0] || 'Call Completed',
                   lastcalled: new Date().toISOString(),
-                  notes: nextNotes
+                  notes: nextNotes,
+                  tags: mergedTags
                 };
 
             const { error } = await client
