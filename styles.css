@@ -1154,3 +1154,83 @@ button:disabled {cursor:not-allowed}
 .selected-lead-top > .lead-card{
   margin-bottom:0 !important;
 }
+
+
+/* Selected lead workspace call screen */
+.call-action-grid-six{grid-template-columns:repeat(3,1fr)}
+.call-action-grid-six .call-action-card{min-height:102px;padding:10px 5px}
+.call-action-grid-six .call-action-card>span:last-child{font-size:11px;line-height:1.2;text-align:center}
+.call-action-grid-six .call-action-icon{background:transparent!important;border:0!important;box-shadow:none!important}
+.call-action-grid-six .call-action-icon i{color:var(--blue)}
+
+.call-control.start-call{
+  width:94px;
+  min-height:94px;
+  justify-self:center;
+  border:0;
+  border-radius:50%;
+  background:linear-gradient(180deg,#2dd17e,#17b765);
+  color:#fff;
+  box-shadow:0 12px 25px rgba(31,193,112,.28);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  font-weight:900;
+}
+.call-control.start-call i{width:31px;height:31px}
+.call-control.start-call span{font-size:10px}
+.call-control.hangup{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+}
+.call-control.hangup span{font-size:10px;font-weight:900}
+.call-status[data-state="idle"] strong,
+.call-status[data-state="idle"] i{color:var(--muted)}
+
+.call-tool-overlay{
+  position:fixed;inset:0;z-index:9998;background:rgba(6,18,31,.58);
+  display:flex;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)
+}
+.call-tool-sheet{
+  width:min(430px,100%);max-height:82vh;overflow:auto;background:var(--page);
+  border-radius:26px 26px 0 0;padding:12px 18px calc(22px + env(safe-area-inset-bottom));
+  box-shadow:0 -20px 50px rgba(7,25,43,.24)
+}
+.call-tool-grabber{width:42px;height:5px;border-radius:999px;background:#cbd5df;margin:0 auto 14px}
+.call-tool-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.call-tool-head h2{margin:0;font-size:24px;letter-spacing:-.45px}
+.call-tool-close{width:36px;height:36px;border:0;border-radius:50%;background:#e8eef4;color:#28425e;display:grid;place-items:center}
+.call-tool-close i{width:18px;height:18px}
+.call-tool-body{margin-top:16px}
+.call-tool-empty{padding:28px 14px;text-align:center;color:var(--muted);font-size:13px}
+.call-tool-list{display:grid;gap:8px}
+.call-tool-row{display:flex;align-items:center;gap:10px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#fff;font-size:12px;font-weight:800}
+.call-tool-row i{width:18px;height:18px;color:var(--blue)}
+.call-tool-tags{display:flex;flex-wrap:wrap;gap:8px}
+.call-tool-tags span{padding:8px 11px;border-radius:999px;background:#e7f2ff;color:#1765b5;font-size:11px;font-weight:900}
+.call-tool-textarea{width:100%;min-height:150px;resize:vertical;border:1px solid #d7e1eb;background:#fff;color:var(--text);border-radius:14px;padding:13px;font:inherit;line-height:1.45;outline:none}
+.call-tool-primary,.call-tool-secondary{width:100%;min-height:46px;border-radius:12px;font-weight:900;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:7px}
+.call-tool-primary{border:0;background:var(--blue);color:#fff}
+.call-tool-secondary{border:1px solid #d7e1eb;background:#fff;color:#36506c}
+.call-tool-link{text-decoration:none}
+.call-preview-link{padding:12px;border:1px solid #d7e1eb;border-radius:12px;background:#fff;color:#42617e;font-size:11px;overflow-wrap:anywhere}
+.call-template-list{display:grid;gap:9px}
+.call-template{width:100%;border:1px solid #dce5ee;background:#fff;color:var(--text);border-radius:14px;padding:13px;text-align:left;display:grid;grid-template-columns:1fr auto;gap:5px 10px}
+.call-template strong{font-size:13px}
+.call-template span{grid-column:1;font-size:10px;line-height:1.4;color:#738196}
+.call-template i{grid-column:2;grid-row:1/3;width:17px;height:17px;align-self:center;color:#7b8da0}
+.quick-info-pricing{display:grid;gap:10px}
+.quick-info-pricing>div{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center}
+.quick-info-pricing span{font-size:12px;font-weight:850;color:#3c5168}
+.quick-info-pricing strong{font-size:24px;color:var(--navy);grid-row:1/3;grid-column:2}
+.quick-info-pricing small{font-size:10px;color:var(--muted)}
+@media(min-width:700px){
+  .call-tool-overlay{align-items:center;padding:18px}
+  .call-tool-sheet{border-radius:26px}
+}
