@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#102945" />
   <title>Outreach</title>
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261001-search-results-final" />
+  <link rel="stylesheet" href="styles.css?v=20261001-initial-skeleton-fix" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -18,7 +18,7 @@
     </div>
   </header>
 
-  <main class="content">
+  <main class="content outreach-loading">
     <div id="selectedLeadTop" class="crm-leads selected-lead-top" aria-live="polite"></div>
 
     <div class="outreach-controls">
@@ -32,7 +32,74 @@
     </div>
 
     <section class="crm-state card" id="crmStatus" aria-live="polite">Connecting to CRM…</section>
-    <div id="crmLeadCards" class="crm-leads" aria-live="polite"></div>
+    <div id="crmLeadCards" class="crm-leads" aria-live="polite">
+      <div class="skeleton-lead skeleton-compact" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk-shape sk-icon"></div>
+          <div class="sk-grow">
+            <div class="sk-shape sk-title"></div>
+            <div class="sk-shape sk-subtitle"></div>
+          </div>
+          <div class="sk-shape sk-star"></div>
+        </div>
+        <div class="sk-shape sk-phone"></div>
+      </div>
+      <div class="skeleton-lead skeleton-compact" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk-shape sk-icon"></div>
+          <div class="sk-grow">
+            <div class="sk-shape sk-title"></div>
+            <div class="sk-shape sk-subtitle"></div>
+          </div>
+          <div class="sk-shape sk-star"></div>
+        </div>
+        <div class="sk-shape sk-phone"></div>
+      </div>
+      <div class="skeleton-lead skeleton-compact" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk-shape sk-icon"></div>
+          <div class="sk-grow">
+            <div class="sk-shape sk-title"></div>
+            <div class="sk-shape sk-subtitle"></div>
+          </div>
+          <div class="sk-shape sk-star"></div>
+        </div>
+        <div class="sk-shape sk-phone"></div>
+      </div>
+      <div class="skeleton-lead skeleton-compact" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk-shape sk-icon"></div>
+          <div class="sk-grow">
+            <div class="sk-shape sk-title"></div>
+            <div class="sk-shape sk-subtitle"></div>
+          </div>
+          <div class="sk-shape sk-star"></div>
+        </div>
+        <div class="sk-shape sk-phone"></div>
+      </div>
+      <div class="skeleton-lead skeleton-compact" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk-shape sk-icon"></div>
+          <div class="sk-grow">
+            <div class="sk-shape sk-title"></div>
+            <div class="sk-shape sk-subtitle"></div>
+          </div>
+          <div class="sk-shape sk-star"></div>
+        </div>
+        <div class="sk-shape sk-phone"></div>
+      </div>
+      <div class="skeleton-lead skeleton-compact" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk-shape sk-icon"></div>
+          <div class="sk-grow">
+            <div class="sk-shape sk-title"></div>
+            <div class="sk-shape sk-subtitle"></div>
+          </div>
+          <div class="sk-shape sk-star"></div>
+        </div>
+        <div class="sk-shape sk-phone"></div>
+      </div>
+    </div>
   </main>
 
   <nav class="bottom-nav">
@@ -46,6 +113,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-1930"></script>
-<script src="app.js?v=20261001-search-results-final"></script>
+<script src="app.js?v=20261001-initial-skeleton-fix"></script>
 </body>
 </html>

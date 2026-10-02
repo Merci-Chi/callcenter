@@ -1695,6 +1695,10 @@ function crmSetupGlobalSearchControls() {
   }
 }
 
+function finishInitialOutreachLoad() {
+  q('main.content')?.classList.remove('outreach-loading');
+}
+
 async function loadApprovedPreviewCRM(options = {}) {
   const status = q('#crmStatus');
   const box = q('#crmLeadCards');
@@ -1705,6 +1709,8 @@ async function loadApprovedPreviewCRM(options = {}) {
   crmSetupGlobalSearchControls();
 
   if (!window.supabase) {
+    finishInitialOutreachLoad();
+    status.style.display = '';
     status.textContent = 'Unable to connect. Please try again.';
     return;
   }
@@ -1731,6 +1737,8 @@ async function loadApprovedPreviewCRM(options = {}) {
     }
   } catch (error) {
     console.error('Authentication check failed:', error);
+    finishInitialOutreachLoad();
+    status.style.display = '';
     status.textContent = 'Unable to connect. Please try again.';
     return;
   }
@@ -1946,7 +1954,10 @@ async function loadApprovedPreviewCRM(options = {}) {
     // User-specific Outreach stats are loaded from callcenter_call_activity in user-data.js.\n\n    setupCopyButtons();
     setupOutreach();
     refreshIcons();
+    finishInitialOutreachLoad();
   } catch (error) {
+    finishInitialOutreachLoad();
+    status.style.display = '';
     status.textContent =
       'Unable to load leads. Please try again.';
 

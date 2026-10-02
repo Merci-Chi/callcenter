@@ -1514,3 +1514,15 @@ button:disabled {cursor:not-allowed}
 .outreach-controls .crm-toolbar{margin-bottom:10px}
 .outreach-controls .filter-row{margin-bottom:0}
 .selected-lead-top{margin-top:2px}
+
+/* Initial Outreach load: show skeletons first, never flash search/filters at the top */
+.outreach-loading .outreach-controls,
+.outreach-loading #selectedLeadTop,
+.outreach-loading #crmStatus {
+  display: none !important;
+}
+
+.outreach-loading #crmLeadCards {
+  display: block;
+  margin-top: 0;
+}
