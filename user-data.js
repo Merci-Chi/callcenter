@@ -492,50 +492,300 @@
 
   async function loadAccount(session, profile) {
     if (document.title !== 'Account') return;
+
     const main = document.querySelector('main.content');
     if (!main) return;
+
     const state = activityState(profile);
     const initials = (profile.display_name || session.user.email || 'U')
       .split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 
+    const { data: permission } = await client()
+      .from('team_permissions')
+      .select('role,active')
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+
+    const isManager = ['ADMIN','MOD'].includes(permission?.role);
+
     main.innerHTML = `
       <section class="card profile-card">
         <div class="profile-avatar">${esc(initials)}</div>
-        <div class="profile-info"><strong>${esc(profile.display_name || 'User')}</strong><small>${esc(session.user.email || '')}</small></div>
+        <div class="profile-info">
+          <strong>${esc(profile.display_name || 'User')}</strong>
+          <small>${esc(session.user.email || '')}</small>
+        </div>
+        <i class="chev" data-lucide="chevron-right"></i>
       </section>
 
       <section class="cc-live-card">
         <strong>Account Activity</strong>
-        <div class="cc-activity"><span class="cc-muted">A call within the last 30 days keeps your account active.</span><span class="cc-status ${state.cls}">${state.label}</span></div>
+        <div class="cc-activity">
+          <span class="cc-muted">A completed call within the last 30 days keeps your account active.</span>
+          <span class="cc-status ${state.cls}">${state.label}</span>
+        </div>
         <p class="cc-muted" style="margin:10px 0 0">Last call: ${profile.last_call_at ? new Date(profile.last_call_at).toLocaleString() : 'No calls yet'}.</p>
         <p class="cc-muted" style="margin:5px 0 0">If no call is completed for 90 days, the account is disabled and support must renew it.</p>
       </section>
 
       <section class="card settings-group" style="margin-top:12px">
         <div class="group-title">Account</div>
-        <a class="setting-row" href="#" id="ccProfileEdit"><i data-lucide="user-round"></i><span>Profile Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
-        <a class="setting-row logout" href="#" id="ccLogout"><i data-lucide="log-out"></i><span>Log Out</span><i class="chev" data-lucide="chevron-right"></i></a>
+        <a class="setting-row" href="#" data-account-action="profile"><i data-lucide="user-round"></i><span>Profile Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
+        <a class="setting-row logout" href="#" data-account-action="logout"><i data-lucide="log-out"></i><span>Log Out</span><i class="chev" data-lucide="chevron-right"></i></a>
+      </section>
+
+      <section class="card settings-group">
+        <div class="group-title">Calling &amp; Audio</div>
+        <a class="setting-row" href="#" data-account-action="phone"><i data-lucide="phone"></i><span>Phone Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
+        <a class="setting-row" href="#" data-account-action="audio"><i data-lucide="headphones"></i><span>Audio Devices</span><i class="chev" data-lucide="chevron-right"></i></a>
+        <div class="setting-row" data-account-action="recording" style="cursor:pointer"><i data-lucide="badge-dot"></i><span>Call Recording</span><div class="toggle"></div></div>
+        <a class="setting-row" href="#" data-account-action="notifications"><i data-lucide="bell"></i><span>Notifications</span><i class="chev" data-lucide="chevron-right"></i></a>
+      </section>
+
+      ${isManager ? `
+      <section class="card settings-group">
+        <div class="group-title">Team &amp; Admin</div>
+        <a class="setting-row" href="#" data-account-action="team"><i data-lucide="users"></i><span>Team Management</span><i class="chev" data-lucide="chevron-right"></i></a>
+        <a class="setting-row" href="#" data-account-action="inactive"><i data-lucide="user-x"></i><span>Inactive Users</span><i class="chev" data-lucide="chevron-right"></i></a>
+        <a class="setting-row" href="#" data-account-action="tags"><i data-lucide="tag"></i><span>Tags</span><i class="chev" data-lucide="chevron-right"></i></a>
+        <a class="setting-row" href="#" data-account-action="alerts"><i data-lucide="triangle-alert"></i><span>Alerts</span><i class="chev" data-lucide="chevron-right"></i></a>
+      </section>` : ''}
+
+      <section class="card settings-group">
+        <div class="group-title">App Settings</div>
+        <a class="setting-row" href="#" data-account-action="general"><i data-lucide="settings"></i><span>General Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
       </section>
     `;
 
-    document.getElementById('ccLogout').onclick = async e => {
-      e.preventDefault();
-      await client()?.auth.signOut();
-      location.replace('login.html');
+    const openModal = (title, body, actions) => {
+      if (typeof window.modal === 'function') return window.modal(title, body, actions);
+      alert(title);
     };
 
-    document.getElementById('ccProfileEdit').onclick = async e => {
-      e.preventDefault();
-      const name = prompt('Display name', profile.display_name || '');
-      if (name === null) return;
-      const phone = prompt('Phone number', profile.phone || '');
-      if (phone === null) return;
-      const { error } = await client().from('callcenter_profiles').update({
-        display_name:name.trim(), phone:phone.trim(), updated_at:new Date().toISOString()
-      }).eq('user_id', session.user.id);
-      if (error) return alert(error.message);
-      location.reload();
+    main.querySelectorAll('[data-account-action]').forEach(row => {
+      row.addEventListener('click', async event => {
+        event.preventDefault();
+        const action = row.dataset.accountAction;
+
+        if (action === 'profile') {
+          const name = prompt('Display name', profile.display_name || '');
+          if (name === null) return;
+          const phone = prompt('Phone number', profile.phone || '');
+          if (phone === null) return;
+          const { error } = await client().from('callcenter_profiles').update({
+            display_name:name.trim(),
+            phone:phone.trim(),
+            updated_at:new Date().toISOString()
+          }).eq('user_id', session.user.id);
+          if (error) return alert(error.message);
+          location.reload();
+          return;
+        }
+
+        if (action === 'logout') {
+          await client()?.auth.signOut();
+          location.replace('login.html');
+          return;
+        }
+
+        if (action === 'recording') {
+          row.querySelector('.toggle')?.classList.toggle('on');
+          return;
+        }
+
+        const configs = {
+          phone: ['Phone Settings', '<p class="modal-help">Your account phone: <strong>' + esc(profile.phone || 'Not set') + '</strong></p>'],
+          audio: ['Audio Devices', '<p class="modal-help">Use your browser or device settings to choose your microphone and speaker.</p>'],
+          notifications: ['Notifications', '<label class="modal-check"><input type="checkbox" checked> Follow-up reminders</label><label class="modal-check"><input type="checkbox" checked> Earnings updates</label>'],
+          team: ['Team Management', '<p class="modal-help">Manage team members and access from your admin dashboard.</p>'],
+          inactive: ['Inactive Users', '<p class="modal-help">Use Activity to view inactive and disabled callers.</p>'],
+          tags: ['Tags', '<p class="modal-help">Lead tags continue to come from the CRM.</p>'],
+          alerts: ['Alerts', '<label class="modal-check"><input type="checkbox" checked> Missed follow-ups</label><label class="modal-check"><input type="checkbox" checked> New assignments</label>'],
+          general: ['General Settings', '<label class="modal-check"><input type="checkbox" checked> Confirm before calling</label>']
+        };
+
+        const cfg = configs[action];
+        if (cfg) openModal(cfg[0], cfg[1], [{label:'Close'}]);
+      });
+    });
+
+    window.lucide?.createIcons();
+  }
+
+  async function loadActivity(session, ownProfile) {
+    if (document.title !== 'Activity') return;
+
+    const c = client();
+    const main = document.getElementById('activityContent');
+    if (!main) return;
+
+    const { data: permission } = await c
+      .from('team_permissions')
+      .select('role,active')
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+
+    const isManager = ['ADMIN','MOD'].includes(permission?.role);
+    const requestedUserId = new URLSearchParams(location.search).get('user');
+    const selectedUserId = isManager && requestedUserId ? requestedUserId : session.user.id;
+
+    let activityQuery = c
+      .from('callcenter_call_activity')
+      .select('id,user_id,crm_id,duration_seconds,outcome,created_at')
+      .order('created_at', { ascending:false })
+      .limit(1000);
+
+    if (!isManager || requestedUserId) {
+      activityQuery = activityQuery.eq('user_id', selectedUserId);
+    }
+
+    let profilesQuery = c
+      .from('callcenter_profiles')
+      .select('user_id,display_name,email,last_call_at,created_at,disabled_at')
+      .order('display_name', { ascending:true });
+
+    if (!isManager) {
+      profilesQuery = profilesQuery.eq('user_id', session.user.id);
+    }
+
+    const [
+      { data: activities = [], error: activityError },
+      { data: profiles = [], error: profilesError }
+    ] = await Promise.all([activityQuery, profilesQuery]);
+
+    if (activityError || profilesError) {
+      console.error('Unable to load Activity:', activityError || profilesError);
+      main.innerHTML = '<section class="card light-card"><strong>Unable to load activity.</strong><p class="cc-muted">The admin Activity permission may still need to be applied in Supabase.</p></section>';
+      return;
+    }
+
+    const crmIds = [...new Set(activities.map(row => row.crm_id).filter(Boolean))];
+    let leads = [];
+    if (crmIds.length) {
+      const { data } = await c
+        .from('crm')
+        .select('id,company,name,phone,callbackdate,callbackat,notes,stage')
+        .in('id', crmIds.slice(0,500));
+      leads = data || [];
+    }
+    const leadMap = new Map(leads.map(lead => [lead.id, lead]));
+
+    const allCalledUsers = new Set(activities.map(row => row.user_id));
+    const selectedProfile = profiles.find(p => p.user_id === selectedUserId) ||
+      (selectedUserId === session.user.id ? ownProfile : null);
+
+    const formatDuration = seconds => {
+      const total = Number(seconds) || 0;
+      const min = Math.floor(total / 60);
+      const sec = total % 60;
+      return min ? min + 'm ' + sec + 's' : sec + 's';
     };
+
+    const userRows = userId => activities.filter(row => row.user_id === userId);
+    const isCallback = row => /follow up|call back|callback|requested text|requested email/i.test(row.outcome || '');
+
+    if (isManager && !requestedUserId) {
+      const profileById = new Map(profiles.map(p => [p.user_id,p]));
+      const callers = [...new Set(activities.map(row => row.user_id))];
+
+      main.innerHTML = `
+        <div class="cc-live-grid">
+          <div class="cc-live-stat"><strong>${callers.length}</strong><span>Users Called</span></div>
+          <div class="cc-live-stat"><strong>${activities.length}</strong><span>Total Calls</span></div>
+          <div class="cc-live-stat"><strong>${activities.filter(isCallback).length}</strong><span>Callbacks</span></div>
+        </div>
+
+        <div class="section-title">Users</div>
+        <section class="card light-card">
+          ${profiles.length ? profiles.map(user => {
+            const rows = userRows(user.user_id);
+            const state = activityState(user);
+            const display = user.display_name || user.email || 'User';
+            const initials = display.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+            return `<a class="user-row" href="activity.html?user=${encodeURIComponent(user.user_id)}">
+              <div class="user-avatar">${esc(initials || 'U')}</div>
+              <div class="user-info">
+                <strong>${esc(display)}</strong>
+                <small>${rows.length} call${rows.length===1?'':'s'} · ${rows.filter(isCallback).length} callback${rows.filter(isCallback).length===1?'':'s'}</small>
+              </div>
+              <div class="user-side">
+                <span class="badge ${state.label==='Active'?'active':'pending'}">${state.label}</span>
+                <i data-lucide="chevron-right" style="width:16px;height:16px;margin-top:6px"></i>
+              </div>
+            </a>`;
+          }).join('') : '<div class="cc-empty">No user accounts found.</div>'}
+        </section>
+
+        <div class="section-title">Recent History</div>
+        <section class="card light-card">
+          ${activities.length ? activities.slice(0,30).map(row => {
+            const user = profileById.get(row.user_id);
+            const lead = leadMap.get(row.crm_id);
+            return `<div class="cc-row">
+              <div class="cc-row-main">
+                <strong>${esc(user?.display_name || user?.email || 'User')} · ${esc(lead?.company || lead?.name || 'Lead')}</strong>
+                <small>${new Date(row.created_at).toLocaleString()} · ${formatDuration(row.duration_seconds)}</small>
+                <small>${esc(row.outcome || 'Call completed')}</small>
+              </div>
+            </div>`;
+          }).join('') : '<div class="cc-empty">No calls have been recorded yet.</div>'}
+        </section>
+      `;
+
+      window.lucide?.createIcons();
+      return;
+    }
+
+    const rows = activities.filter(row => row.user_id === selectedUserId);
+    const callbacks = rows.filter(isCallback);
+    const display = selectedProfile?.display_name || selectedProfile?.email || 'User';
+    const state = activityState(selectedProfile || ownProfile);
+
+    main.innerHTML = `
+      ${isManager ? '<a href="activity.html" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:900;color:#2579cf;margin:2px 2px 12px"><i data-lucide="chevron-left" style="width:15px;height:15px"></i> All users</a>' : ''}
+
+      <section class="card profile-card">
+        <div class="profile-avatar">${esc(display.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase() || 'U')}</div>
+        <div class="profile-info"><strong>${esc(display)}</strong><small>${esc(selectedProfile?.email || '')}</small></div>
+        <span class="cc-status ${state.cls}">${state.label}</span>
+      </section>
+
+      <div class="cc-live-grid" style="margin-top:12px">
+        <div class="cc-live-stat"><strong>${rows.length}</strong><span>Total Calls</span></div>
+        <div class="cc-live-stat"><strong>${callbacks.length}</strong><span>Call Backs</span></div>
+        <div class="cc-live-stat"><strong>${rows.length ? new Date(rows[0].created_at).toLocaleDateString() : '—'}</strong><span>Last Call</span></div>
+      </div>
+
+      <div class="section-title">Call Backs</div>
+      <section class="card light-card">
+        ${rows.length ? rows.map(row => {
+          const lead = leadMap.get(row.crm_id);
+          return `<div class="cc-row">
+            <div class="cc-row-main">
+              <strong>${esc(lead?.company || lead?.name || 'Lead')}</strong>
+              <small>${lead?.phone ? esc(lead.phone) + ' · ' : ''}${new Date(row.created_at).toLocaleString()}</small>
+              <small>${esc(row.outcome || 'Called')}</small>
+            </div>
+            ${row.crm_id ? '<a href="index.html?crm_id=' + encodeURIComponent(row.crm_id) + '" class="cc-status pending">Open Lead</a>' : ''}
+          </div>`;
+        }).join('') : '<div class="cc-empty">No called leads yet.</div>'}
+      </section>
+
+      <div class="section-title">History</div>
+      <section class="card light-card">
+        ${rows.length ? rows.map(row => {
+          const lead = leadMap.get(row.crm_id);
+          return `<div class="cc-row">
+            <div class="cc-row-main">
+              <strong>${esc(lead?.company || lead?.name || 'Lead')}</strong>
+              <small>${new Date(row.created_at).toLocaleString()} · ${formatDuration(row.duration_seconds)}</small>
+              <small>${esc(row.outcome || 'Call completed')}</small>
+            </div>
+          </div>`;
+        }).join('') : '<div class="cc-empty">No call history yet.</div>'}
+      </section>
+    `;
+
     window.lucide?.createIcons();
   }
 
@@ -607,6 +857,7 @@
     await Promise.all([
       loadEarnings(session, profile),
       loadAccount(session, profile),
+      loadActivity(session, profile),
       loadPersonalOutreachStats(session)
     ]);
   }
