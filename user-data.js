@@ -504,16 +504,19 @@
   }
 
   async function loadAccount(session, profile) {
-    if (document.title !== 'Account') return;
+    if (!['Account','Settings'].includes(document.title)) return;
 
     const main = document.querySelector('main.content');
     if (!main) return;
 
+    const c = client();
     const state = activityState(profile);
-    const initials = (profile.display_name || session.user.email || 'U')
+    const displayName = profile.display_name || 'User';
+    const emailAddress = session.user.email || '';
+    const initials = (displayName || emailAddress || 'U')
       .split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 
-    const { data: permission } = await client()
+    const { data: permission } = await c
       .from('team_permissions')
       .select('role,active')
       .eq('user_id', session.user.id)
@@ -521,104 +524,301 @@
 
     const isManager = ['ADMIN','MOD'].includes(permission?.role);
 
+    const prefKey = key => 'steadyhands-setting-' + key;
+    const readPref = (key, fallback=true) => {
+      try {
+        const saved = localStorage.getItem(prefKey(key));
+        return saved == null ? fallback : saved === 'true';
+      } catch { return fallback; }
+    };
+    const writePref = (key, value) => {
+      try { localStorage.setItem(prefKey(key), String(!!value)); } catch {}
+    };
+
+    const prefs = {
+      confirmCalls: readPref('confirm-calls', true),
+      recording: readPref('call-recording', false),
+      followups: readPref('followup-reminders', true),
+      earnings: readPref('earnings-updates', true),
+      assignments: readPref('new-assignments', true)
+    };
+
+    const statusText = state.label;
+    const phoneText = profile.phone || 'Not set';
+
     main.innerHTML = `
-      <section class="card profile-card">
-        <div class="profile-avatar">${esc(initials)}</div>
-        <div class="profile-info">
-          <strong>${esc(profile.display_name || 'User')}</strong>
-          <small>${esc(session.user.email || '')}</small>
+      <section class="settings-profile">
+        <div class="settings-avatar">${esc(initials)}</div>
+        <div class="settings-profile-copy">
+          <strong>${esc(displayName)}</strong>
+          <span>${esc(emailAddress)}</span>
         </div>
-        <i class="chev" data-lucide="chevron-right"></i>
+        <button type="button" class="settings-edit-btn" data-account-action="profile">Edit</button>
       </section>
 
-      <section class="cc-live-card">
-        <strong>Account Activity</strong>
-        <div class="cc-activity">
-          <span class="cc-muted">A completed call within the last 30 days keeps your account active.</span>
-          <span class="cc-status ${state.cls}">${state.label}</span>
-        </div>
-        <p class="cc-muted" style="margin:10px 0 0">Last call: ${profile.last_call_at ? new Date(profile.last_call_at).toLocaleString() : 'No calls yet'}.</p>
-        <p class="cc-muted" style="margin:5px 0 0">If no call is completed for 90 days, the account is disabled and support must renew it.</p>
+      <section class="settings-section">
+        <div class="settings-section-title">Account</div>
+        <button class="settings-row" type="button" data-account-action="profile">
+          <span class="settings-icon"><i data-lucide="user-round"></i></span>
+          <span class="settings-copy"><strong>Profile &amp; Personal Info</strong><small>${esc(phoneText)}</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
+        <button class="settings-row" type="button" data-account-action="security">
+          <span class="settings-icon"><i data-lucide="shield-check"></i></span>
+          <span class="settings-copy"><strong>Sign-in &amp; Security</strong><small>Password and account access</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
+        <button class="settings-row" type="button" data-account-action="status">
+          <span class="settings-icon"><i data-lucide="activity"></i></span>
+          <span class="settings-copy"><strong>Account Status</strong><small>Activity and access status</small></span>
+          <span class="cc-status ${state.cls}">${esc(statusText)}</span>
+        </button>
       </section>
 
-      <section class="card settings-group" style="margin-top:12px">
-        <div class="group-title">Account</div>
-        <a class="setting-row" href="#" data-account-action="profile"><i data-lucide="user-round"></i><span>Profile Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
-        <a class="setting-row logout" href="#" data-account-action="logout"><i data-lucide="log-out"></i><span>Log Out</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <section class="settings-section">
+        <div class="settings-section-title">Calling</div>
+        <button class="settings-row" type="button" data-account-action="audio">
+          <span class="settings-icon"><i data-lucide="mic"></i></span>
+          <span class="settings-copy"><strong>Microphone &amp; Audio</strong><small id="microphoneStatus">Check microphone access</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
+        <button class="settings-row" type="button" data-toggle-setting="recording">
+          <span class="settings-icon"><i data-lucide="badge-dot"></i></span>
+          <span class="settings-copy"><strong>Call Recording</strong><small>Save recording preference for calls</small></span>
+          <span class="settings-switch ${prefs.recording?'on':''}" role="switch" aria-checked="${prefs.recording}"><span></span></span>
+        </button>
+        <button class="settings-row" type="button" data-toggle-setting="confirmCalls">
+          <span class="settings-icon"><i data-lucide="phone-call"></i></span>
+          <span class="settings-copy"><strong>Confirm Before Calling</strong><small>Ask before starting an outbound call</small></span>
+          <span class="settings-switch ${prefs.confirmCalls?'on':''}" role="switch" aria-checked="${prefs.confirmCalls}"><span></span></span>
+        </button>
       </section>
 
-      <section class="card settings-group">
-        <div class="group-title">Calling &amp; Audio</div>
-        <a class="setting-row" href="#" data-account-action="phone"><i data-lucide="phone"></i><span>Phone Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
-        <a class="setting-row" href="#" data-account-action="audio"><i data-lucide="headphones"></i><span>Audio Devices</span><i class="chev" data-lucide="chevron-right"></i></a>
-        <div class="setting-row" data-account-action="recording" style="cursor:pointer"><i data-lucide="badge-dot"></i><span>Call Recording</span><div class="toggle"></div></div>
-        <a class="setting-row" href="#" data-account-action="notifications"><i data-lucide="bell"></i><span>Notifications</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <section class="settings-section">
+        <div class="settings-section-title">Notifications</div>
+        <button class="settings-row" type="button" data-toggle-setting="followups">
+          <span class="settings-icon"><i data-lucide="calendar-clock"></i></span>
+          <span class="settings-copy"><strong>Follow-up Reminders</strong><small>Reminders for scheduled follow-ups</small></span>
+          <span class="settings-switch ${prefs.followups?'on':''}" role="switch" aria-checked="${prefs.followups}"><span></span></span>
+        </button>
+        <button class="settings-row" type="button" data-toggle-setting="earnings">
+          <span class="settings-icon"><i data-lucide="circle-dollar-sign"></i></span>
+          <span class="settings-copy"><strong>Earnings Updates</strong><small>Payout and commission updates</small></span>
+          <span class="settings-switch ${prefs.earnings?'on':''}" role="switch" aria-checked="${prefs.earnings}"><span></span></span>
+        </button>
+        <button class="settings-row" type="button" data-toggle-setting="assignments">
+          <span class="settings-icon"><i data-lucide="inbox"></i></span>
+          <span class="settings-copy"><strong>New Assignments</strong><small>Alerts when new work is assigned</small></span>
+          <span class="settings-switch ${prefs.assignments?'on':''}" role="switch" aria-checked="${prefs.assignments}"><span></span></span>
+        </button>
       </section>
 
       ${isManager ? `
-      <section class="card settings-group">
-        <div class="group-title">Team &amp; Admin</div>
-        <a class="setting-row" href="#" data-account-action="team"><i data-lucide="users"></i><span>Team Management</span><i class="chev" data-lucide="chevron-right"></i></a>
-        <a class="setting-row" href="#" data-account-action="inactive"><i data-lucide="user-x"></i><span>Inactive Users</span><i class="chev" data-lucide="chevron-right"></i></a>
-        <a class="setting-row" href="#" data-account-action="tags"><i data-lucide="tag"></i><span>Tags</span><i class="chev" data-lucide="chevron-right"></i></a>
-        <a class="setting-row" href="#" data-account-action="alerts"><i data-lucide="triangle-alert"></i><span>Alerts</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <section class="settings-section">
+        <div class="settings-section-title">Team &amp; Admin</div>
+        <button class="settings-row" type="button" data-account-action="team">
+          <span class="settings-icon"><i data-lucide="users"></i></span>
+          <span class="settings-copy"><strong>Team Management</strong><small>Manage team members and access</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
+        <button class="settings-row" type="button" data-account-action="inactive">
+          <span class="settings-icon"><i data-lucide="user-x"></i></span>
+          <span class="settings-copy"><strong>Inactive Users</strong><small>Review inactive and disabled callers</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
+        <button class="settings-row" type="button" data-account-action="tags">
+          <span class="settings-icon"><i data-lucide="tag"></i></span>
+          <span class="settings-copy"><strong>Tags</strong><small>Manage outreach tags</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
+        <button class="settings-row" type="button" data-account-action="alerts">
+          <span class="settings-icon"><i data-lucide="triangle-alert"></i></span>
+          <span class="settings-copy"><strong>Alerts</strong><small>Manage team alerts</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
       </section>` : ''}
 
-      <section class="card settings-group">
-        <div class="group-title">App Settings</div>
-        <a class="setting-row" href="#" data-account-action="general"><i data-lucide="settings"></i><span>General Settings</span><i class="chev" data-lucide="chevron-right"></i></a>
+      <section class="settings-section">
+        <div class="settings-section-title">App</div>
+        <button class="settings-row" type="button" data-account-action="permissions">
+          <span class="settings-icon"><i data-lucide="lock-keyhole"></i></span>
+          <span class="settings-copy"><strong>Permissions</strong><small>Microphone and notification access</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
+        <a class="settings-row" href="terms.html">
+          <span class="settings-icon"><i data-lucide="file-text"></i></span>
+          <span class="settings-copy"><strong>Terms &amp; Conditions</strong><small>Review the current terms</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </a>
+        <button class="settings-row" type="button" data-account-action="about">
+          <span class="settings-icon"><i data-lucide="info"></i></span>
+          <span class="settings-copy"><strong>About Outreach</strong><small>Steady Hands Outreach</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
       </section>
+
+      <div class="settings-logout-area">
+        <button class="settings-logout-btn" type="button" data-account-action="logout"><i data-lucide="log-out"></i>Log Out</button>
+        <div>Signed in as ${esc(emailAddress)}</div>
+      </div>
     `;
 
-    const openModal = (title, body, actions) => {
-      if (typeof window.modal === 'function') return window.modal(title, body, actions);
-      alert(title);
+    const openSheet = (title, body) => {
+      document.querySelector('.settings-sheet-overlay')?.remove();
+      const overlay = document.createElement('div');
+      overlay.className = 'settings-sheet-overlay';
+      overlay.innerHTML = `
+        <div class="settings-sheet">
+          <div class="settings-sheet-head">
+            <h2>${title}</h2>
+            <button type="button" class="settings-sheet-close" aria-label="Close"><i data-lucide="x"></i></button>
+          </div>
+          <div class="settings-sheet-body">${body}</div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('.settings-sheet-close')?.addEventListener('click',()=>overlay.remove());
+      overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
+      window.lucide?.createIcons();
+      return overlay;
     };
 
+    const refreshMicStatus = async () => {
+      const target = document.getElementById('microphoneStatus');
+      if (!target) return;
+      if (!navigator.mediaDevices?.getUserMedia) {
+        target.textContent = 'Not available on this device';
+        return;
+      }
+      try {
+        if (navigator.permissions?.query) {
+          const p = await navigator.permissions.query({name:'microphone'});
+          target.textContent = p.state === 'granted' ? 'Allowed' : p.state === 'denied' ? 'Permission required' : 'Tap to allow';
+          return;
+        }
+      } catch {}
+      target.textContent = 'Tap to check access';
+    };
+    refreshMicStatus();
+
+    const toggleMap = {
+      recording:['call-recording','recording'],
+      confirmCalls:['confirm-calls','confirmCalls'],
+      followups:['followup-reminders','followups'],
+      earnings:['earnings-updates','earnings'],
+      assignments:['new-assignments','assignments']
+    };
+
+    main.querySelectorAll('[data-toggle-setting]').forEach(row => {
+      row.addEventListener('click', () => {
+        const key = row.dataset.toggleSetting;
+        const pair = toggleMap[key];
+        if (!pair) return;
+        const next = !prefs[pair[1]];
+        prefs[pair[1]] = next;
+        writePref(pair[0], next);
+        const sw = row.querySelector('.settings-switch');
+        sw?.classList.toggle('on', next);
+        sw?.setAttribute('aria-checked', String(next));
+      });
+    });
+
     main.querySelectorAll('[data-account-action]').forEach(row => {
-      row.addEventListener('click', async event => {
-        event.preventDefault();
+      row.addEventListener('click', async () => {
         const action = row.dataset.accountAction;
 
         if (action === 'profile') {
-          const name = prompt('Display name', profile.display_name || '');
-          if (name === null) return;
-          const phone = prompt('Phone number', profile.phone || '');
-          if (phone === null) return;
-          const { error } = await client().from('callcenter_profiles').update({
-            display_name:name.trim(),
-            phone:phone.trim(),
-            updated_at:new Date().toISOString()
-          }).eq('user_id', session.user.id);
-          if (error) return alert(error.message);
-          location.reload();
+          const overlay = openSheet('Edit Profile', `
+            <label class="settings-field-label">Display name<input class="settings-field" id="settingsName" value="${esc(profile.display_name || '')}" autocomplete="name"></label>
+            <label class="settings-field-label">Phone number<input class="settings-field" id="settingsPhone" value="${esc(profile.phone || '')}" autocomplete="tel"></label>
+            <button class="settings-primary-btn" id="settingsSaveProfile" type="button">Save Changes</button>
+          `);
+          overlay.querySelector('#settingsSaveProfile')?.addEventListener('click', async e => {
+            const btn=e.currentTarget;
+            btn.disabled=true;
+            const name=overlay.querySelector('#settingsName').value.trim();
+            const phone=overlay.querySelector('#settingsPhone').value.trim();
+            if(!name){ btn.disabled=false; return; }
+            const { error } = await c.from('callcenter_profiles').update({
+              display_name:name, phone, updated_at:new Date().toISOString()
+            }).eq('user_id',session.user.id);
+            if(error){ btn.disabled=false; alert(error.message); return; }
+            location.reload();
+          });
           return;
         }
 
+        if (action === 'security') {
+          const overlay = openSheet('Sign-in & Security', `
+            <p class="settings-sheet-note">Send a password reset link to <strong>${esc(emailAddress)}</strong>.</p>
+            <button class="settings-primary-btn" id="settingsResetPassword" type="button">Send Password Reset Email</button>
+            <div class="settings-inline-message" id="settingsSecurityMessage"></div>
+          `);
+          overlay.querySelector('#settingsResetPassword')?.addEventListener('click', async e => {
+            const btn=e.currentTarget;
+            const msg=overlay.querySelector('#settingsSecurityMessage');
+            btn.disabled=true;
+            msg.textContent='Sending…';
+            const redirectTo=new URL('login.html?reset=1',location.href).href;
+            const { error }=await c.auth.resetPasswordForEmail(emailAddress,{redirectTo});
+            if(error){ msg.textContent=error.message||'Unable to send reset email.'; btn.disabled=false; return; }
+            msg.textContent='Reset email sent. Check your inbox.';
+          });
+          return;
+        }
+
+        if (action === 'status') {
+          openSheet('Account Status', `
+            <div class="settings-status-card"><span class="cc-status ${state.cls}">${esc(statusText)}</span>
+              <p>A completed call within the last 30 days keeps your account active.</p>
+              <p>After 90 days without a completed call, access is disabled and support must renew it.</p>
+              <p><strong>Last call:</strong> ${profile.last_call_at ? esc(new Date(profile.last_call_at).toLocaleString()) : 'No calls yet'}</p>
+            </div>`);
+          return;
+        }
+
+        if (action === 'audio' || action === 'permissions') {
+          const overlay = openSheet(action==='audio'?'Microphone & Audio':'Permissions', `
+            <div class="settings-permission-row"><span><strong>Microphone</strong><small>Required for browser calling</small></span><button id="settingsMicPermission" type="button">Check Access</button></div>
+            <div class="settings-inline-message" id="settingsPermissionMessage"></div>
+          `);
+          overlay.querySelector('#settingsMicPermission')?.addEventListener('click', async e => {
+            const msg=overlay.querySelector('#settingsPermissionMessage');
+            try {
+              const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+              stream.getTracks().forEach(track=>track.stop());
+              msg.textContent='Microphone access is allowed.';
+              refreshMicStatus();
+            } catch(err) {
+              msg.textContent='Microphone access is blocked. Allow it in your browser or device settings.';
+            }
+          });
+          return;
+        }
+
+        if (action === 'team') {
+          openSheet('Team Management','<p class="settings-sheet-note">Team access is managed from the Steady Hands admin dashboard.</p>');
+          return;
+        }
+        if (action === 'inactive') {
+          location.href='activity.html';
+          return;
+        }
+        if (action === 'tags') {
+          openSheet('Tags','<p class="settings-sheet-note">Outreach tags are managed through the CRM.</p>');
+          return;
+        }
+        if (action === 'alerts') {
+          openSheet('Alerts','<p class="settings-sheet-note">Team alert management can be expanded here as alert controls are added.</p>');
+          return;
+        }
+        if (action === 'about') {
+          openSheet('About Outreach','<div class="settings-about"><strong>Steady Hands Outreach</strong><p>Calling, follow-up, activity, and earnings tools for the Steady Hands team.</p><small>Version 1.0</small></div>');
+          return;
+        }
         if (action === 'logout') {
-          await client()?.auth.signOut();
+          await c.auth.signOut();
           location.replace('login.html');
-          return;
         }
-
-        if (action === 'recording') {
-          row.querySelector('.toggle')?.classList.toggle('on');
-          return;
-        }
-
-        const configs = {
-          phone: ['Phone Settings', '<p class="modal-help">Your account phone: <strong>' + esc(profile.phone || 'Not set') + '</strong></p>'],
-          audio: ['Audio Devices', '<p class="modal-help">Use your browser or device settings to choose your microphone and speaker.</p>'],
-          notifications: ['Notifications', '<label class="modal-check"><input type="checkbox" checked> Follow-up reminders</label><label class="modal-check"><input type="checkbox" checked> Earnings updates</label>'],
-          team: ['Team Management', '<p class="modal-help">Manage team members and access from your admin dashboard.</p>'],
-          inactive: ['Inactive Users', '<p class="modal-help">Use Activity to view inactive and disabled callers.</p>'],
-          tags: ['Tags', '<p class="modal-help">Lead tags continue to come from the CRM.</p>'],
-          alerts: ['Alerts', '<label class="modal-check"><input type="checkbox" checked> Missed follow-ups</label><label class="modal-check"><input type="checkbox" checked> New assignments</label>'],
-          general: ['General Settings', '<label class="modal-check"><input type="checkbox" checked> Confirm before calling</label>']
-        };
-
-        const cfg = configs[action];
-        if (cfg) openModal(cfg[0], cfg[1], [{label:'Close'}]);
       });
     });
 
@@ -885,7 +1085,7 @@
     const main = document.querySelector('main.content');
     if (!main) return;
     const page = document.title;
-    if (!['Earnings','Account'].includes(page)) return;
+    if (!['Earnings','Account','Settings'].includes(page)) return;
 
     if (page === 'Earnings') {
       const state = document.getElementById('earningsState');
