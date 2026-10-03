@@ -92,7 +92,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261002-transcript-save"></script>
-<script src="app.js?v=20261001-calltime"></script>
+<script src="app.js?v=20261003-recipient-timezone-fix"></script>
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
@@ -336,7 +336,7 @@
             <i data-lucide="${timing.state === 'good' ? 'circle-check' : 'triangle-alert'}"></i>
             <span>${timing.label}</span>
           </div>
-          <p class="call-time-confirm-hours">Best calling hours: Monday–Friday · 9:00 AM–4:30 PM their local time.</p>
+          <p class="call-time-confirm-hours">Best calling hours: Monday–Friday · 9:00 AM–5:00 PM their local time.</p>
         </div>`;
 
       modal('Are you sure?', body, [
