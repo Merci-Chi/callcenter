@@ -2438,3 +2438,414 @@ html, body {
     grid-template-columns: repeat(3, minmax(0,1fr));
   }
 }
+
+
+/* Outreach desktop v2 */
+.desktop-outreach-heading {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .page-outreach {
+    background: #eef2f6;
+  }
+
+  .page-outreach .app {
+    padding-left: 248px;
+    background: #eef2f6;
+  }
+
+  .page-outreach .bottom-nav {
+    width: 248px;
+    padding: 30px 18px;
+    background:
+      linear-gradient(180deg, #0f2944 0%, #0c2238 100%);
+  }
+
+  .page-outreach .bottom-nav::before {
+    content: "Steady Hands";
+    padding: 2px 12px 26px;
+    font-size: 19px;
+    letter-spacing: -.35px;
+  }
+
+  .page-outreach .nav-item {
+    min-height: 50px;
+    border-radius: 13px;
+    padding: 0 14px;
+    gap: 12px;
+    font-size: 13px;
+  }
+
+  .page-outreach .nav-item.active {
+    background: #173f68;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+  }
+
+  .page-outreach .topbar {
+    min-height: 96px;
+    padding: 26px 38px;
+    background:
+      linear-gradient(135deg, #173a5e 0%, #102945 72%);
+    box-shadow: 0 8px 24px rgba(16,41,69,.16);
+  }
+
+  .page-outreach .topbar h1 {
+    font-size: 34px;
+    letter-spacing: -1px;
+  }
+
+  .page-outreach .status-pill {
+    padding: 9px 14px;
+    font-size: 12px;
+    box-shadow: none;
+  }
+
+  .page-outreach .content {
+    width: min(1520px, calc(100vw - 248px));
+    padding: 26px 34px 44px;
+    display: grid;
+    grid-template-columns: minmax(390px, 440px) minmax(560px, 1fr);
+    grid-template-areas:
+      "queuehead workspacehead"
+      "controls selected"
+      "status selected"
+      "list selected";
+    column-gap: 26px;
+    row-gap: 14px;
+    align-items: start;
+  }
+
+  .page-outreach .desktop-outreach-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    min-height: 62px;
+  }
+
+  .page-outreach .desktop-queue-heading {
+    grid-area: queuehead;
+  }
+
+  .page-outreach .desktop-workspace-heading {
+    grid-area: workspacehead;
+  }
+
+  .page-outreach .desktop-kicker {
+    display: block;
+    margin-bottom: 4px;
+    color: #73849a;
+    font-size: 10px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: .12em;
+  }
+
+  .page-outreach .desktop-outreach-heading h2 {
+    margin: 0;
+    color: #152943;
+    font-size: 22px;
+    line-height: 1.15;
+    letter-spacing: -.45px;
+  }
+
+  .page-outreach .desktop-outreach-heading p {
+    margin: 5px 0 0;
+    color: #7b8898;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .page-outreach .outreach-controls {
+    grid-area: controls;
+    position: sticky;
+    top: 118px;
+    z-index: 12;
+    margin: 0;
+    padding: 14px;
+    border: 1px solid #dde4ec;
+    border-radius: 18px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 10px 28px rgba(15,33,54,.07);
+    backdrop-filter: blur(10px);
+  }
+
+  .page-outreach .outreach-controls .crm-toolbar {
+    margin-bottom: 10px;
+  }
+
+  .page-outreach .crm-toolbar input {
+    min-height: 46px;
+    border-radius: 13px;
+    border: 1px solid #d7e0e9;
+    background: #f9fbfd;
+    padding: 0 14px;
+    font-size: 13px;
+    color: #1d3148;
+    outline: none;
+  }
+
+  .page-outreach .crm-toolbar input:focus {
+    border-color: #84b8ec;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(22,136,255,.09);
+  }
+
+  .page-outreach #crmReload {
+    min-height: 46px;
+    border-radius: 13px;
+    border: 1px solid #d7e0e9;
+    background: #fff;
+  }
+
+  .page-outreach .outreach-controls .filter-row {
+    padding: 0;
+    gap: 8px;
+  }
+
+  .page-outreach .outreach-controls .pill {
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 11px;
+    font-size: 11px;
+  }
+
+  .page-outreach #crmStatus {
+    grid-area: status;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    box-shadow: none;
+    color: #607086;
+    font-size: 12px;
+  }
+
+  .page-outreach #crmLeadCards {
+    grid-area: list;
+    min-width: 0;
+    padding-bottom: 24px;
+  }
+
+  .page-outreach #crmLeadCards .lead-card:not(.selected-lead) {
+    margin-bottom: 10px;
+    padding: 13px 14px;
+    border: 1px solid #e0e6ed;
+    border-radius: 16px;
+    box-shadow: 0 7px 18px rgba(15,33,54,.055);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+
+  .page-outreach #crmLeadCards .lead-card:not(.selected-lead):hover {
+    transform: translateY(-1px);
+    border-color: #cbd7e3;
+    box-shadow: 0 11px 24px rgba(15,33,54,.08);
+  }
+
+  .page-outreach #crmLeadCards .company-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .page-outreach #crmLeadCards .company-icon i {
+    width: 21px;
+    height: 21px;
+  }
+
+  .page-outreach #crmLeadCards .lead-title h2 {
+    font-size: 15px;
+  }
+
+  .page-outreach #crmLeadCards .contact-line {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #edf1f5;
+    font-size: 13px;
+  }
+
+  .page-outreach #crmLeadCards .compact-lead-meta {
+    margin-top: 9px;
+  }
+
+  .page-outreach #crmLeadCards .call-time-status {
+    padding: 7px 9px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+
+  .page-outreach #crmLeadCards .compact-local-time {
+    font-size: 10px;
+  }
+
+  .page-outreach #selectedLeadTop {
+    grid-area: selected;
+    min-width: 0;
+    position: sticky;
+    top: 118px;
+    max-height: calc(100vh - 145px);
+    overflow-y: auto;
+    padding: 0 4px 10px 0;
+    scrollbar-width: thin;
+  }
+
+  .page-outreach #selectedLeadTop:empty {
+    min-height: 520px;
+    border: 1px dashed #ced8e2;
+    border-radius: 20px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.7), rgba(248,250,252,.8));
+  }
+
+  .page-outreach #selectedLeadTop:empty::before {
+    content: "Choose a lead from the queue to review it here.";
+    display: grid;
+    place-items: center;
+    min-height: 520px;
+    padding: 40px;
+    text-align: center;
+    color: #8290a0;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #dce4ec;
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 16px 38px rgba(15,33,54,.09);
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead > .lead-head {
+    padding: 22px 22px 18px;
+    align-items: center;
+    background:
+      linear-gradient(180deg, #fbfdff 0%, #fff 100%);
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .company-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .company-icon i {
+    width: 28px;
+    height: 28px;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .lead-title h2 {
+    font-size: 21px;
+    letter-spacing: -.4px;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .lead-title .name {
+    margin-top: 3px;
+    font-size: 13px;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead > .contact-line {
+    margin: 0;
+    padding: 16px 22px;
+    border-top: 1px solid #edf1f5;
+    border-bottom: 1px solid #edf1f5;
+    font-size: 16px;
+    background: #fff;
+  }
+
+  .page-outreach #selectedLeadTop .lead-details {
+    padding: 18px 22px 22px;
+  }
+
+  .page-outreach #selectedLeadTop .tag-row {
+    margin-top: 0;
+  }
+
+  .page-outreach #selectedLeadTop .call-time-status {
+    margin-top: 12px;
+    padding: 11px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  .page-outreach #selectedLeadTop .time-row {
+    margin: 0;
+    padding: 10px 2px;
+    border-bottom: 1px solid #edf1f5;
+    font-size: 12px;
+  }
+
+  .page-outreach #selectedLeadTop .preview-links {
+    padding: 14px 0 2px;
+  }
+
+  .page-outreach #selectedLeadTop .preview-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 10px;
+    background: #edf6ff;
+    color: #1268bf;
+    font-size: 12px;
+    font-weight: 850;
+  }
+
+  .page-outreach #selectedLeadTop .notes {
+    margin-top: 14px;
+    padding: 16px;
+    border: 1px solid #e3e8ee;
+    border-radius: 14px;
+    background: #fafbfd;
+  }
+
+  .page-outreach #selectedLeadTop .notes-title {
+    margin-bottom: 7px;
+    font-size: 12px;
+  }
+
+  .page-outreach #selectedLeadTop .notes p {
+    font-size: 12px;
+  }
+
+  .page-outreach #selectedLeadTop .call-btn {
+    margin-top: 18px;
+    min-height: 52px;
+    border-radius: 13px;
+    font-size: 16px;
+  }
+
+  .page-outreach #selectedLeadTop .quick-actions {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .page-outreach #selectedLeadTop .quick-btn {
+    min-height: 58px;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+
+  .page-outreach #selectedLeadTop .quick-btn i {
+    width: 19px;
+    height: 19px;
+  }
+
+  .page-outreach.outreach-loading .desktop-outreach-heading {
+    display: flex;
+  }
+
+  .page-outreach .outreach-loading .desktop-outreach-heading {
+    display: flex;
+  }
+}
+
+@media (min-width: 1240px) {
+  .page-outreach .content {
+    grid-template-columns: 430px minmax(650px, 1fr);
+  }
+}
