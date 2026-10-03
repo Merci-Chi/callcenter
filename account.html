@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png" />
   <title>Settings</title>
-  <link rel="stylesheet" href="styles.css?v=20261003-settings-desktop-layout" />
+  <link rel="stylesheet" href="styles.css?v=20261003-settings-skeleton" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="app-update.js" defer></script>
 </head>
@@ -20,9 +20,42 @@
 <div class="app">
   <header class="topbar"><div class="topbar-row"><h1>Settings</h1></div></header>
   <main class="content" id="accountContent">
-    <section class="card light-card" id="accountLoading" style="text-align:center;padding:28px 18px">
-      <div style="font-weight:900;margin-bottom:6px">Loading your account…</div>
-      <div style="font-size:12px;color:#738196">Your profile and activity status will appear here.</div>
+    <section class="settings-skeleton" id="accountLoading" aria-hidden="true">
+      <div class="settings-skeleton-profile">
+        <span class="settings-skeleton-circle"></span>
+        <div class="settings-skeleton-lines">
+          <span class="settings-skeleton-line settings-skeleton-line-lg"></span>
+          <span class="settings-skeleton-line settings-skeleton-line-md"></span>
+        </div>
+        <span class="settings-skeleton-pill"></span>
+      </div>
+
+      <div class="settings-skeleton-grid">
+        <div class="settings-skeleton-card">
+          <span class="settings-skeleton-heading"></span>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+        </div>
+        <div class="settings-skeleton-card">
+          <span class="settings-skeleton-heading"></span>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+        </div>
+        <div class="settings-skeleton-card">
+          <span class="settings-skeleton-heading"></span>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+        </div>
+        <div class="settings-skeleton-card">
+          <span class="settings-skeleton-heading"></span>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+          <div class="settings-skeleton-row"></div>
+        </div>
+      </div>
     </section>
   </main>
 
