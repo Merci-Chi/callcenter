@@ -1584,106 +1584,284 @@ function setupOutreach() {
 }
 
 function setupSkills() {
-
   const tabs = qa('.tabs a');
-
   if (!tabs.length) return;
 
   const main = q('main.content');
-
   const original = main.innerHTML;
 
+  const escapeSkill = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[ch]));
+
+  const formatDuration = seconds => {
+    const total = Math.max(0, Number(seconds) || 0);
+    const mins = Math.floor(total / 60);
+    const secs = Math.floor(total % 60);
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const formatTranscriptTimestamp = seconds => {
+    const total = Math.max(0, Number(seconds) || 0);
+    return `${Math.floor(total / 60)}:${String(Math.floor(total % 60)).padStart(2, '0')}`;
+  };
+
+  const formatCallDate = value => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString([], {
+      month:'short',
+      day:'numeric',
+      hour:'numeric',
+      minute:'2-digit'
+    });
+  };
+
   const practice = `
-
     <section class="card light-card skill-placeholder">
-
       <div class="skill-big-icon"><i data-lucide="messages-square"></i></div>
-
       <h3>Practice Objections</h3>
-
       <p>Choose a situation and practice your response.</p>
-
       <button class="practice-btn" data-practice="I already have a website">I already have a website</button>
-
       <button class="practice-btn" data-practice="I'm not interested">I'm not interested</button>
-
       <button class="practice-btn" data-practice="How much does it cost?">How much does it cost?</button>
-
     </section>`;
 
-  const library = `
-
-    <section class="card light-card skill-placeholder">
-
-      <div class="skill-big-icon"><i data-lucide="book-open"></i></div>
-
-      <h3>Call Library</h3>
-
-      <p>Review your saved transcripts and examples.</p>
-
-      <button class="practice-btn" data-transcript>BrightPath Marketing · 4:32</button>
-
-      <button class="practice-btn" data-transcript>Summit Construction · 3:18</button>
-
+  const libraryShell = `
+    <section class="card light-card skill-library-card">
+      <div class="skill-library-heading">
+        <div>
+          <div class="skill-library-title"><i data-lucide="book-open"></i><h3>Call Library</h3></div>
+          <p>Review transcripts from your completed calls.</p>
+        </div>
+      </div>
+      <div class="skill-library-list" id="skillLibraryList">
+        <div class="skill-library-loading">
+          <span class="skill-library-skeleton"></span>
+          <span class="skill-library-skeleton"></span>
+          <span class="skill-library-skeleton"></span>
+        </div>
+      </div>
     </section>`;
+
+  let transcriptRows = [];
+  let libraryLoaded = false;
+
+  const getSkillsClient = () =>
+    window.steadyHandsCRMClient ||
+    (window.supabase ? window.supabase.createClient(SH_SUPABASE_URL, SH_PUBLISHABLE_KEY) : null);
+
+  function renderTranscriptModal(row) {
+    let segments = row?.segments;
+
+    if (typeof segments === 'string') {
+      try { segments = JSON.parse(segments); } catch { segments = []; }
+    }
+
+    if (!Array.isArray(segments)) segments = [];
+
+    const finalSegments = segments
+      .filter(segment => segment && String(segment.text || '').trim())
+      .map(segment => ({
+        speaker: String(segment.speaker || 'user'),
+        start_seconds: Math.max(0, Number(segment.start_seconds) || 0),
+        text: String(segment.text || '').trim()
+      }));
+
+    const transcriptBody = finalSegments.length
+      ? finalSegments.map(segment => {
+          const isUser = segment.speaker === 'user';
+          return `
+            <div class="skill-transcript-line">
+              <div class="skill-transcript-meta">
+                <strong>${isUser ? 'You' : escapeSkill(segment.speaker)}</strong>
+                <span>${formatTranscriptTimestamp(segment.start_seconds)}</span>
+              </div>
+              <div class="skill-transcript-bubble">${escapeSkill(segment.text)}</div>
+            </div>`;
+        }).join('')
+      : row?.transcript
+        ? `<div class="skill-transcript-plain">${escapeSkill(row.transcript).replace(/\n/g, '<br>')}</div>`
+        : '<div class="skill-library-empty">No transcript text was captured for this call.</div>';
+
+    const details = [
+      row?.company ? escapeSkill(row.company) : 'Call Transcript',
+      formatCallDate(row?.created_at),
+      formatDuration(row?.duration_seconds)
+    ].filter(Boolean).join(' · ');
+
+    modal(
+      row?.company ? escapeSkill(row.company) : 'Full Transcript',
+      `
+        <div class="skill-transcript-detail">
+          <div class="skill-transcript-summary">
+            <strong>${details}</strong>
+            ${row?.outcome ? `<span>${escapeSkill(row.outcome)}</span>` : ''}
+          </div>
+          <div class="skill-transcript-lines">${transcriptBody}</div>
+        </div>`
+    );
+  }
+
+  function renderLibraryRows(rows) {
+    const list = q('#skillLibraryList');
+    if (!list) return;
+
+    if (!rows.length) {
+      list.innerHTML = `
+        <div class="skill-library-empty">
+          <i data-lucide="phone-call"></i>
+          <strong>No saved transcripts yet</strong>
+          <p>Complete a call with Live Transcript enabled and it will appear here.</p>
+        </div>`;
+      refreshIcons();
+      return;
+    }
+
+    list.innerHTML = rows.map(row => {
+      const company = escapeSkill(row.company || 'Business');
+      const contact = escapeSkill(row.contact || '');
+      const date = formatCallDate(row.created_at);
+      const duration = formatDuration(row.duration_seconds);
+      const outcome = escapeSkill(row.outcome || 'Call completed');
+
+      return `
+        <button class="skill-library-row" type="button" data-transcript-id="${escapeSkill(row.id)}">
+          <span class="skill-library-row-icon"><i data-lucide="file-text"></i></span>
+          <span class="skill-library-row-copy">
+            <strong>${company}</strong>
+            ${contact ? `<span>${contact}</span>` : ''}
+            <small>${escapeSkill(date)} · ${duration}</small>
+            <em>${outcome}</em>
+          </span>
+          <i class="skill-library-chevron" data-lucide="chevron-right"></i>
+        </button>`;
+    }).join('');
+
+    qa('[data-transcript-id]', list).forEach(button => {
+      button.addEventListener('click', () => {
+        const row = transcriptRows.find(item => String(item.id) === String(button.dataset.transcriptId));
+        if (row) renderTranscriptModal(row);
+      });
+    });
+
+    refreshIcons();
+  }
+
+  async function loadLibrary({ force = false } = {}) {
+    if (libraryLoaded && !force) {
+      renderLibraryRows(transcriptRows);
+      return;
+    }
+
+    const list = q('#skillLibraryList');
+    if (!list) return;
+
+    const client = getSkillsClient();
+    if (!client) {
+      list.innerHTML = '<div class="skill-library-empty"><strong>Unable to connect.</strong><p>Please refresh and try again.</p></div>';
+      return;
+    }
+
+    try {
+      const { data: authData, error: authError } = await client.auth.getSession();
+      if (authError) throw authError;
+
+      const userId = authData?.session?.user?.id;
+      if (!userId) {
+        window.location.replace('login.html');
+        return;
+      }
+
+      const { data, error } = await client
+        .from('callcenter_transcripts')
+        .select('id,crm_id,call_activity_id,company,contact,phone,started_at,ended_at,duration_seconds,transcript,segments,outcome,created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending:false })
+        .limit(200);
+
+      if (error) throw error;
+
+      transcriptRows = Array.isArray(data) ? data : [];
+      libraryLoaded = true;
+      renderLibraryRows(transcriptRows);
+    } catch (error) {
+      console.error('Unable to load Skills call library:', error);
+      list.innerHTML = `
+        <div class="skill-library-empty">
+          <i data-lucide="triangle-alert"></i>
+          <strong>Unable to load your transcripts</strong>
+          <p>Please refresh and try again.</p>
+        </div>`;
+      refreshIcons();
+    }
+  }
 
   const wireDynamic = () => {
-
     qa('[data-practice]').forEach(btn => btn.addEventListener('click', () => {
-
-      modal('Practice Prompt', `<p class="modal-help"><strong>Customer:</strong> “${btn.dataset.practice}”</p><textarea class="modal-textarea" placeholder="Type how you would respond..."></textarea>`, [
-
-        { label: 'Close' }, { label: 'Save Practice', primary: true, onClick: close => { close(); showToast('Practice saved'); } }
-
-      ]);
-
+      modal(
+        'Practice Prompt',
+        `<p class="modal-help"><strong>Customer:</strong> “${escapeSkill(btn.dataset.practice)}”</p><textarea class="modal-textarea" placeholder="Type how you would respond..."></textarea>`,
+        [
+          { label: 'Close' },
+          {
+            label: 'Save Practice',
+            primary: true,
+            onClick: close => {
+              close();
+              showToast('Practice saved');
+            }
+          }
+        ]
+      );
     }));
-
-    qa('[data-transcript]').forEach(btn => btn.addEventListener('click', showTranscript));
-
   };
 
   tabs.forEach((tab, i) => {
-
-    tab.addEventListener('click', e => {
-
+    tab.addEventListener('click', async e => {
       e.preventDefault();
 
       tabs.forEach(x => x.classList.remove('active'));
-
       tab.classList.add('active');
 
-      main.innerHTML = i === 0 ? original : i === 1 ? practice : library;
+      main.innerHTML = i === 0
+        ? original
+        : i === 1
+          ? practice
+          : libraryShell;
 
       refreshIcons();
-
       setupSkillSelectors();
-
       wireDynamic();
 
+      if (i === 2) {
+        await loadLibrary();
+      }
     });
-
   });
 
-  function showTranscript(e) {
-
-    e?.preventDefault?.();
-
-    modal('Full Transcript', `<div class="full-transcript"><p><strong>You · 0:08</strong><br>Hi Sarah, this is Alex from BrightPath. Do you have a minute to chat about your website?</p><p><strong>Sarah · 0:24</strong><br>Yeah, of course. We’re actually looking at a few options right now.</p><p><strong>You · 0:37</strong><br>Great. I wanted to show you a preview and ask a couple quick questions about what you need.</p></div>`);
-
-  }
-
-  qa('.transcript-head a').forEach(a => a.addEventListener('click', showTranscript));
+  qa('.transcript-head a').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    tabs[2]?.click();
+  }));
 
   function setupSkillSelectors() {
-
-    qa('.mini-select').forEach(btn => btn.addEventListener('click', () => cycleButton(btn, ['Last 7 days', 'Last 30 days', 'All time'])));
-
+    qa('.mini-select').forEach(btn => {
+      if (btn.dataset.skillSelectorReady === 'true') return;
+      btn.dataset.skillSelectorReady = 'true';
+      btn.addEventListener('click', () =>
+        cycleButton(btn, ['Last 7 days', 'Last 30 days', 'All time'])
+      );
+    });
   }
 
   setupSkillSelectors();
-
 }
+
 
 function setupEarnings() {
 
