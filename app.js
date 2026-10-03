@@ -385,6 +385,33 @@ function callcenterShuffle(items) {
   return shuffled;
 }
 
+function selectedLeadSkeletonMarkup() {
+  return `
+    <div class="skeleton-lead skeleton-expanded selected-lead-skeleton" aria-hidden="true">
+      <div class="sk-row">
+        <div class="sk-shape sk-icon"></div>
+        <div class="sk-grow">
+          <div class="sk-shape sk-title"></div>
+          <div class="sk-shape sk-subtitle"></div>
+        </div>
+        <div class="sk-shape sk-star"></div>
+      </div>
+      <div class="sk-shape sk-phone"></div>
+      <div class="sk-shape sk-line"></div>
+      <div class="sk-chips"><span class="sk-shape"></span><span class="sk-shape"></span></div>
+      <div class="sk-shape sk-preview"></div>
+      <div class="sk-shape sk-note"></div>
+      <div class="sk-shape sk-call"></div>
+      <div class="sk-chips sk-bottom"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
+    </div>`;
+}
+
+function showSelectedLeadSkeleton() {
+  const box = q('#selectedLeadTop');
+  if (!box) return;
+  box.innerHTML = selectedLeadSkeletonMarkup();
+}
+
 function setupOutreach() {
 
   const leadContainer = q('#crmLeadCards');
@@ -965,6 +992,8 @@ function setupOutreach() {
   const selectCard = (card, shouldScroll = true) => {
 
     if (!card || !matchesFilter(card)) return;
+
+    showSelectedLeadSkeleton();
 
     changeLeads(() => {
 
@@ -2621,7 +2650,7 @@ function crmShowLiveSearchLoading(query) {
   const status = q('#crmStatus');
   if (!box || !status) return;
 
-  q('#selectedLeadTop')?.replaceChildren();
+  showSelectedLeadSkeleton();
 
   status.style.display = '';
   status.textContent = query ? `Searching for “${query}”…` : 'Loading leads...';
@@ -3114,27 +3143,28 @@ function setupDesktopOutreachPaneScrolling() {
 
   if (!content || !leftPane || !rightPane) return;
 
-  const bounceTimers = new WeakMap();
+  const stretchTimers = new WeakMap();
 
-  const bouncePane = (pane, deltaY) => {
-    const amount = Math.max(-12, Math.min(12, deltaY * 0.055));
+  const stretchPane = (pane, deltaY, edge) => {
+    const strength = Math.min(0.028, Math.max(0.008, Math.abs(deltaY) * 0.00016));
 
-    pane.style.setProperty('--pane-bounce-y', `${amount}px`);
-    pane.classList.add('pane-bouncing');
+    pane.style.setProperty('--pane-stretch-scale', String(1 + strength));
+    pane.style.setProperty('--pane-stretch-origin', edge === 'top' ? 'top center' : 'bottom center');
+    pane.classList.add('pane-stretching');
 
-    const current = bounceTimers.get(pane);
+    const current = stretchTimers.get(pane);
     if (current) clearTimeout(current);
 
     const timer = setTimeout(() => {
-      pane.style.setProperty('--pane-bounce-y', '0px');
-      pane.classList.add('pane-bounce-back');
+      pane.style.setProperty('--pane-stretch-scale', '1');
+      pane.classList.add('pane-stretch-release');
 
       setTimeout(() => {
-        pane.classList.remove('pane-bouncing', 'pane-bounce-back');
-      }, 180);
-    }, 55);
+        pane.classList.remove('pane-stretching', 'pane-stretch-release');
+      }, 190);
+    }, 65);
 
-    bounceTimers.set(pane, timer);
+    stretchTimers.set(pane, timer);
   };
 
   const onWheel = (event) => {
@@ -3159,15 +3189,13 @@ function setupDesktopOutreachPaneScrolling() {
     const tryingPastBottom = event.deltaY > 0 && atBottom;
 
     if (maxScroll > 0 && !tryingPastTop && !tryingPastBottom) {
-      const next = Math.max(0, Math.min(maxScroll, pane.scrollTop + event.deltaY));
       event.preventDefault();
-      pane.scrollTop = next;
+      pane.scrollTop = Math.max(0, Math.min(maxScroll, pane.scrollTop + event.deltaY));
       return;
     }
 
-    // Even with no overflow, give the pane a small elastic response.
     event.preventDefault();
-    bouncePane(pane, event.deltaY);
+    stretchPane(pane, event.deltaY, tryingPastTop ? 'top' : 'bottom');
   };
 
   document.addEventListener('wheel', onWheel, { passive: false });
