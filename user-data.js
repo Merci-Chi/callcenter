@@ -101,8 +101,80 @@
     return { label:'Active', cls:'active', days };
   }
 
+  async function maybePromptDeviceNotifications() {
+    const PROMPTED_KEY = 'steadyhands-device-notifications-prompted';
+    const ENABLED_KEY = 'steadyhands-setting-device-notifications';
+
+    if (!('Notification' in window)) return;
+
+    try {
+      if (localStorage.getItem(PROMPTED_KEY) === '1') return;
+    } catch {}
+
+    if (Notification.permission === 'granted') {
+      try {
+        localStorage.setItem(PROMPTED_KEY, '1');
+        localStorage.setItem(ENABLED_KEY, 'true');
+      } catch {}
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      try {
+        localStorage.setItem(PROMPTED_KEY, '1');
+        localStorage.setItem(ENABLED_KEY, 'false');
+      } catch {}
+      return;
+    }
+
+    if (document.querySelector('.cc-overlay[data-notification-prompt]')) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'cc-overlay';
+    overlay.dataset.notificationPrompt = 'true';
+    overlay.innerHTML = `
+      <div class="cc-disabled" style="text-align:left">
+        <div style="width:46px;height:46px;border-radius:14px;background:#eaf3ff;color:#2378d2;display:grid;place-items:center;margin-bottom:12px">
+          <i data-lucide="bell-ring" style="width:24px;height:24px"></i>
+        </div>
+        <h2 style="margin:0 0 8px">Allow notifications?</h2>
+        <p style="margin:0 0 16px">Get account activity warnings and other enabled Outreach notifications on this device.</p>
+        <div style="display:flex;gap:10px">
+          <button id="ccNotificationLater" style="flex:1;border:1px solid #d9e2ec;background:#fff;color:#40556c;border-radius:12px;padding:12px 14px;font-weight:900">Not Now</button>
+          <button id="ccNotificationAllow" style="flex:1;border:0;background:#1677e8;color:#fff;border-radius:12px;padding:12px 14px;font-weight:900">Allow</button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    window.lucide?.createIcons();
+
+    const finish = (enabled) => {
+      try {
+        localStorage.setItem(PROMPTED_KEY, '1');
+        localStorage.setItem(ENABLED_KEY, enabled ? 'true' : 'false');
+      } catch {}
+      overlay.remove();
+    };
+
+    document.getElementById('ccNotificationLater')?.addEventListener('click', () => finish(false));
+    document.getElementById('ccNotificationAllow')?.addEventListener('click', async () => {
+      try {
+        const permission = await Notification.requestPermission();
+        finish(permission === 'granted');
+      } catch {
+        finish(false);
+      }
+    });
+  }
+
   async function maybeSendAccountActivityNotification(profile) {
     if (!profile) return;
+
+    let deviceNotificationsEnabled = false;
+    try {
+      deviceNotificationsEnabled = localStorage.getItem('steadyhands-setting-device-notifications') === 'true';
+    } catch {}
+    if (!deviceNotificationsEnabled) return;
 
     const referenceDate = profile.last_call_at || profile.created_at;
     if (!referenceDate) return;
@@ -583,6 +655,7 @@
     const prefs = {
       confirmCalls: readPref('confirm-calls', true),
       recording: readPref('call-recording', false),
+      deviceNotifications: readPref('device-notifications', false),
       followups: readPref('followup-reminders', true),
       earnings: readPref('earnings-updates', true),
       assignments: readPref('new-assignments', true)
@@ -641,6 +714,11 @@
 
       <section class="settings-section">
         <div class="settings-section-title">Notifications</div>
+        <button class="settings-row" type="button" data-toggle-setting="deviceNotifications">
+          <span class="settings-icon"><i data-lucide="bell-ring"></i></span>
+          <span class="settings-copy"><strong>Device Notifications</strong><small id="deviceNotificationStatus">Enable notifications on this device</small></span>
+          <span class="settings-switch ${prefs.deviceNotifications?'on':''}" role="switch" aria-checked="${prefs.deviceNotifications}"><span></span></span>
+        </button>
         <button class="settings-row" type="button" data-toggle-setting="followups">
           <span class="settings-icon"><i data-lucide="calendar-clock"></i></span>
           <span class="settings-copy"><strong>Follow-up Reminders</strong><small>Reminders for scheduled follow-ups</small></span>
@@ -723,6 +801,7 @@
     refreshMicStatus();
 
     const toggleMap = {
+      deviceNotifications:['device-notifications','deviceNotifications'],
       recording:['call-recording','recording'],
       confirmCalls:['confirm-calls','confirmCalls'],
       followups:['followup-reminders','followups'],
@@ -730,11 +809,69 @@
       assignments:['new-assignments','assignments']
     };
 
+    const refreshDeviceNotificationStatus = () => {
+      const target = document.getElementById('deviceNotificationStatus');
+      if (!target) return;
+      if (!('Notification' in window)) {
+        target.textContent = 'Not supported on this device';
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        target.textContent = 'Blocked in device settings';
+        return;
+      }
+      if (prefs.deviceNotifications && Notification.permission === 'granted') {
+        target.textContent = 'Allowed on this device';
+        return;
+      }
+      target.textContent = 'Off on this device';
+    };
+    refreshDeviceNotificationStatus();
+
     main.querySelectorAll('[data-toggle-setting]').forEach(row => {
-      row.addEventListener('click', () => {
+      row.addEventListener('click', async () => {
         const key = row.dataset.toggleSetting;
         const pair = toggleMap[key];
         if (!pair) return;
+
+        if (key === 'deviceNotifications') {
+          const sw = row.querySelector('.settings-switch');
+
+          if (prefs.deviceNotifications) {
+            prefs.deviceNotifications = false;
+            writePref('device-notifications', false);
+            sw?.classList.remove('on');
+            sw?.setAttribute('aria-checked', 'false');
+            refreshDeviceNotificationStatus();
+            return;
+          }
+
+          if (!('Notification' in window)) {
+            refreshDeviceNotificationStatus();
+            return;
+          }
+
+          if (Notification.permission === 'denied') {
+            refreshDeviceNotificationStatus();
+            openSheet('Notifications', '<p class="settings-sheet-note">Notifications are blocked for this site. Allow them in your browser or device settings, then come back and turn Device Notifications on.</p>');
+            return;
+          }
+
+          let permission = Notification.permission;
+          if (permission === 'default') {
+            try { permission = await Notification.requestPermission(); } catch {}
+          }
+
+          const enabled = permission === 'granted';
+          prefs.deviceNotifications = enabled;
+          writePref('device-notifications', enabled);
+          try { localStorage.setItem('steadyhands-device-notifications-prompted', '1'); } catch {}
+          sw?.classList.toggle('on', enabled);
+          sw?.setAttribute('aria-checked', String(enabled));
+          refreshDeviceNotificationStatus();
+          return;
+        }
+
         const next = !prefs[pair[1]];
         prefs[pair[1]] = next;
         writePref(pair[0], next);
@@ -802,8 +939,34 @@
         if (action === 'audio' || action === 'permissions') {
           const overlay = openSheet(action==='audio'?'Microphone & Audio':'Permissions', `
             <div class="settings-permission-row"><span><strong>Microphone</strong><small>Required for browser calling</small></span><button id="settingsMicPermission" type="button">Check Access</button></div>
+            <div class="settings-permission-row" style="margin-top:10px"><span><strong>Notifications</strong><small>${!('Notification' in window) ? 'Not supported' : Notification.permission === 'granted' ? 'Allowed' : Notification.permission === 'denied' ? 'Blocked' : 'Not decided'}</small></span><button id="settingsNotificationPermission" type="button">Manage</button></div>
             <div class="settings-inline-message" id="settingsPermissionMessage"></div>
           `);
+          overlay.querySelector('#settingsNotificationPermission')?.addEventListener('click', async () => {
+            const msg=overlay.querySelector('#settingsPermissionMessage');
+            if (!('Notification' in window)) {
+              msg.textContent='Notifications are not supported on this device.';
+              return;
+            }
+            if (Notification.permission === 'denied') {
+              msg.textContent='Notifications are blocked. Allow them in your browser or device settings.';
+              return;
+            }
+            try {
+              const permission = Notification.permission === 'default'
+                ? await Notification.requestPermission()
+                : Notification.permission;
+              const enabled = permission === 'granted';
+              prefs.deviceNotifications = enabled;
+              writePref('device-notifications', enabled);
+              try { localStorage.setItem('steadyhands-device-notifications-prompted', '1'); } catch {}
+              msg.textContent = enabled ? 'Notifications are allowed on this device.' : 'Notifications are not enabled.';
+              refreshDeviceNotificationStatus();
+            } catch {
+              msg.textContent='Unable to change notification access.';
+            }
+          });
+
           overlay.querySelector('#settingsMicPermission')?.addEventListener('click', async e => {
             const msg=overlay.querySelector('#settingsPermissionMessage');
             try {
@@ -1120,6 +1283,7 @@
       return;
     }
 
+    await maybePromptDeviceNotifications();
     await maybeSendAccountActivityNotification(profile);
 
     const state = activityState(profile);
