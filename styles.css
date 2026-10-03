@@ -3153,13 +3153,11 @@ html, body {
   .page-outreach #selectedLeadTop {
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: #c5d0db transparent;
   }
 
   .page-outreach #crmLeadCards {
-    overscroll-behavior: contain;
   }
 
   .page-outreach #selectedLeadTop::-webkit-scrollbar {
@@ -3180,7 +3178,6 @@ html, body {
     height: 100%;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    overscroll-behavior: contain;
   }
 
   .page-outreach #selectedLeadTop .lead-card.selected-lead {
@@ -3191,5 +3188,30 @@ html, body {
 
   .page-outreach #selectedLeadTop .lead-details {
     overflow: visible !important;
+  }
+}
+
+
+/* Outreach desktop rounded shell + elastic pane feedback */
+@media (min-width: 900px) {
+  .page-outreach .app {
+    border-radius: 28px !important;
+    overflow: hidden !important;
+  }
+
+  .page-outreach #crmLeadCards,
+  .page-outreach #selectedLeadTop {
+    transform: translateY(var(--pane-bounce-y, 0px));
+    will-change: transform;
+  }
+
+  .page-outreach #crmLeadCards.pane-bouncing,
+  .page-outreach #selectedLeadTop.pane-bouncing {
+    transition: transform 70ms ease-out;
+  }
+
+  .page-outreach #crmLeadCards.pane-bounce-back,
+  .page-outreach #selectedLeadTop.pane-bounce-back {
+    transition: transform 180ms cubic-bezier(.2,.85,.35,1);
   }
 }
