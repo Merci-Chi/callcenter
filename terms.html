@@ -32,7 +32,7 @@
 <body>
   <header class="terms-top">
     <div class="terms-top-inner">
-      <button class="terms-back" type="button" aria-label="Back" onclick="history.length>1?history.back():location.href='login.html'">‹</button>
+      <button class="terms-back" type="button" aria-label="Back" onclick="if(window.parent!==window){window.parent.postMessage({type:'close-terms'},location.origin)}else{history.length>1?history.back():location.href='login.html'}">‹</button>
       <h1>Terms &amp; Conditions</h1>
     </div>
   </header>
