@@ -13,6 +13,8 @@
   const subheading = document.getElementById('loginSubheading');
   const saveEmail = document.getElementById('saveEmailToDevice');
   const agreeToTerms = document.getElementById('agreeToTerms');
+  const termsOption = document.querySelector('.terms-option');
+  const termsValidation = document.getElementById('termsValidation');
   const SAVED_EMAIL_KEY = 'steadyhands-saved-login-email';
 
   try {
@@ -50,6 +52,13 @@
         localStorage.removeItem(SAVED_EMAIL_KEY);
       }
     } catch {}
+  });
+
+  agreeToTerms?.addEventListener('change', () => {
+    if (agreeToTerms.checked) {
+      termsOption?.classList.remove('is-invalid');
+      termsValidation?.classList.remove('is-visible');
+    }
   });
 
   window.lucide?.createIcons();
@@ -241,7 +250,9 @@
     }
 
     if (!agreeToTerms?.checked) {
-      message.textContent = 'You must agree to the Terms & Conditions before signing in.';
+      message.textContent = '';
+      termsOption?.classList.add('is-invalid');
+      termsValidation?.classList.add('is-visible');
       agreeToTerms?.focus();
       return;
     }
