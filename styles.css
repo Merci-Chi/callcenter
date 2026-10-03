@@ -2081,3 +2081,360 @@ html, body {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Desktop layout — activates only on larger screens. Mobile remains unchanged. */
+@media (min-width: 900px) {
+  html, body {
+    min-height: 100%;
+    background: #edf1f5;
+  }
+
+  body {
+    padding: 0;
+  }
+
+  .app {
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0 0 0 230px;
+    border-radius: 0;
+    overflow: visible;
+    box-shadow: none;
+    background: var(--page);
+  }
+
+  .topbar {
+    min-height: 86px;
+    padding: 22px 34px;
+    display: flex;
+    align-items: center;
+    border-radius: 0;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .topbar-row {
+    width: 100%;
+  }
+
+  .topbar h1 {
+    font-size: 32px;
+  }
+
+  .topbar .tabs {
+    width: min(520px, 52vw);
+    margin: 0 0 0 28px;
+  }
+
+  .content {
+    width: min(1440px, calc(100vw - 230px));
+    margin: 0 auto;
+    padding: 28px 34px 52px;
+  }
+
+  .bottom-nav {
+    position: fixed;
+    inset: 0 auto 0 0;
+    transform: none;
+    width: 230px;
+    height: 100vh;
+    padding: 28px 16px;
+    background: #10253b;
+    border: 0;
+    border-radius: 0;
+    box-shadow: 12px 0 34px rgba(10,25,40,.14);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 8px;
+    z-index: 50;
+  }
+
+  .bottom-nav::before {
+    content: "Steady Hands";
+    display: block;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -.3px;
+    padding: 4px 10px 24px;
+  }
+
+  .nav-item {
+    min-height: 48px;
+    padding: 0 12px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 11px;
+    font-size: 12px;
+    color: #c4d0dc;
+  }
+
+  .nav-item i {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+  }
+
+  .nav-item.active {
+    color: #fff;
+    background: rgba(25,160,255,.14);
+  }
+
+  .nav-item:hover {
+    background: rgba(255,255,255,.06);
+    color: #fff;
+  }
+
+  .card {
+    border-radius: 18px;
+  }
+
+  .light-card,
+  .ref-card,
+  .chart-card,
+  .profile-card,
+  .settings-group,
+  .earn-hero {
+    margin-top: 16px;
+  }
+
+  .app-modal-overlay {
+    align-items: center;
+  }
+
+  .app-modal {
+    width: min(620px, calc(100vw - 80px));
+    max-height: 86vh;
+    border-radius: 22px;
+  }
+
+  .app-toast {
+    left: calc(50% + 115px);
+    bottom: 30px;
+  }
+
+  /* Outreach desktop */
+  .page-outreach .content {
+    display: grid;
+    grid-template-columns: minmax(340px, .82fr) minmax(480px, 1.45fr);
+    grid-template-areas:
+      "controls selected"
+      "status selected"
+      "list selected";
+    gap: 18px 24px;
+    align-items: start;
+  }
+
+  .page-outreach .outreach-controls {
+    grid-area: controls;
+    margin: 0;
+    position: sticky;
+    top: 106px;
+  }
+
+  .page-outreach #crmStatus {
+    grid-area: status;
+    margin: 0;
+  }
+
+  .page-outreach #crmLeadCards {
+    grid-area: list;
+    min-width: 0;
+  }
+
+  .page-outreach #selectedLeadTop {
+    grid-area: selected;
+    min-width: 0;
+    position: sticky;
+    top: 106px;
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .page-outreach .lead-card {
+    margin-bottom: 12px;
+  }
+
+  .page-outreach #crmLeadCards .lead-card:not(.selected-lead) {
+    padding: 14px;
+    box-shadow: 0 6px 18px rgba(15,33,54,.07);
+  }
+
+  .page-outreach .crm-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 44px;
+    gap: 8px;
+  }
+
+  .page-outreach .filter-row {
+    overflow: visible;
+    flex-wrap: wrap;
+  }
+
+  .page-outreach .selected-lead .quick-actions {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Skills desktop */
+  .page-skills .content {
+    max-width: 1180px;
+  }
+
+  .page-skills .insight-grid {
+    grid-template-columns: repeat(3, minmax(180px,1fr));
+    gap: 14px;
+  }
+
+  .page-skills .insight {
+    padding: 20px 16px;
+  }
+
+  .page-skills .insight strong {
+    font-size: 28px;
+  }
+
+  .page-skills .feedback-list {
+    padding: 8px 18px;
+  }
+
+  .page-skills .skill-library-list {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .page-skills .skill-library-row {
+    min-height: 92px;
+  }
+
+  .page-skills .skill-score-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 14px 18px;
+  }
+
+  /* Earnings desktop */
+  .page-earnings .content {
+    max-width: 1180px;
+  }
+
+  .page-earnings .earn-hero {
+    padding: 24px 26px;
+  }
+
+  .page-earnings .earn-total {
+    font-size: 44px;
+  }
+
+  .page-earnings .two-grid {
+    gap: 16px;
+  }
+
+  .page-earnings .metric-card {
+    padding: 20px;
+  }
+
+  .page-earnings .sales-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  /* Activity desktop */
+  .page-activity .content {
+    max-width: 1220px;
+  }
+
+  .page-activity .card,
+  .page-activity .light-card {
+    padding: 18px;
+  }
+
+  /* Account desktop */
+  .page-account .content {
+    max-width: 1100px;
+    display: grid;
+    grid-template-columns: minmax(300px,.8fr) minmax(420px,1.2fr);
+    gap: 18px 24px;
+    align-items: start;
+  }
+
+  .page-account .profile-card {
+    grid-column: 1;
+    position: sticky;
+    top: 106px;
+  }
+
+  .page-account .settings-group {
+    grid-column: 2;
+    margin-top: 12px;
+  }
+
+  /* Real call screen desktop */
+  .page-call .app {
+    padding-left: 0;
+  }
+
+  .page-call .call-content {
+    width: min(1280px, calc(100vw - 64px));
+    margin: 0 auto;
+    padding: 28px 0 50px;
+    display: grid;
+    grid-template-columns: minmax(420px,.95fr) minmax(500px,1.05fr);
+    grid-template-areas:
+      "identity transcript"
+      "actions transcript"
+      "controls transcript"
+      "script transcript";
+    gap: 18px 26px;
+    align-items: start;
+  }
+
+  .page-call .call-identity {
+    grid-area: identity;
+  }
+
+  .page-call .call-action-grid {
+    grid-area: actions;
+  }
+
+  .page-call .call-controls {
+    grid-area: controls;
+  }
+
+  .page-call .starter-script-card {
+    grid-area: script;
+  }
+
+  .page-call .call-transcript-section {
+    grid-area: transcript;
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+  }
+
+  .page-call .call-action-grid-six {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .page-call .live-transcript-list {
+    max-height: calc(100vh - 270px);
+  }
+}
+
+@media (min-width: 1250px) {
+  .page-outreach .content {
+    grid-template-columns: minmax(390px, .78fr) minmax(640px, 1.55fr);
+  }
+
+  .page-skills .skill-library-list {
+    grid-template-columns: repeat(3, minmax(0,1fr));
+  }
+}
