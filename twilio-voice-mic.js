@@ -1,4 +1,8 @@
-import { Device } from 'https://esm.sh/@twilio/voice-sdk@2.18.5';
+const Device = window.Twilio?.Device;
+
+if (!Device) {
+  throw new Error('Twilio Voice SDK did not load. Refresh the page and try again.');
+}
 
 let device = null;
 let activeCall = null;
