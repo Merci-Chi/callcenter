@@ -2215,7 +2215,7 @@ callcenterAddAreaCodes('America/Los_Angeles', `206 209 213 253 279 310 323 341 3
 callcenterAddAreaCodes('America/Phoenix', `480 520 602 623 928`);
 callcenterAddAreaCodes('America/Denver', `303 307 385 406 435 505 575 719 720 801 970 983`);
 callcenterAddAreaCodes('America/Boise', `208 986`);
-callcenterAddAreaCodes('America/Chicago', `205 210 214 217 224 225 228 251 254 262 281 308 309 312 314 316 318 319 320 325 331 334 346 361 409 417 430 432 447 469 479 501 504 507 512 515 534 539 563 573 580 601 605 608 612 615 618 620 630 636 641 651 660 662 682 701 708 712 713 715 726 737 763 769 779 785 806 815 816 817 830 832 847 850 870 872 903 913 918 920 936 940 945 956 972 975 979 985`);
+callcenterAddAreaCodes('America/Chicago', `205 210 214 217 224 225 228 251 254 262 281 308 309 312 314 316 318 319 320 325 331 334 346 361 409 417 430 432 447 469 479 501 504 507 512 515 534 539 563 573 580 601 605 608 612 615 618 620 630 636 641 651 660 662 682 701 708 712 713 715 726 737 763 769 779 785 806 815 816 817 830 832 847 850 870 872 903 913 918 920 936 940 945 956 972 975 979 985 270 364`);
 callcenterAddAreaCodes('America/New_York', `201 202 203 207 212 215 216 220 223 227 229 231 234 239 240 248 252 267 269 272 276 301 302 304 305 313 315 321 330 332 336 339 347 351 352 380 386 401 404 407 410 412 413 419 423 434 440 445 448 470 475 478 484 502 508 513 516 517 518 540 551 561 567 570 571 574 582 585 586 603 606 607 609 610 614 616 617 631 640 646 656 659 667 678 680 681 689 703 704 706 716 717 724 727 732 734 740 743 754 757 762 765 770 772 774 781 786 802 803 804 810 813 814 826 828 835 843 845 848 850 854 856 857 859 860 862 863 864 878 904 908 910 912 914 917 919 929 930 934 937 941 943 947 948 954 959 980 984 989`);
 callcenterAddAreaCodes('America/Anchorage', `907`);
 callcenterAddAreaCodes('Pacific/Honolulu', `808`);
@@ -2250,10 +2250,14 @@ function callcenterNormalizedZone(value) {
 
 function callcenterLeadZone(phone, storedTimezone) {
   const area = callcenterPhoneAreaCode(phone);
-  const areaZone = CALLCENTER_AREA_CODE_ZONES[area];
-  if (areaZone) return { zone: areaZone, area, source: 'area' };
+
+  // An explicit CRM timezone is more accurate than an area-code guess.
   const stored = callcenterNormalizedZone(storedTimezone);
   if (stored) return { zone: stored, area, source: 'crm' };
+
+  const areaZone = CALLCENTER_AREA_CODE_ZONES[area];
+  if (areaZone) return { zone: areaZone, area, source: 'area' };
+
   return { zone: 'America/Los_Angeles', area, source: 'fallback' };
 }
 
@@ -2288,23 +2292,30 @@ function callcenterCallStatus(phone, storedTimezone, date = new Date()) {
   const minutes = p.hour * 60 + p.minute;
   const weekdayIndex = ({ Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 })[p.weekday] ?? 0;
   const weekday = weekdayIndex >= 1 && weekdayIndex <= 5;
+  const insideCallWindow =
+    weekday &&
+    minutes >= CALLCENTER_CALL_WINDOW.start &&
+    minutes < CALLCENTER_CALL_WINDOW.end;
+
   let state = 'late';
-  let label = 'Outside best hours';
+  let label = 'Best to call Mon-Fri 9:00 AM-5:00 PM';
   let score = 5000;
 
-  if (weekday && minutes >= CALLCENTER_CALL_WINDOW.start && minutes <= CALLCENTER_CALL_WINDOW.end) {
+  if (insideCallWindow) {
     state = 'good';
-    label = 'Good time to call now · Best times between Mon–Friday 9:00 AM–5:00 PM';
+    label = 'Good time to call now · Mon-Fri 9:00 AM-5:00 PM';
     score = minutes - CALLCENTER_CALL_WINDOW.start;
   } else if (weekday && minutes < CALLCENTER_CALL_WINDOW.start) {
     state = 'wait';
-    label = 'Best later today at 9:00 AM';
     score = 1000 + (CALLCENTER_CALL_WINDOW.start - minutes);
   } else {
-    const days = weekdayIndex === 5 ? 3 : weekdayIndex === 6 ? 2 : weekdayIndex === 0 ? 1 : 1;
+    const daysUntilWeekday =
+      weekdayIndex === 5 ? 3 :
+      weekdayIndex === 6 ? 2 :
+      weekdayIndex === 0 ? 1 : 1;
+
     state = 'late';
-    label = days === 1 ? 'Best next weekday at 9:00 AM' : 'Best Monday at 9:00 AM';
-    score = 2000 + (days * 1440) + (CALLCENTER_CALL_WINDOW.start - minutes);
+    score = 2000 + (daysUntilWeekday * 1440);
   }
 
   return { ...info, ...p, minutes, state, label, score };
