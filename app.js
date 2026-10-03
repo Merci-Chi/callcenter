@@ -1670,6 +1670,7 @@ function setupSkills() {
     </section>`;
 
   let transcriptRows = [];
+  let feedbackByTranscript = new Map();
   let libraryLoaded = false;
   let insightsLoaded = false;
   let currentRange = 7;
@@ -1717,6 +1718,69 @@ function setupSkills() {
       formatDuration(row?.duration_seconds)
     ].filter(Boolean).join(' · ');
 
+    const feedback = feedbackByTranscript.get(String(row?.id || '')) || null;
+    const strengths = Array.isArray(feedback?.strengths) ? feedback.strengths : [];
+    const improvements = Array.isArray(feedback?.improvements) ? feedback.improvements : [];
+    const scores = feedback?.scores && typeof feedback.scores === 'object' ? feedback.scores : {};
+
+    const scoreLabels = {
+      opening: 'Opening',
+      questions: 'Questions',
+      pricing: 'Pricing',
+      objection_handling: 'Objection Handling',
+      closing: 'Closing'
+    };
+
+    const coachingBlock = feedback ? `
+      <section class="skill-coaching-card">
+        <div class="skill-coaching-head">
+          <div>
+            <span>Call Coaching</span>
+            <strong>${escapeSkill(feedback.sentiment || 'neutral')} sentiment</strong>
+          </div>
+          <i data-lucide="sparkles"></i>
+        </div>
+
+        ${feedback.summary ? `<p class="skill-coaching-summary">${escapeSkill(feedback.summary)}</p>` : ''}
+
+        <div class="skill-score-grid">
+          ${Object.entries(scoreLabels).map(([key,label]) => {
+            const value = Math.max(0, Math.min(100, Number(scores?.[key]) || 0));
+            return `
+              <div class="skill-score">
+                <div><span>${label}</span><strong>${value}</strong></div>
+                <div class="skill-score-track"><span style="width:${value}%"></span></div>
+              </div>`;
+          }).join('')}
+        </div>
+
+        <div class="skill-coaching-columns">
+          <div>
+            <h4><i data-lucide="circle-check"></i> Strengths</h4>
+            ${strengths.length
+              ? `<ul>${strengths.map(item => `<li>${escapeSkill(item)}</li>`).join('')}</ul>`
+              : '<p>No specific strengths were returned.</p>'}
+          </div>
+          <div>
+            <h4><i data-lucide="target"></i> Improve Next</h4>
+            ${improvements.length
+              ? `<ul>${improvements.map(item => `<li>${escapeSkill(item)}</li>`).join('')}</ul>`
+              : '<p>No specific improvements were returned.</p>'}
+          </div>
+        </div>
+      </section>`
+      : `
+      <section class="skill-coaching-card skill-coaching-pending">
+        <div class="skill-coaching-head">
+          <div>
+            <span>Call Coaching</span>
+            <strong>Analysis pending</strong>
+          </div>
+          <i data-lucide="clock-3"></i>
+        </div>
+        <p class="skill-coaching-summary">Coaching feedback has not been generated for this transcript yet.</p>
+      </section>`;
+
     modal(
       row?.company ? escapeSkill(row.company) : 'Full Transcript',
       `
@@ -1725,6 +1789,7 @@ function setupSkills() {
             <strong>${details}</strong>
             ${row?.outcome ? `<span>${escapeSkill(row.outcome)}</span>` : ''}
           </div>
+          ${coachingBlock}
           <div class="skill-transcript-lines">${transcriptBody}</div>
         </div>`
     );
@@ -1745,16 +1810,33 @@ function setupSkills() {
       return [];
     }
 
-    const { data, error } = await client
-      .from('callcenter_transcripts')
-      .select('id,crm_id,call_activity_id,company,contact,phone,started_at,ended_at,duration_seconds,transcript,segments,outcome,created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending:false })
-      .limit(500);
+    const [
+      { data: transcripts, error: transcriptError },
+      { data: feedbackRows, error: feedbackError }
+    ] = await Promise.all([
+      client
+        .from('callcenter_transcripts')
+        .select('id,crm_id,call_activity_id,company,contact,phone,started_at,ended_at,duration_seconds,transcript,segments,outcome,created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending:false })
+        .limit(500),
+      client
+        .from('callcenter_call_feedback')
+        .select('id,transcript_id,summary,strengths,improvements,sentiment,scores,created_at,updated_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending:false })
+        .limit(500)
+    ]);
 
-    if (error) throw error;
+    if (transcriptError) throw transcriptError;
+    if (feedbackError) throw feedbackError;
 
-    transcriptRows = Array.isArray(data) ? data : [];
+    transcriptRows = Array.isArray(transcripts) ? transcripts : [];
+    feedbackByTranscript = new Map(
+      (Array.isArray(feedbackRows) ? feedbackRows : [])
+        .map(row => [String(row.transcript_id), row])
+    );
+
     libraryLoaded = true;
     return transcriptRows;
   }
@@ -1813,14 +1895,23 @@ function setupSkills() {
 
     recent.innerHTML = recentRows.map(row => {
       const good = positiveOutcome(row.outcome);
+      const feedback = feedbackByTranscript.get(String(row.id)) || null;
+      const sentiment = String(feedback?.sentiment || '').toLowerCase();
+      const iconClass = sentiment === 'positive' ? 'green' : sentiment === 'negative' ? 'orange' : 'blue';
+      const iconName = feedback ? 'sparkles' : (good ? 'circle-check' : 'phone-call');
+      const detail = feedback?.summary
+        ? feedback.summary
+        : `${row.outcome || 'Call completed'} · ${formatDuration(row.duration_seconds)}`;
+
       return `
         <button class="feedback skill-recent-call" type="button" data-insight-transcript-id="${escapeSkill(row.id)}">
-          <div class="feedback-icon ${good ? 'green' : 'blue'}">
-            <i data-lucide="${good ? 'circle-check' : 'phone-call'}"></i>
+          <div class="feedback-icon ${iconClass}">
+            <i data-lucide="${iconName}"></i>
           </div>
           <div>
             <strong>${escapeSkill(row.company || 'Business')}</strong>
-            <p>${escapeSkill(row.outcome || 'Call completed')} · ${formatDuration(row.duration_seconds)}</p>
+            <p>${escapeSkill(detail)}</p>
+            ${feedback ? `<small class="skill-feedback-status">${escapeSkill(sentiment || 'neutral')} coaching</small>` : ''}
           </div>
           <time>${escapeSkill(relativeCallTime(row.created_at))}</time>
         </button>`;
@@ -1886,6 +1977,7 @@ function setupSkills() {
       const date = formatCallDate(row.created_at);
       const duration = formatDuration(row.duration_seconds);
       const outcome = escapeSkill(row.outcome || 'Call completed');
+      const feedback = feedbackByTranscript.get(String(row.id)) || null;
 
       return `
         <button class="skill-library-row" type="button" data-transcript-id="${escapeSkill(row.id)}">
@@ -1895,6 +1987,7 @@ function setupSkills() {
             ${contact ? `<span>${contact}</span>` : ''}
             <small>${escapeSkill(date)} · ${duration}</small>
             <em>${outcome}</em>
+            ${feedback ? `<small class="skill-library-coaching"><i data-lucide="sparkles"></i> Coaching ready</small>` : ''}
           </span>
           <i class="skill-library-chevron" data-lucide="chevron-right"></i>
         </button>`;
