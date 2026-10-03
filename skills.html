@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png" />
   <title>Skills</title>
-  <link rel="stylesheet" href="styles.css?v=20261002-skills-library" />
+  <link rel="stylesheet" href="styles.css?v=20261002-real-skills-insights" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="app-update.js" defer></script>
 </head>
@@ -23,24 +23,23 @@
   </header>
   <main class="content">
     <section class="card light-card">
-      <div class="card-head"><h3>Your Call Insights</h3><button class="mini-select">Last 7 days⌄</button></div>
-      <div class="insight-grid">
-        <div class="insight"><strong>78%</strong><span>Talk Time</span><em>↑ 12%</em></div>
-        <div class="insight"><strong>4:32</strong><span>Avg. Call Length</span><em>↑ 28%</em></div>
-        <div class="insight"><strong>62%</strong><span>Positive Sentiment</span><em>↑ 18%</em></div>
+      <div class="card-head">
+        <h3>Your Call Insights</h3>
+        <button class="mini-select" id="skillsRangeSelect" type="button" data-range="7">Last 7 days⌄</button>
+      </div>
+      <div class="insight-grid" id="skillsInsightGrid">
+        <div class="insight"><strong>—</strong><span>Calls Reviewed</span><em>Loading</em></div>
+        <div class="insight"><strong>—</strong><span>Avg. Call Length</span><em>Loading</em></div>
+        <div class="insight"><strong>—</strong><span>Positive Outcomes</span><em>Loading</em></div>
       </div>
     </section>
 
-    <div class="section-title">Recent Call Feedback</div>
-    <section class="card light-card feedback-list">
-      <div class="feedback"><div class="feedback-icon green"><i data-lucide="trophy"></i></div><div><strong>Great opening!</strong><p>You built rapport quickly.</p></div><time>2h ago</time></div>
-      <div class="feedback"><div class="feedback-icon blue"><i data-lucide="mic-2"></i></div><div><strong>Talk slower</strong><p>Try pausing after key points.</p></div><time>4h ago</time></div>
-      <div class="feedback"><div class="feedback-icon green"><i data-lucide="chart-no-axes-column-increasing"></i></div><div><strong>Handled pricing well</strong><p>You addressed the objection clearly.</p></div><time>1d ago</time></div>
-      <div class="feedback"><div class="feedback-icon orange"><i data-lucide="target"></i></div><div><strong>Ask more questions</strong><p>Learn about their timeline earlier.</p></div><time>1d ago</time></div>
-      <div class="transcript">
-        <div class="transcript-head"><strong>Transcript Example</strong><a href="#">Full Transcript →</a></div>
-        <div class="bubble-row"><div class="avatar">You</div><div class="bubble"><span class="speaker">You</span><small>0:08</small><br>Hi Sarah, this is Alex from BrightPath. Do you have a minute to chat about…</div></div>
-        <div class="bubble-row"><div class="avatar purple">SJ</div><div class="bubble"><span class="speaker">Sarah</span><small>0:24</small><br>Yeah, of course. We’re actually looking at a few options right now…</div></div>
+    <div class="section-title">Recent Calls</div>
+    <section class="card light-card feedback-list" id="skillsRecentCalls">
+      <div class="skill-library-loading">
+        <span class="skill-library-skeleton"></span>
+        <span class="skill-library-skeleton"></span>
+        <span class="skill-library-skeleton"></span>
       </div>
     </section>
   </main>
@@ -56,6 +55,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-1918"></script>
-<script src="app.js?v=20261002-skills-library"></script>
+<script src="app.js?v=20261002-real-skills-insights"></script>
 </body>
 </html>
