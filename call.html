@@ -653,14 +653,34 @@
         outcome: String(outcome || '')
       };
 
-      const { error } = await client
+      const { data: savedTranscript, error } = await client
         .from('callcenter_transcripts')
-        .insert(payload);
+        .insert(payload)
+        .select('id')
+        .single();
 
       if(error) throw error;
 
       transcriptSavedForCall = true;
-      return true;
+
+      const transcriptId = savedTranscript?.id || null;
+
+      if(transcriptId){
+        client.functions
+          .invoke('analyze-call-transcript', {
+            body: { transcript_id: transcriptId }
+          })
+          .then(({ error: analysisError }) => {
+            if(analysisError){
+              console.warn('Transcript coaching analysis failed:', analysisError);
+            }
+          })
+          .catch(analysisError => {
+            console.warn('Transcript coaching analysis failed:', analysisError);
+          });
+      }
+
+      return transcriptId || true;
     }catch(error){
       console.error('Unable to save call transcript:', error);
       return false;
