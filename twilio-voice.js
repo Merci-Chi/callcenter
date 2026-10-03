@@ -20,6 +20,70 @@ function cleanNumber(value) {
   return '+' + digits;
 }
 
+function microphoneErrorMessage(error) {
+  const name = String(error?.name || '');
+  const message = String(error?.message || '');
+
+  if (!window.isSecureContext) {
+    return 'Microphone access requires HTTPS. Open https://outreach.steadyhandsop.com and try again.';
+  }
+
+  if (name === 'NotAllowedError' || name === 'SecurityError') {
+    return 'Microphone access is blocked. In Safari, open Website Settings for outreach.steadyhandsop.com, set Microphone to Allow, then try again.';
+  }
+
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return 'No microphone was found on this device.';
+  }
+
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return 'Your microphone is being used by another app or could not be opened.';
+  }
+
+  return message || 'Microphone permission could not be enabled.';
+}
+
+async function requestMicrophonePermission() {
+  if (!window.isSecureContext) {
+    throw new Error(
+      'Microphone access requires HTTPS. Open https://outreach.steadyhandsop.com and try again.'
+    );
+  }
+
+  // Modern Safari/Chrome/Firefox path.
+  if (navigator.mediaDevices?.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error) {
+      throw new Error(microphoneErrorMessage(error));
+    }
+  }
+
+  // Legacy fallback for older WebKit builds.
+  const legacyGetUserMedia =
+    navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia;
+
+  if (legacyGetUserMedia) {
+    try {
+      const stream = await new Promise((resolve, reject) => {
+        legacyGetUserMedia.call(navigator, { audio: true }, resolve, reject);
+      });
+      stream.getTracks?.().forEach(track => track.stop());
+      return true;
+    } catch (error) {
+      throw new Error(microphoneErrorMessage(error));
+    }
+  }
+
+  throw new Error(
+    'Microphone calling is unavailable in this browser. Open https://outreach.steadyhandsop.com in Safari or Chrome and try again.'
+  );
+}
+
 async function fetchToken() {
   const client = window.steadyHandsCRMClient;
   if (!client) throw new Error('The signed-in CRM session is not ready yet.');
@@ -107,12 +171,7 @@ async function start(destination, metadata = {}) {
     throw new Error('This lead does not have a valid phone number.');
   }
 
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error('This browser does not support microphone calling.');
-  }
-
-  const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  permissionStream.getTracks().forEach(track => track.stop());
+  await requestMicrophonePermission();
 
   const readyDevice = await ensureDevice();
   emit('calling');
