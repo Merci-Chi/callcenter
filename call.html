@@ -91,7 +91,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
-<script src="user-data.js?v=20261001-leadworkspace"></script>
+<script src="user-data.js?v=20261002-transcript-save"></script>
 <script src="app.js?v=20261001-calltime"></script>
 <script>
 (function(){
@@ -234,6 +234,8 @@
     document.querySelector('.call-status').dataset.state = state;
 
     if(state === 'connected'){
+      if(!callConnectedAt) callConnectedAt = Date.now();
+      callEndedAt = null;
       timerWrap.hidden = false;
       if(!timerTick){
         timerTick = setInterval(() => {
@@ -255,7 +257,19 @@
     stateTimers = [];
     if(timerTick) clearInterval(timerTick);
     timerTick = null;
+
+    callEndedAt = Date.now();
+
+    if(liveTranscriptEnabled && speechRecognition){
+      liveTranscriptEnabled = false;
+      try{ speechRecognition.stop(); }catch{}
+      setTranscriptStatus('Live transcript is off');
+      const button = document.getElementById('enableLiveTranscript');
+      if(button) button.innerHTML = '<i data-lucide="mic"></i> Enable Live Transcript';
+    }
+
     setState('ended');
+    lucide.createIcons();
   }
 
   const mainCallButton = document.getElementById('hangupBtn');
@@ -276,6 +290,17 @@
     stateTimers.forEach(clearTimeout);
     stateTimers = [];
     connectedSeconds = 0;
+    callConnectedAt = null;
+    callEndedAt = null;
+    transcriptStartedAt = null;
+    transcriptSegments = [];
+    transcriptSavedForCall = false;
+
+    const transcriptList = document.getElementById('liveTranscriptList');
+    if(transcriptList){
+      transcriptList.innerHTML = '<div class="live-transcript-empty" id="liveTranscriptEmpty">No transcript yet.</div>';
+    }
+
     timer.textContent = '00:00';
     setState('calling');
     syncMainCallButton();
@@ -563,11 +588,83 @@
   let speechRecognition = null;
   let liveTranscriptEnabled = false;
   let transcriptStartedAt = null;
+  let transcriptSegments = [];
+  let callConnectedAt = null;
+  let callEndedAt = null;
+  let transcriptSavedForCall = false;
+
+  function transcriptElapsedSeconds(){
+    const origin = callConnectedAt || transcriptStartedAt;
+    if(!origin) return 0;
+    return Math.max(0, Math.floor((Date.now() - origin) / 1000));
+  }
 
   function transcriptTime(){
-    if(!transcriptStartedAt) return '00:00';
-    const seconds = Math.max(0,Math.floor((Date.now()-transcriptStartedAt)/1000));
+    const seconds = transcriptElapsedSeconds();
     return String(Math.floor(seconds/60)).padStart(2,'0') + ':' + String(seconds%60).padStart(2,'0');
+  }
+
+  async function saveCallTranscript({ activityId = null, outcome = '' } = {}){
+    if(transcriptSavedForCall) return true;
+
+    const client = window.steadyHandsCRMClient;
+    if(!client) {
+      console.warn('Unable to save transcript: CRM client is unavailable.');
+      return false;
+    }
+
+    try{
+      const { data: authData, error: authError } = await client.auth.getSession();
+      if(authError) throw authError;
+
+      const userId = authData?.session?.user?.id;
+      if(!userId) throw new Error('No signed-in user.');
+
+      const finalSegments = transcriptSegments
+        .filter(segment => segment && segment.text && !segment.interim)
+        .map(segment => ({
+          speaker: segment.speaker || 'user',
+          start_seconds: Math.max(0, Number(segment.start_seconds) || 0),
+          text: String(segment.text || '').trim()
+        }))
+        .filter(segment => segment.text);
+
+      const plainTranscript = finalSegments
+        .map(segment => segment.text)
+        .join('\n')
+        .trim();
+
+      const payload = {
+        user_id: userId,
+        crm_id: crmId || null,
+        call_activity_id: activityId || null,
+        company: company || '',
+        contact: contact === '____' ? '' : contact,
+        phone: number === '(000) 000-0000' ? '' : number,
+        started_at: callConnectedAt
+          ? new Date(callConnectedAt).toISOString()
+          : (transcriptStartedAt ? new Date(transcriptStartedAt).toISOString() : null),
+        ended_at: callEndedAt
+          ? new Date(callEndedAt).toISOString()
+          : new Date().toISOString(),
+        duration_seconds: Math.max(0, Number(connectedSeconds) || 0),
+        transcript: plainTranscript,
+        segments: finalSegments,
+        outcome: String(outcome || '')
+      };
+
+      const { error } = await client
+        .from('callcenter_transcripts')
+        .insert(payload);
+
+      if(error) throw error;
+
+      transcriptSavedForCall = true;
+      return true;
+    }catch(error){
+      console.error('Unable to save call transcript:', error);
+      return false;
+    }
   }
 
   function addTranscriptLine(text, interim=false){
@@ -586,7 +683,17 @@
     row.querySelector('.transcript-meta span').textContent = transcriptTime();
     row.querySelector('.transcript-bubble').textContent = text;
 
-    if(!interim) row.classList.remove('interim');
+    if(!interim){
+      row.classList.remove('interim');
+
+      transcriptSegments.push({
+        speaker: 'user',
+        start_seconds: transcriptElapsedSeconds(),
+        text: text.trim(),
+        interim: false
+      });
+    }
+
     row.scrollIntoView({block:'nearest',behavior:'smooth'});
   }
 
@@ -1002,15 +1109,26 @@
             }
           }
 
-          await window.callcenterRecordCall?.({
+          const finalOutcome = [
+            data.rating,
+            ...data.outcomes,
+            data.route === 'callback' ? 'Call Back' : data.route === 'notinterested' ? 'Not Interested' : ''
+          ].filter(Boolean).join(' • ');
+
+          const savedActivity = await window.callcenterRecordCall?.({
             crmId,
             duration: connectedSeconds,
-            outcome: [
-              data.rating,
-              ...data.outcomes,
-              data.route === 'callback' ? 'Call Back' : data.route === 'notinterested' ? 'Not Interested' : ''
-            ].filter(Boolean).join(' • ')
+            outcome: finalOutcome
           });
+
+          const transcriptSaved = await saveCallTranscript({
+            activityId: savedActivity?.id || null,
+            outcome: finalOutcome
+          });
+
+          if(!transcriptSaved){
+            console.warn('Call activity saved, but transcript could not be saved.');
+          }
         }
 
         if (data.route === 'notinterested') {
