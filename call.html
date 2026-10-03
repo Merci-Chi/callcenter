@@ -93,6 +93,7 @@
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261002-transcript-save"></script>
 <script src="app.js?v=20261003-recipient-timezone-fix"></script>
+<script type="module" src="twilio-voice.js?v=20261003-live-calling"></script>
 <script>
 (function(){
   const params = new URLSearchParams(location.search);
@@ -286,7 +287,7 @@
     lucide.createIcons();
   }
 
-  function startCall(){
+  async function startCall(){
     stateTimers.forEach(clearTimeout);
     stateTimers = [];
     connectedSeconds = 0;
@@ -304,8 +305,22 @@
     timer.textContent = '00:00';
     setState('calling');
     syncMainCallButton();
-    stateTimers.push(setTimeout(() => setState('ringing'), 900));
-    stateTimers.push(setTimeout(() => setState('connected'), 3000));
+
+    try {
+      if (!window.SteadyHandsTwilioVoice) {
+        throw new Error('The browser phone is still loading. Try again in a second.');
+      }
+
+      await window.SteadyHandsTwilioVoice.start(number, {
+        crmId,
+        company
+      });
+    } catch (error) {
+      console.error('Unable to start Twilio call:', error);
+      stopCall();
+      syncMainCallButton();
+      alert(error?.message || 'The call could not be started.');
+    }
   }
 
   function confirmCallTime() {
@@ -357,10 +372,11 @@
     if(callState === 'idle' || callState === 'ended'){
       const confirmed = await confirmCallTime();
       if (!confirmed) return;
-      startCall();
+      await startCall();
       return;
     }
 
+    window.SteadyHandsTwilioVoice?.hangup();
     stopCall();
     syncMainCallButton();
     openPostCallFlow();
@@ -374,24 +390,55 @@
 
   document.getElementById('muteBtn')?.addEventListener('click', function(){
     if(callState !== 'connected') return;
-    this.classList.toggle('active');
+    const nextMuted = !this.classList.contains('active');
+    window.SteadyHandsTwilioVoice?.setMuted(nextMuted);
+    this.classList.toggle('active', nextMuted);
     const span = this.querySelector('span');
-    span.textContent = this.classList.contains('active') ? 'Unmute' : 'Mute';
+    span.textContent = nextMuted ? 'Unmute' : 'Mute';
     const icon = this.querySelector('i');
-    icon.setAttribute('data-lucide', this.classList.contains('active') ? 'mic-off' : 'mic');
+    icon.setAttribute('data-lucide', nextMuted ? 'mic-off' : 'mic');
     lucide.createIcons();
+  });
+
+  window.addEventListener('steadyhands:voice-state', event => {
+    const detail = event.detail || {};
+    const voiceState = detail.state;
+
+    if (voiceState === 'calling') {
+      setState('calling');
+      syncMainCallButton();
+      return;
+    }
+
+    if (voiceState === 'ringing') {
+      setState('ringing');
+      syncMainCallButton();
+      return;
+    }
+
+    if (voiceState === 'connected') {
+      setState('connected');
+      syncMainCallButton();
+      return;
+    }
+
+    if (voiceState === 'error') {
+      if (detail.message) alert(detail.message);
+      return;
+    }
+
+    if (voiceState === 'ended' && ['calling','ringing','connected'].includes(callState)) {
+      stopCall();
+      syncMainCallButton();
+      if (!questionnaireOpen) openPostCallFlow();
+    }
   });
 
   syncMainCallButton();
 
   document.getElementById('holdBtn')?.addEventListener('click', function(){
     if(callState !== 'connected') return;
-    this.classList.toggle('active');
-    const span = this.querySelector('span');
-    span.textContent = this.classList.contains('active') ? 'Resume' : 'Hold';
-    const icon = this.querySelector('i');
-    icon.setAttribute('data-lucide', this.classList.contains('active') ? 'play' : 'pause');
-    lucide.createIcons();
+    alert('Hold will be enabled after the first live browser-call test.');
   });
 
   function toolSheet(title, body){
