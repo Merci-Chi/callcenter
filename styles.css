@@ -2494,7 +2494,7 @@ html, body {
     padding: 18px 26px 20px;
 
     display: grid;
-    grid-template-columns: minmax(340px, 405px) minmax(0, 1fr);
+    grid-template-columns: minmax(460px, 560px) minmax(420px, .82fr);
     grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       "queuehead workspacehead"
@@ -3027,7 +3027,7 @@ html, body {
 
 @media (min-width: 1400px) {
   .page-outreach .content {
-    grid-template-columns: 410px minmax(0,1fr);
+    grid-template-columns: 560px minmax(440px,.8fr);
     column-gap: 26px;
   }
 }
