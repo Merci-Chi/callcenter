@@ -575,7 +575,7 @@
           <i class="settings-chevron" data-lucide="chevron-right"></i>
         </button>
         <button class="settings-row" type="button" data-toggle-setting="recording">
-          <span class="settings-icon"><i data-lucide="badge-dot"></i></span>
+          <span class="settings-icon"><i data-lucide="circle-dot"></i></span>
           <span class="settings-copy"><strong>Call Recording</strong><small>Save recording preference for calls</small></span>
           <span class="settings-switch ${prefs.recording?'on':''}" role="switch" aria-checked="${prefs.recording}"><span></span></span>
         </button>
