@@ -13,7 +13,7 @@
   <title>Outreach</title>
 
   <link rel="preconnect" href="https://unpkg.com">
-  <link rel="stylesheet" href="styles.css?v=20261003-rounded-elastic-panes" />
+  <link rel="stylesheet" href="styles.css?v=20261003-selected-skeleton-stretch" />
 
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="app-update.js" defer></script>
@@ -43,7 +43,25 @@
       </div>
     </div>
 
-    <div id="selectedLeadTop" class="crm-leads selected-lead-top" aria-live="polite"></div>
+    <div id="selectedLeadTop" class="crm-leads selected-lead-top" aria-live="polite">
+      <div class="skeleton-lead skeleton-expanded selected-lead-skeleton" aria-hidden="true">
+        <div class="sk-row">
+          <div class="sk-shape sk-icon"></div>
+          <div class="sk-grow">
+            <div class="sk-shape sk-title"></div>
+            <div class="sk-shape sk-subtitle"></div>
+          </div>
+          <div class="sk-shape sk-star"></div>
+        </div>
+        <div class="sk-shape sk-phone"></div>
+        <div class="sk-shape sk-line"></div>
+        <div class="sk-chips"><span class="sk-shape"></span><span class="sk-shape"></span></div>
+        <div class="sk-shape sk-preview"></div>
+        <div class="sk-shape sk-note"></div>
+        <div class="sk-shape sk-call"></div>
+        <div class="sk-chips sk-bottom"><span class="sk-shape"></span><span class="sk-shape"></span><span class="sk-shape"></span></div>
+      </div>
+    </div>
 
     <div class="outreach-controls">
       <div class="crm-toolbar">
@@ -140,6 +158,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js"></script>
 <script src="user-data.js?v=20261001-1930"></script>
-<script src="app.js?v=20261003-rounded-elastic-panes"></script>
+<script src="app.js?v=20261003-selected-skeleton-stretch"></script>
 </body>
 </html>
