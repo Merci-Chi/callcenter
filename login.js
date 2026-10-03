@@ -32,6 +32,36 @@
 
   window.lucide?.createIcons();
 
+  const termsLink = document.getElementById('termsLink');
+
+  function openTermsModal() {
+    document.querySelector('.terms-modal-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'terms-modal-overlay';
+    overlay.innerHTML = `
+      <div class="terms-modal-bar">
+        <strong>Terms &amp; Conditions</strong>
+        <button type="button" class="terms-modal-close" aria-label="Close Terms & Conditions">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <iframe class="terms-modal-frame" src="terms.html" title="Terms & Conditions"></iframe>
+    `;
+
+    document.body.appendChild(overlay);
+    window.lucide?.createIcons();
+
+    overlay.querySelector('.terms-modal-close')?.addEventListener('click', () => {
+      overlay.remove();
+    });
+  }
+
+  termsLink?.addEventListener('click', event => {
+    event.preventDefault();
+    openTermsModal();
+  });
+
   function setPasswordVisibility(input, toggle) {
     if (!input || !toggle) return;
     toggle.addEventListener('click', () => {
