@@ -3146,3 +3146,28 @@ html, body {
     height: 13px !important;
   }
 }
+
+
+/* Allow either Outreach desktop side to scroll from anywhere in that side. */
+@media (min-width: 900px) {
+  .page-outreach #selectedLeadTop {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #c5d0db transparent;
+  }
+
+  .page-outreach #crmLeadCards {
+    overscroll-behavior: contain;
+  }
+
+  .page-outreach #selectedLeadTop::-webkit-scrollbar {
+    width: 7px;
+  }
+
+  .page-outreach #selectedLeadTop::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c5d0db;
+  }
+}
