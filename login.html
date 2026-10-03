@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Outreach" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png" /><title>Sign In • Outreach</title>
-<link rel="stylesheet" href="styles.css?v=20261003-login-redesign"/>
+<link rel="stylesheet" href="styles.css?v=20261003-login-input-fit"/>
 <script src="https://unpkg.com/lucide@latest"></script>
 <style>
   *{box-sizing:border-box}
@@ -108,7 +108,7 @@
   .login-form{
     display:flex!important;
     flex-direction:column!important;
-    gap:12px!important;
+    gap:8px!important;
   }
 
   .login-form>label:not(.save-email-option):not(.terms-option){
@@ -123,7 +123,7 @@
     display:flex!important;
     align-items:center!important;
     gap:13px!important;
-    padding:0 18px!important;
+    padding:0 16px!important;
     border:1.8px solid #d7e2ed!important;
     border-radius:22px!important;
     background:#f8fbff!important;
@@ -147,13 +147,20 @@
     background:transparent!important;
     color:#183652!important;
     font:inherit!important;
-    font-size:17px!important;
+    font-size:15px!important;
     font-weight:750!important;
+    line-height:1.2!important;
   }
 
   .login-field input::placeholder{
     color:#a7b3c0!important;
     opacity:1!important;
+    font-size:15px!important;
+    letter-spacing:-.01em!important;
+  }
+
+  .login-field + label:not(.save-email-option):not(.terms-option){
+    margin-top:0!important;
   }
 
   .login-field button{
@@ -360,6 +367,14 @@
     .login-field{
       min-height:58px!important;
       border-radius:20px!important;
+      padding-left:14px!important;
+      padding-right:14px!important;
+      gap:10px!important;
+    }
+
+    .login-field input,
+    .login-field input::placeholder{
+      font-size:14px!important;
     }
 
     .login-submit{
