@@ -3103,9 +3103,49 @@ async function loadApprovedPreviewCRM(options = {}) {
   }
 }
 
+
+
+function setupDesktopOutreachPaneScrolling() {
+  if (!document.body.classList.contains('page-outreach')) return;
+
+  const content = document.querySelector('.page-outreach .content');
+  const leftPane = document.querySelector('#crmLeadCards');
+  const rightPane = document.querySelector('#selectedLeadTop');
+
+  if (!content || !leftPane || !rightPane) return;
+
+  const onWheel = (event) => {
+    if (!window.matchMedia('(min-width: 900px)').matches) return;
+    if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
+
+    const contentRect = content.getBoundingClientRect();
+    if (
+      event.clientX < contentRect.left ||
+      event.clientX > contentRect.right ||
+      event.clientY < contentRect.top ||
+      event.clientY > contentRect.bottom
+    ) return;
+
+    const rightRect = rightPane.getBoundingClientRect();
+    const pane = event.clientX < rightRect.left ? leftPane : rightPane;
+
+    const maxScroll = Math.max(0, pane.scrollHeight - pane.clientHeight);
+    if (!maxScroll) return;
+
+    const next = Math.max(0, Math.min(maxScroll, pane.scrollTop + event.deltaY));
+    if (next === pane.scrollTop) return;
+
+    event.preventDefault();
+    pane.scrollTop = next;
+  };
+
+  document.addEventListener('wheel', onWheel, { passive: false });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
   refreshIcons();
+  setupDesktopOutreachPaneScrolling();
 
   setupCopyButtons();
 
