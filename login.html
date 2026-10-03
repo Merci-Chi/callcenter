@@ -42,7 +42,8 @@
     border-radius:inherit;
   }
 
-  .save-email-option{
+  .save-email-option,
+  .terms-option{
     display:flex;
     align-items:center;
     gap:9px;
@@ -56,7 +57,8 @@
     -webkit-user-select:none;
     user-select:none;
   }
-  .save-email-option input{
+  .save-email-option input,
+  .terms-option input{
     position:absolute;
     opacity:0;
     pointer-events:none;
@@ -78,14 +80,39 @@
     height:13px;
     stroke-width:3;
   }
-  .save-email-option input:checked + .save-email-check{
+  .save-email-option input:checked + .save-email-check,
+  .terms-option input:checked + .save-email-check{
     background:#1677e8;
     border-color:#1677e8;
     color:#fff;
   }
-  .save-email-option input:focus-visible + .save-email-check{
+  .save-email-option input:focus-visible + .save-email-check,
+  .terms-option input:focus-visible + .save-email-check{
     outline:2px solid rgba(22,119,232,.25);
     outline-offset:2px;
+  }
+  .terms-option{
+    display:flex;
+    align-items:flex-start;
+    gap:9px;
+    width:100%;
+    margin:2px 0 8px;
+    color:#53677c;
+    font-size:12px;
+    font-weight:750;
+    cursor:pointer;
+    -webkit-user-select:none;
+    user-select:none;
+    line-height:1.4;
+  }
+  .terms-option .save-email-check{
+    margin-top:1px;
+  }
+  .terms-option a{
+    color:#1677e8;
+    font-weight:850;
+    text-decoration:underline;
+    text-underline-offset:2px;
   }
 </style>
   <script src="app-update.js" defer></script>
@@ -97,9 +124,14 @@
 <label for="loginEmail">Email address</label><div class="login-field"><i data-lucide="mail"></i><input id="loginEmail" type="email" name="email" placeholder="name@steadyhandsop.com" autocomplete="username" required/></div>
 <label for="loginPassword">Password</label><div class="login-field"><i data-lucide="lock-keyhole"></i><input id="loginPassword" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required/><button type="button" id="showPassword" aria-label="Show password"><i data-lucide="eye"></i></button></div>
 <label class="save-email-option" for="saveEmailToDevice">
-  <input id="saveEmailToDevice" type="checkbox" checked />
+  <input id="saveEmailToDevice" type="checkbox" />
   <span class="save-email-check" aria-hidden="true"><i data-lucide="check"></i></span>
   <span>Save email to this device</span>
+</label>
+<label class="terms-option" for="agreeToTerms">
+  <input id="agreeToTerms" type="checkbox" required />
+  <span class="save-email-check" aria-hidden="true"><i data-lucide="check"></i></span>
+  <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>.</span>
 </label>
 <button type="button" id="forgotPassword" class="forgot-password">Forgot password?</button>
 <div id="loginMessage" class="login-message" role="status" aria-live="polite"></div>
