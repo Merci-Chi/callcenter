@@ -1575,6 +1575,8 @@ function setupOutreach() {
         timezone: card.dataset.timezone || ''
       });
 
+      params.set('build', '20261003-mic-permission-2');
+
       const callHref = `call.html?${params.toString()}`;
       window.callcenterSetResumeLocation?.(callHref, company);
       window.location.href = callHref;
