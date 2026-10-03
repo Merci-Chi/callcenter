@@ -3298,11 +3298,20 @@ html, body {
     position: relative;
   }
 
+  /* Keep the real controls in-flow so loading never changes their position/height. */
+  .page-outreach .outreach-controls-live {
+    display: block;
+  }
+
   .page-outreach .outreach-controls-skeleton {
-    display: none;
+    position: absolute;
+    inset: 11px;
+    z-index: 2;
     grid-template-columns: minmax(0, 1fr) 42px;
-    gap: 7px;
+    grid-template-rows: 42px 34px;
+    gap: 8px 7px;
     align-items: center;
+    pointer-events: none;
   }
 
   .page-outreach .outreach-controls-skeleton .sk-search-bar {
@@ -3320,8 +3329,9 @@ html, body {
   .page-outreach .outreach-controls-skeleton .sk-filter-row {
     grid-column: 1 / -1;
     display: flex;
+    align-items: center;
     gap: 7px;
-    margin-top: 1px;
+    margin: 0;
   }
 
   .page-outreach .outreach-controls-skeleton .sk-filter-pill {
@@ -3340,10 +3350,13 @@ html, body {
   }
 
   body.page-outreach main.content.outreach-loading .outreach-controls-live {
-    display: none !important;
+    display: block !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
   }
 
   body.page-outreach main.content.outreach-loading .outreach-controls-skeleton {
     display: grid !important;
+    visibility: visible !important;
   }
 }
