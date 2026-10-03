@@ -472,9 +472,79 @@ async function callcenterEnsurePhoneApproved() {
     return false;
   }
 
+  const openVerifyCode = phone => {
+    callcenterPhoneApprovalModal(
+      'Enter verification code',
+      `<p class="modal-help">We sent a 6-digit code to <strong>${crmEscape(phone)}</strong>.</p>
+       <label class="modal-label">Verification code
+         <input class="modal-input" id="verifyPhoneCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
+       </label>
+       <div class="modal-note" id="verifyCodeMessage">Enter the code from the text message.</div>`,
+      [
+        {
+          label:'Back',
+          onClick:(close) => {
+            close();
+            openVerifyNumber();
+          }
+        },
+        {
+          label:'Verify',
+          primary:true,
+          onClick:async (close, overlay) => {
+            const codeInput = overlay.querySelector('#verifyPhoneCode');
+            const message = overlay.querySelector('#verifyCodeMessage');
+            const verifyButton = overlay.querySelector('.modal-action.primary');
+            const code = String(codeInput?.value || '').replace(/\D/g,'').slice(0,6);
+
+            if (code.length !== 6) {
+              if (message) message.textContent = 'Enter the 6-digit code.';
+              return;
+            }
+
+            if (verifyButton) {
+              verifyButton.disabled = true;
+              verifyButton.textContent = 'Verifying…';
+            }
+            if (message) message.textContent = 'Checking your code…';
+
+            const { data, error } = await client.functions.invoke('callcenter-phone-verify-code', {
+              body:{ phone, code }
+            });
+
+            if (error || !data?.ok) {
+              console.error('Unable to verify phone code:', error || data);
+              if (message) message.textContent = data?.error || error?.message || 'That code could not be verified.';
+              if (verifyButton) {
+                verifyButton.disabled = false;
+                verifyButton.textContent = 'Verify';
+              }
+              return;
+            }
+
+            close();
+            profile = {
+              ...profile,
+              phone:data.phone || phone,
+              phone_verified_at:data.phone_verified_at || new Date().toISOString(),
+              phone_approval_status:'pending'
+            };
+
+            callcenterPhoneApprovalModal(
+              'Phone verified',
+              `<p class="modal-help">Your phone number <strong>${crmEscape(profile.phone)}</strong> has been verified.</p>
+               <p class="modal-note">Your number is now waiting for admin approval. You will not be able to place calls until it is approved.</p>`
+            );
+          }
+        }
+      ]
+    );
+  };
+
   const openVerifyNumber = () => {
     const currentPhone = profile.phone || '';
-    const overlay = callcenterPhoneApprovalModal(
+
+    callcenterPhoneApprovalModal(
       'Verify phone number',
       `<p class="modal-help">Before you can make calls, verify your phone number by SMS. After verification, an admin must approve it.</p>
        <label class="modal-label">Phone number
@@ -483,113 +553,47 @@ async function callcenterEnsurePhoneApproved() {
        <div class="modal-note" id="verifyPhoneMessage">We will text a 6-digit verification code to this number.</div>`,
       [
         {label:'Cancel'},
-        {label:'Send Code', primary:true, id:'sendPhoneCode'}
+        {
+          label:'Send Code',
+          primary:true,
+          onClick:async (close, overlay) => {
+            const phoneInput = overlay.querySelector('#verifyPhoneNumber');
+            const message = overlay.querySelector('#verifyPhoneMessage');
+            const sendButton = overlay.querySelector('.modal-action.primary');
+            const phone = String(phoneInput?.value || '').trim();
+            const digits = phone.replace(/\D/g,'');
+
+            if (digits.length < 10) {
+              if (message) message.textContent = 'Enter a valid phone number first.';
+              return;
+            }
+
+            if (sendButton) {
+              sendButton.disabled = true;
+              sendButton.textContent = 'Sending…';
+            }
+            if (message) message.textContent = 'Sending verification code…';
+
+            const { data, error } = await client.functions.invoke('callcenter-phone-send-code', {
+              body:{ phone }
+            });
+
+            if (error || !data?.ok) {
+              console.error('Unable to send phone code:', error || data);
+              if (message) message.textContent = data?.error || error?.message || 'Unable to send the verification code.';
+              if (sendButton) {
+                sendButton.disabled = false;
+                sendButton.textContent = 'Send Code';
+              }
+              return;
+            }
+
+            close();
+            openVerifyCode(data.phone || phone);
+          }
+        }
       ]
     );
-
-    const sendButton = overlay?.querySelector?.('[data-action-id="sendPhoneCode"]');
-    const phoneInput = overlay?.querySelector?.('#verifyPhoneNumber');
-    const message = overlay?.querySelector?.('#verifyPhoneMessage');
-
-    if (!sendButton || !phoneInput) return;
-
-    sendButton.addEventListener('click', async event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      const phone = String(phoneInput.value || '').trim();
-      const digits = phone.replace(/\D/g,'');
-      if (digits.length < 10) {
-        if (message) message.textContent = 'Enter a valid phone number first.';
-        return;
-      }
-
-      sendButton.disabled = true;
-      sendButton.textContent = 'Sending…';
-      if (message) message.textContent = 'Sending verification code…';
-
-      const { data, error } = await client.functions.invoke('callcenter-phone-send-code', {
-        body:{ phone }
-      });
-
-      if (error || !data?.ok) {
-        console.error('Unable to send phone code:', error || data);
-        if (message) message.textContent = data?.error || error?.message || 'Unable to send the verification code.';
-        sendButton.disabled = false;
-        sendButton.textContent = 'Send Code';
-        return;
-      }
-
-      q('.app-modal-overlay')?.remove();
-      openVerifyCode(phone);
-    });
-  };
-
-  const openVerifyCode = phone => {
-    const overlay = callcenterPhoneApprovalModal(
-      'Enter verification code',
-      `<p class="modal-help">We sent a 6-digit code to <strong>${crmEscape(phone)}</strong>.</p>
-       <label class="modal-label">Verification code
-         <input class="modal-input" id="verifyPhoneCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000">
-       </label>
-       <div class="modal-note" id="verifyCodeMessage">Enter the code from the text message.</div>`,
-      [
-        {label:'Back', id:'backPhoneVerify'},
-        {label:'Verify', primary:true, id:'verifyPhoneCodeButton'}
-      ]
-    );
-
-    overlay?.querySelector?.('[data-action-id="backPhoneVerify"]')?.addEventListener('click', event => {
-      event.preventDefault();
-      event.stopPropagation();
-      q('.app-modal-overlay')?.remove();
-      openVerifyNumber();
-    });
-
-    const verifyButton = overlay?.querySelector?.('[data-action-id="verifyPhoneCodeButton"]');
-    const codeInput = overlay?.querySelector?.('#verifyPhoneCode');
-    const message = overlay?.querySelector?.('#verifyCodeMessage');
-
-    verifyButton?.addEventListener('click', async event => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      const code = String(codeInput?.value || '').replace(/\D/g,'').slice(0,6);
-      if (code.length !== 6) {
-        if (message) message.textContent = 'Enter the 6-digit code.';
-        return;
-      }
-
-      verifyButton.disabled = true;
-      verifyButton.textContent = 'Verifying…';
-      if (message) message.textContent = 'Checking your code…';
-
-      const { data, error } = await client.functions.invoke('callcenter-phone-verify-code', {
-        body:{ phone, code }
-      });
-
-      if (error || !data?.ok) {
-        console.error('Unable to verify phone code:', error || data);
-        if (message) message.textContent = data?.error || error?.message || 'That code could not be verified.';
-        verifyButton.disabled = false;
-        verifyButton.textContent = 'Verify';
-        return;
-      }
-
-      q('.app-modal-overlay')?.remove();
-      profile = {
-        ...profile,
-        phone:data.phone || phone,
-        phone_verified_at:data.phone_verified_at || new Date().toISOString(),
-        phone_approval_status:'pending'
-      };
-
-      callcenterPhoneApprovalModal(
-        'Phone verified',
-        `<p class="modal-help">Your phone number <strong>${crmEscape(profile.phone)}</strong> has been verified.</p>
-         <p class="modal-note">Your number is now waiting for admin approval. You will not be able to place calls until it is approved.</p>`
-      );
-    });
   };
 
   if (profile.phone_approval_status === 'rejected') {
@@ -599,7 +603,14 @@ async function callcenterEnsurePhoneApproved() {
        <p class="modal-note">Verify a different phone number to submit a new approval request.</p>`,
       [
         {label:'Close'},
-        {label:'Verify New Number', primary:true, callback:openVerifyNumber}
+        {
+          label:'Verify New Number',
+          primary:true,
+          onClick:(close) => {
+            close();
+            openVerifyNumber();
+          }
+        }
       ]
     );
     return false;
