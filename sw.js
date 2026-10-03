@@ -32,6 +32,38 @@ self.addEventListener('message', event => {
   }
 });
 
+
+
+self.addEventListener('push', event => {
+  let data = {};
+
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    try {
+      data = { body: event.data?.text?.() || '' };
+    } catch {}
+  }
+
+  const title = data.title || 'Scheduled call';
+  const options = {
+    body: data.body || '',
+    icon: 'images/icon-192.png',
+    badge: 'images/icon-192.png',
+    tag: data.tag || 'scheduled-call',
+    renotify: true,
+    data: {
+      url: data.url || 'index.html',
+      crm_id: data.crm_id || null,
+      reminder_minutes: data.reminder_minutes ?? null
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const target = event.notification?.data?.url || 'index.html';
