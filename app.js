@@ -1621,6 +1621,27 @@ function setupSkills() {
     });
   };
 
+  const relativeCallTime = value => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    const diff = Math.max(0, Date.now() - date.getTime());
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return formatCallDate(value);
+  };
+
+  const positiveOutcome = outcome => {
+    const text = String(outcome || '').toLowerCase();
+    if (!text) return false;
+    if (/not interested|no answer|left voicemail|busy|wrong number|do not call|didn't call|did not call/.test(text)) return false;
+    return /interested|call back|callback|needs more info|send preview|requested email|requested text|decision maker|hot lead|conversion|sold/.test(text);
+  };
+
   const practice = `
     <section class="card light-card skill-placeholder">
       <div class="skill-big-icon"><i data-lucide="messages-square"></i></div>
@@ -1650,6 +1671,8 @@ function setupSkills() {
 
   let transcriptRows = [];
   let libraryLoaded = false;
+  let insightsLoaded = false;
+  let currentRange = 7;
 
   const getSkillsClient = () =>
     window.steadyHandsCRMClient ||
@@ -1707,6 +1730,141 @@ function setupSkills() {
     );
   }
 
+  async function fetchTranscriptRows() {
+    if (libraryLoaded) return transcriptRows;
+
+    const client = getSkillsClient();
+    if (!client) throw new Error('Unable to connect.');
+
+    const { data: authData, error: authError } = await client.auth.getSession();
+    if (authError) throw authError;
+
+    const userId = authData?.session?.user?.id;
+    if (!userId) {
+      window.location.replace('login.html');
+      return [];
+    }
+
+    const { data, error } = await client
+      .from('callcenter_transcripts')
+      .select('id,crm_id,call_activity_id,company,contact,phone,started_at,ended_at,duration_seconds,transcript,segments,outcome,created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending:false })
+      .limit(500);
+
+    if (error) throw error;
+
+    transcriptRows = Array.isArray(data) ? data : [];
+    libraryLoaded = true;
+    return transcriptRows;
+  }
+
+  function filteredInsightRows() {
+    if (currentRange === 'all') return [...transcriptRows];
+    const days = Number(currentRange) || 7;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return transcriptRows.filter(row => {
+      const date = new Date(row.created_at);
+      return !Number.isNaN(date.getTime()) && date.getTime() >= cutoff;
+    });
+  }
+
+  function renderInsights() {
+    const grid = q('#skillsInsightGrid');
+    const recent = q('#skillsRecentCalls');
+    if (!grid || !recent) return;
+
+    const rows = filteredInsightRows();
+    const callsReviewed = rows.length;
+    const totalSeconds = rows.reduce((sum, row) => sum + Math.max(0, Number(row.duration_seconds) || 0), 0);
+    const avgSeconds = callsReviewed ? Math.round(totalSeconds / callsReviewed) : 0;
+    const positiveCount = rows.filter(row => positiveOutcome(row.outcome)).length;
+    const positivePercent = callsReviewed ? Math.round((positiveCount / callsReviewed) * 100) : 0;
+
+    grid.innerHTML = `
+      <div class="insight">
+        <strong>${callsReviewed}</strong>
+        <span>Calls Reviewed</span>
+        <em>${callsReviewed === 1 ? '1 saved call' : `${callsReviewed} saved calls`}</em>
+      </div>
+      <div class="insight">
+        <strong>${formatDuration(avgSeconds)}</strong>
+        <span>Avg. Call Length</span>
+        <em>${callsReviewed ? 'Connected time' : 'No calls yet'}</em>
+      </div>
+      <div class="insight">
+        <strong>${positivePercent}%</strong>
+        <span>Positive Outcomes</span>
+        <em>${positiveCount} of ${callsReviewed}</em>
+      </div>`;
+
+    const recentRows = rows.slice(0, 5);
+
+    if (!recentRows.length) {
+      recent.innerHTML = `
+        <div class="skill-library-empty">
+          <i data-lucide="phone-call"></i>
+          <strong>No calls in this period</strong>
+          <p>Complete a call and it will show up here.</p>
+        </div>`;
+      refreshIcons();
+      return;
+    }
+
+    recent.innerHTML = recentRows.map(row => {
+      const good = positiveOutcome(row.outcome);
+      return `
+        <button class="feedback skill-recent-call" type="button" data-insight-transcript-id="${escapeSkill(row.id)}">
+          <div class="feedback-icon ${good ? 'green' : 'blue'}">
+            <i data-lucide="${good ? 'circle-check' : 'phone-call'}"></i>
+          </div>
+          <div>
+            <strong>${escapeSkill(row.company || 'Business')}</strong>
+            <p>${escapeSkill(row.outcome || 'Call completed')} · ${formatDuration(row.duration_seconds)}</p>
+          </div>
+          <time>${escapeSkill(relativeCallTime(row.created_at))}</time>
+        </button>`;
+    }).join('');
+
+    qa('[data-insight-transcript-id]', recent).forEach(button => {
+      button.addEventListener('click', () => {
+        const row = transcriptRows.find(item => String(item.id) === String(button.dataset.insightTranscriptId));
+        if (row) renderTranscriptModal(row);
+      });
+    });
+
+    refreshIcons();
+  }
+
+  async function loadInsights({ force = false } = {}) {
+    if (insightsLoaded && !force) {
+      renderInsights();
+      return;
+    }
+
+    const grid = q('#skillsInsightGrid');
+    const recent = q('#skillsRecentCalls');
+
+    try {
+      await fetchTranscriptRows();
+      insightsLoaded = true;
+      renderInsights();
+    } catch (error) {
+      console.error('Unable to load Skills insights:', error);
+
+      if (grid) {
+        grid.innerHTML = `
+          <div class="insight"><strong>—</strong><span>Calls Reviewed</span><em>Unavailable</em></div>
+          <div class="insight"><strong>—</strong><span>Avg. Call Length</span><em>Unavailable</em></div>
+          <div class="insight"><strong>—</strong><span>Positive Outcomes</span><em>Unavailable</em></div>`;
+      }
+
+      if (recent) {
+        recent.innerHTML = '<div class="skill-library-empty"><strong>Unable to load call insights.</strong><p>Please refresh and try again.</p></div>';
+      }
+    }
+  }
+
   function renderLibraryRows(rows) {
     const list = q('#skillLibraryList');
     if (!list) return;
@@ -1753,42 +1911,17 @@ function setupSkills() {
   }
 
   async function loadLibrary({ force = false } = {}) {
-    if (libraryLoaded && !force) {
-      renderLibraryRows(transcriptRows);
-      return;
-    }
-
     const list = q('#skillLibraryList');
     if (!list) return;
 
-    const client = getSkillsClient();
-    if (!client) {
-      list.innerHTML = '<div class="skill-library-empty"><strong>Unable to connect.</strong><p>Please refresh and try again.</p></div>';
-      return;
-    }
-
     try {
-      const { data: authData, error: authError } = await client.auth.getSession();
-      if (authError) throw authError;
-
-      const userId = authData?.session?.user?.id;
-      if (!userId) {
-        window.location.replace('login.html');
-        return;
+      if (force) {
+        libraryLoaded = false;
+        insightsLoaded = false;
       }
 
-      const { data, error } = await client
-        .from('callcenter_transcripts')
-        .select('id,crm_id,call_activity_id,company,contact,phone,started_at,ended_at,duration_seconds,transcript,segments,outcome,created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending:false })
-        .limit(200);
-
-      if (error) throw error;
-
-      transcriptRows = Array.isArray(data) ? data : [];
-      libraryLoaded = true;
-      renderLibraryRows(transcriptRows);
+      const rows = await fetchTranscriptRows();
+      renderLibraryRows(rows);
     } catch (error) {
       console.error('Unable to load Skills call library:', error);
       list.innerHTML = `
@@ -1799,6 +1932,28 @@ function setupSkills() {
         </div>`;
       refreshIcons();
     }
+  }
+
+  function setupInsightsRangeSelector() {
+    const btn = q('#skillsRangeSelect');
+    if (!btn || btn.dataset.skillSelectorReady === 'true') return;
+
+    btn.dataset.skillSelectorReady = 'true';
+
+    const choices = [
+      { value:7, label:'Last 7 days' },
+      { value:30, label:'Last 30 days' },
+      { value:'all', label:'All time' }
+    ];
+
+    btn.addEventListener('click', () => {
+      const currentIndex = choices.findIndex(choice => String(choice.value) === String(currentRange));
+      const next = choices[(currentIndex + 1) % choices.length];
+      currentRange = next.value;
+      btn.dataset.range = String(next.value);
+      btn.textContent = `${next.label}⌄`;
+      renderInsights();
+    });
   }
 
   const wireDynamic = () => {
@@ -1835,33 +1990,20 @@ function setupSkills() {
           : libraryShell;
 
       refreshIcons();
-      setupSkillSelectors();
       wireDynamic();
 
-      if (i === 2) {
+      if (i === 0) {
+        setupInsightsRangeSelector();
+        await loadInsights();
+      } else if (i === 2) {
         await loadLibrary();
       }
     });
   });
 
-  qa('.transcript-head a').forEach(a => a.addEventListener('click', e => {
-    e.preventDefault();
-    tabs[2]?.click();
-  }));
-
-  function setupSkillSelectors() {
-    qa('.mini-select').forEach(btn => {
-      if (btn.dataset.skillSelectorReady === 'true') return;
-      btn.dataset.skillSelectorReady = 'true';
-      btn.addEventListener('click', () =>
-        cycleButton(btn, ['Last 7 days', 'Last 30 days', 'All time'])
-      );
-    });
-  }
-
-  setupSkillSelectors();
+  setupInsightsRangeSelector();
+  loadInsights();
 }
-
 
 function setupEarnings() {
 
