@@ -2849,3 +2849,939 @@ html, body {
     grid-template-columns: 430px minmax(650px, 1fr);
   }
 }
+
+/*
+  OUTREACH DESKTOP REDESIGN
+  -------------------------------------------------------
+  IMPORTANT:
+  - This file affects desktop only.
+  - The existing mobile layout in styles.css is untouched.
+  - The selected lead is designed to fit inside one desktop viewport.
+  - There is no horizontal page scrolling.
+*/
+
+@media (min-width: 900px) {
+
+  /* ---------- GLOBAL DESKTOP SAFETY ---------- */
+
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    background: #eef2f6;
+  }
+
+  body.page-outreach,
+  body.page-outreach .app,
+  body.page-outreach .content,
+  body.page-outreach .content *,
+  body.page-outreach .bottom-nav,
+  body.page-outreach .topbar {
+    box-sizing: border-box;
+  }
+
+  body.page-outreach .app {
+    width: 100%;
+    max-width: none !important;
+    min-width: 0;
+    min-height: 100vh;
+    margin: 0 !important;
+    padding: 0 0 0 220px !important;
+    overflow-x: hidden !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #eef2f6;
+  }
+
+  body.page-outreach .app *,
+  body.page-outreach .content > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* ---------- LEFT DESKTOP NAV ---------- */
+
+  body.page-outreach .bottom-nav {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    transform: none !important;
+
+    width: 220px !important;
+    height: 100vh !important;
+
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+
+    gap: 7px;
+    padding: 24px 14px !important;
+
+    overflow: hidden !important;
+
+    border: 0 !important;
+    border-radius: 0 !important;
+
+    background:
+      linear-gradient(180deg, #102b47 0%, #0d243b 100%) !important;
+
+    box-shadow: 10px 0 28px rgba(10, 25, 40, .12) !important;
+
+    z-index: 100;
+  }
+
+  body.page-outreach .bottom-nav::before {
+    content: "Steady Hands";
+    display: block;
+
+    padding: 4px 10px 22px;
+
+    color: #ffffff;
+
+    font-size: 18px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -.35px;
+  }
+
+  body.page-outreach .nav-item {
+    min-height: 48px;
+
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: flex-start;
+
+    gap: 11px;
+
+    padding: 0 13px !important;
+
+    border-radius: 12px;
+
+    color: #c2cfdd;
+
+    font-size: 12px !important;
+    font-weight: 800;
+  }
+
+  body.page-outreach .nav-item i {
+    width: 20px !important;
+    height: 20px !important;
+    flex: 0 0 20px;
+  }
+
+  body.page-outreach .nav-item.active {
+    color: #ffffff !important;
+    background: #17456f !important;
+  }
+
+  body.page-outreach .nav-item:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, .06);
+  }
+
+
+  /* ---------- TOP HEADER ---------- */
+
+  body.page-outreach .topbar {
+    position: sticky !important;
+    top: 0;
+
+    min-height: 76px !important;
+
+    display: flex;
+    align-items: center;
+
+    padding: 17px 30px !important;
+
+    background:
+      linear-gradient(135deg, #173a5e 0%, #102945 75%) !important;
+
+    box-shadow: 0 6px 18px rgba(16, 41, 69, .14);
+
+    z-index: 50;
+  }
+
+  body.page-outreach .topbar-row {
+    width: 100%;
+  }
+
+  body.page-outreach .topbar h1 {
+    margin: 0;
+
+    font-size: 30px !important;
+    line-height: 1;
+    letter-spacing: -.8px;
+  }
+
+  body.page-outreach .status-pill {
+    padding: 8px 13px;
+    font-size: 11px;
+  }
+
+
+  /* ---------- MAIN TWO-PANE DESKTOP WORKSPACE ---------- */
+
+  body.page-outreach .content {
+    width: auto !important;
+    max-width: none !important;
+
+    height: calc(100vh - 76px);
+    min-height: 0;
+
+    margin: 0 !important;
+    padding: 18px 22px 20px !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(340px, 405px)
+      minmax(0, 1fr);
+
+    grid-template-rows:
+      auto
+      auto
+      minmax(0, 1fr);
+
+    grid-template-areas:
+      "queuehead workspacehead"
+      "controls selected"
+      "list selected";
+
+    column-gap: 22px;
+    row-gap: 12px;
+
+    overflow: hidden !important;
+  }
+
+
+  /* ---------- COLUMN HEADINGS ---------- */
+
+  body.page-outreach .desktop-outreach-heading {
+    display: block !important;
+    min-width: 0;
+  }
+
+  body.page-outreach .desktop-queue-heading {
+    grid-area: queuehead;
+  }
+
+  body.page-outreach .desktop-workspace-heading {
+    grid-area: workspacehead;
+  }
+
+  body.page-outreach .desktop-kicker {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #7e8da0;
+
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: .12em;
+  }
+
+  body.page-outreach .desktop-outreach-heading h2 {
+    margin: 0;
+
+    color: #172b43;
+
+    font-size: 19px;
+    line-height: 1.15;
+    letter-spacing: -.35px;
+  }
+
+  body.page-outreach .desktop-outreach-heading p {
+    margin: 3px 0 0;
+
+    color: #7b8999;
+
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+
+  /* ---------- SEARCH / FILTER PANEL ---------- */
+
+  body.page-outreach .outreach-controls {
+    grid-area: controls;
+
+    position: static !important;
+
+    margin: 0 !important;
+    padding: 11px !important;
+
+    border: 1px solid #dde5ed;
+    border-radius: 15px;
+
+    background: #ffffff;
+
+    box-shadow: 0 7px 18px rgba(15, 33, 54, .055);
+
+    z-index: 3;
+  }
+
+  body.page-outreach .outreach-controls .crm-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 42px;
+
+    gap: 7px;
+
+    margin: 0 0 8px !important;
+  }
+
+  body.page-outreach .crm-toolbar input {
+    width: 100%;
+
+    min-height: 42px;
+
+    padding: 0 12px;
+
+    border: 1px solid #d6e0ea;
+    border-radius: 11px;
+
+    outline: 0;
+
+    background: #f9fbfd;
+
+    color: #1d3148;
+
+    font-size: 12px;
+  }
+
+  body.page-outreach .crm-toolbar input:focus {
+    border-color: #7eb2e5;
+    background: #ffffff;
+
+    box-shadow: 0 0 0 3px rgba(22, 136, 255, .08);
+  }
+
+  body.page-outreach #crmReload {
+    width: 42px;
+    min-width: 42px;
+    min-height: 42px;
+
+    padding: 0;
+
+    border: 1px solid #d6e0ea;
+    border-radius: 11px;
+
+    background: #ffffff;
+  }
+
+  body.page-outreach .outreach-controls .filter-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+
+    gap: 7px;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+  }
+
+  body.page-outreach .outreach-controls .pill {
+    min-height: 34px;
+
+    padding: 0 10px;
+
+    border-radius: 10px;
+
+    font-size: 10px;
+  }
+
+
+  /* ---------- HIDE THE STATUS BOX WHEN IT IS EMPTY / NON-CRITICAL ---------- */
+
+  body.page-outreach #crmStatus {
+    display: none !important;
+  }
+
+
+  /* ---------- LEFT LEAD QUEUE ---------- */
+
+  body.page-outreach #crmLeadCards {
+    grid-area: list;
+
+    min-height: 0;
+
+    padding: 0 4px 18px 0;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    scrollbar-width: thin;
+    scrollbar-color: #c5d0db transparent;
+  }
+
+  body.page-outreach #crmLeadCards::-webkit-scrollbar {
+    width: 7px;
+  }
+
+  body.page-outreach #crmLeadCards::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #c5d0db;
+  }
+
+  body.page-outreach #crmLeadCards .lead-card:not(.selected-lead) {
+    width: 100%;
+
+    margin: 0 0 9px !important;
+    padding: 11px 12px !important;
+
+    border: 1px solid #dfe6ed !important;
+    border-radius: 14px !important;
+
+    background: #ffffff;
+
+    box-shadow: 0 5px 14px rgba(15, 33, 54, .05) !important;
+
+    overflow: hidden;
+  }
+
+  body.page-outreach #crmLeadCards .lead-card:not(.selected-lead):hover {
+    border-color: #c9d6e2 !important;
+
+    transform: translateY(-1px);
+
+    box-shadow: 0 8px 19px rgba(15, 33, 54, .075) !important;
+  }
+
+  body.page-outreach #crmLeadCards .lead-head {
+    gap: 10px;
+  }
+
+  body.page-outreach #crmLeadCards .company-icon {
+    width: 38px !important;
+    height: 38px !important;
+
+    border-radius: 11px !important;
+  }
+
+  body.page-outreach #crmLeadCards .company-icon i {
+    width: 19px !important;
+    height: 19px !important;
+  }
+
+  body.page-outreach #crmLeadCards .lead-title h2 {
+    margin: 0 0 2px !important;
+
+    font-size: 13px !important;
+    line-height: 1.2;
+  }
+
+  body.page-outreach #crmLeadCards .lead-title .name {
+    font-size: 10px !important;
+  }
+
+  body.page-outreach #crmLeadCards .contact-line {
+    margin-top: 8px !important;
+    padding-top: 8px !important;
+
+    border-top: 1px solid #edf1f5;
+
+    font-size: 11px !important;
+  }
+
+  body.page-outreach #crmLeadCards .compact-lead-meta {
+    margin-top: 7px !important;
+  }
+
+  body.page-outreach #crmLeadCards .compact-tag-row {
+    margin-bottom: 6px !important;
+  }
+
+  body.page-outreach #crmLeadCards .tag {
+    padding: 4px 7px;
+
+    font-size: 9px;
+  }
+
+  body.page-outreach #crmLeadCards .compact-call-row {
+    gap: 5px !important;
+  }
+
+  body.page-outreach #crmLeadCards .call-time-status {
+    margin: 0 !important;
+    padding: 6px 8px !important;
+
+    border-radius: 9px !important;
+
+    font-size: 9px !important;
+    line-height: 1.2;
+  }
+
+  body.page-outreach #crmLeadCards .compact-local-time {
+    font-size: 9px !important;
+    line-height: 1.25;
+  }
+
+
+  /* ---------- RIGHT SELECTED LEAD WORKSPACE ---------- */
+
+  body.page-outreach #selectedLeadTop {
+    grid-area: selected;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+
+    height: 100%;
+    max-height: none !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+
+    position: static !important;
+  }
+
+  body.page-outreach #selectedLeadTop:empty {
+    display: grid;
+    place-items: center;
+
+    min-height: 0 !important;
+    height: 100%;
+
+    border: 1px dashed #ccd7e2;
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, .72);
+  }
+
+  body.page-outreach #selectedLeadTop:empty::before {
+    content: "Choose a lead from the queue to review it here.";
+
+    display: block;
+
+    min-height: 0 !important;
+
+    padding: 32px;
+
+    color: #8391a1;
+
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  body.page-outreach #selectedLeadTop .lead-card.selected-lead {
+    width: 100%;
+    height: 100%;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    display: grid;
+
+    grid-template-rows:
+      auto
+      auto
+      minmax(0, 1fr);
+
+    border: 1px solid #dce4ec !important;
+    border-radius: 18px !important;
+
+    background: #ffffff;
+
+    box-shadow: 0 11px 27px rgba(15, 33, 54, .075) !important;
+
+    overflow: hidden !important;
+  }
+
+
+  /* ---------- SELECTED LEAD HEADER ---------- */
+
+  body.page-outreach #selectedLeadTop .lead-card.selected-lead > .lead-head {
+    min-width: 0;
+
+    margin: 0;
+    padding: 15px 17px 13px !important;
+
+    align-items: center;
+
+    border-bottom: 1px solid #edf1f5;
+
+    background:
+      linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+  }
+
+  body.page-outreach #selectedLeadTop .lead-card.selected-lead .company-icon {
+    width: 46px !important;
+    height: 46px !important;
+
+    border-radius: 13px !important;
+  }
+
+  body.page-outreach #selectedLeadTop .lead-card.selected-lead .company-icon i {
+    width: 23px !important;
+    height: 23px !important;
+  }
+
+  body.page-outreach #selectedLeadTop .lead-card.selected-lead .lead-title h2 {
+    margin: 0 0 2px !important;
+
+    overflow-wrap: anywhere;
+
+    font-size: 17px !important;
+    line-height: 1.18;
+    letter-spacing: -.3px;
+  }
+
+  body.page-outreach #selectedLeadTop .lead-card.selected-lead .lead-title .name {
+    font-size: 11px !important;
+  }
+
+  body.page-outreach #selectedLeadTop .lead-card.selected-lead > .contact-line {
+    margin: 0 !important;
+    padding: 10px 17px !important;
+
+    border-bottom: 1px solid #edf1f5;
+
+    background: #ffffff;
+
+    font-size: 13px !important;
+  }
+
+
+  /* ---------- SELECTED LEAD BODY ---------- */
+
+  body.page-outreach #selectedLeadTop .lead-details {
+    min-width: 0;
+    min-height: 0;
+
+    padding: 12px 16px 14px !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr);
+
+    grid-auto-rows: auto;
+
+    column-gap: 12px;
+    row-gap: 8px;
+
+    align-content: start;
+
+    overflow: hidden !important;
+  }
+
+  /* tags */
+  body.page-outreach #selectedLeadTop .lead-details > .tag-row {
+    grid-column: 1 / -1;
+
+    margin: 0 !important;
+  }
+
+  body.page-outreach #selectedLeadTop .lead-details .tag {
+    padding: 4px 7px;
+
+    font-size: 9px;
+  }
+
+  /* good/bad calling status */
+  body.page-outreach #selectedLeadTop .lead-details > .call-time-status {
+    grid-column: 1 / -1;
+
+    margin: 0 !important;
+    padding: 8px 10px !important;
+
+    border-radius: 10px !important;
+
+    font-size: 10px !important;
+    line-height: 1.25;
+  }
+
+  /* the two information rows automatically occupy each half */
+  body.page-outreach #selectedLeadTop .lead-details > .time-row {
+    min-width: 0;
+
+    margin: 0 !important;
+    padding: 7px 9px !important;
+
+    border: 1px solid #e6ebf0 !important;
+    border-radius: 10px;
+
+    background: #fafbfd;
+
+    color: #5e6e82;
+
+    font-size: 10px !important;
+    line-height: 1.25;
+  }
+
+  body.page-outreach #selectedLeadTop .lead-details > .time-row span {
+    min-width: 0;
+
+    align-items: center;
+
+    overflow-wrap: anywhere;
+  }
+
+  /* preview link */
+  body.page-outreach #selectedLeadTop .preview-links {
+    grid-column: 1 / -1;
+
+    min-width: 0;
+
+    padding: 0 !important;
+  }
+
+  body.page-outreach #selectedLeadTop .preview-link {
+    width: 100%;
+    min-width: 0;
+    min-height: 34px;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    gap: 6px;
+
+    padding: 0 10px !important;
+
+    border-radius: 9px !important;
+
+    overflow: hidden;
+
+    background: #edf6ff;
+
+    color: #1268bf;
+
+    font-size: 10px !important;
+    font-weight: 850;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* notes */
+  body.page-outreach #selectedLeadTop .notes {
+    grid-column: 1 / -1;
+
+    min-width: 0;
+
+    margin: 0 !important;
+    padding: 10px 11px !important;
+
+    border: 1px solid #e3e8ee !important;
+    border-radius: 11px;
+
+    background: #fafbfd;
+  }
+
+  body.page-outreach #selectedLeadTop .notes-title {
+    margin-bottom: 4px !important;
+
+    font-size: 10px !important;
+  }
+
+  body.page-outreach #selectedLeadTop .notes p {
+    margin: 0 !important;
+
+    max-height: 3.9em;
+
+    overflow: hidden;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+
+    overflow-wrap: anywhere;
+
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* call button */
+  body.page-outreach #selectedLeadTop .call-btn {
+    grid-column: 1 / -1;
+
+    min-height: 42px;
+
+    margin: 1px 0 0 !important;
+    padding: 0 12px !important;
+
+    border-radius: 10px !important;
+
+    font-size: 13px !important;
+  }
+
+  /* bottom actions */
+  body.page-outreach #selectedLeadTop .quick-actions {
+    grid-column: 1 / -1;
+
+    margin: 0 !important;
+
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+
+    gap: 7px !important;
+  }
+
+  body.page-outreach #selectedLeadTop .quick-btn {
+    min-width: 0;
+    min-height: 40px;
+
+    padding: 6px !important;
+
+    border-radius: 9px !important;
+
+    font-size: 9px !important;
+    line-height: 1.15;
+
+    overflow: hidden;
+  }
+
+  body.page-outreach #selectedLeadTop .quick-btn i {
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+
+  /* ---------- NEVER ALLOW HORIZONTAL SCROLL ---------- */
+
+  body.page-outreach .lead-card,
+  body.page-outreach .lead-head,
+  body.page-outreach .lead-title,
+  body.page-outreach .contact-line,
+  body.page-outreach .compact-lead-meta,
+  body.page-outreach .lead-details,
+  body.page-outreach .notes,
+  body.page-outreach .time-row,
+  body.page-outreach .call-time-status,
+  body.page-outreach .preview-links,
+  body.page-outreach .quick-actions {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  body.page-outreach .lead-title h2,
+  body.page-outreach .lead-title .name,
+  body.page-outreach .contact-line span,
+  body.page-outreach .notes p,
+  body.page-outreach .time-row span,
+  body.page-outreach .call-time-status {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+
+  /* ---------- LOADING STATE ---------- */
+
+  body.page-outreach .outreach-loading .desktop-outreach-heading {
+    display: block !important;
+  }
+
+  body.page-outreach .outreach-loading .outreach-controls,
+  body.page-outreach .outreach-loading #selectedLeadTop,
+  body.page-outreach .outreach-loading #crmStatus {
+    display: none !important;
+  }
+
+  body.page-outreach .outreach-loading #crmLeadCards {
+    display: block !important;
+
+    grid-column: 1 / -1;
+
+    overflow: hidden !important;
+  }
+
+
+  /* ---------- SHORT LAPTOP HEIGHTS ---------- */
+
+  @media (max-height: 760px) {
+
+    body.page-outreach .topbar {
+      min-height: 66px !important;
+      padding-top: 14px !important;
+      padding-bottom: 14px !important;
+    }
+
+    body.page-outreach .topbar h1 {
+      font-size: 27px !important;
+    }
+
+    body.page-outreach .content {
+      height: calc(100vh - 66px);
+
+      padding-top: 12px !important;
+      padding-bottom: 12px !important;
+
+      row-gap: 8px;
+    }
+
+    body.page-outreach .desktop-outreach-heading p {
+      display: none;
+    }
+
+    body.page-outreach .outreach-controls {
+      padding: 9px !important;
+    }
+
+    body.page-outreach .crm-toolbar input,
+    body.page-outreach #crmReload {
+      min-height: 38px;
+      height: 38px;
+    }
+
+    body.page-outreach .outreach-controls .pill {
+      min-height: 31px;
+    }
+
+    body.page-outreach #selectedLeadTop .lead-card.selected-lead > .lead-head {
+      padding-top: 11px !important;
+      padding-bottom: 10px !important;
+    }
+
+    body.page-outreach #selectedLeadTop .lead-card.selected-lead > .contact-line {
+      padding-top: 8px !important;
+      padding-bottom: 8px !important;
+    }
+
+    body.page-outreach #selectedLeadTop .lead-details {
+      padding-top: 9px !important;
+      padding-bottom: 10px !important;
+
+      row-gap: 6px;
+    }
+
+    body.page-outreach #selectedLeadTop .notes p {
+      max-height: 2.6em;
+      -webkit-line-clamp: 2;
+    }
+
+    body.page-outreach #selectedLeadTop .quick-btn {
+      min-height: 36px;
+    }
+
+    body.page-outreach #selectedLeadTop .call-btn {
+      min-height: 38px;
+    }
+  }
+}
+
+
+/*
+  Extra-wide desktop:
+  keep the queue readable instead of stretching it.
+*/
+@media (min-width: 1400px) {
+  body.page-outreach .content {
+    grid-template-columns:
+      410px
+      minmax(0, 1fr);
+
+    column-gap: 26px;
+  }
+}
