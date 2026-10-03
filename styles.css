@@ -2446,27 +2446,24 @@ html, body {
   }
 }
 
-/* Skills header tabs: mobile below title, desktop on the right */
-.skills-topbar-row {
-  align-items: flex-start;
-  flex-wrap: wrap;
-}
-
-.skills-topbar-row .tabs {
-  flex: 0 0 100%;
+/* Skills header tabs:
+   the title row stays identical to every other page.
+   Mobile tabs extend below it; desktop tabs sit on the right without changing header height. */
+.skills-header-tabs {
   width: 100%;
+  margin-top: 10px;
 }
 
 @media (min-width: 900px) {
-  .skills-topbar-row {
-    min-height: 46px;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: nowrap;
+  .page-skills .topbar {
+    position: sticky;
   }
 
-  .skills-topbar-row .tabs {
-    flex: 0 0 auto;
+  .skills-header-tabs {
+    position: absolute;
+    right: 34px;
+    top: 50%;
+    transform: translateY(-50%);
     width: min(420px, 44vw);
     margin: 0;
   }
