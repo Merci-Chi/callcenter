@@ -3194,12 +3194,8 @@ html, body {
   }
 }
 
-/* Outreach desktop rounded shell + selected lead skeleton */
+/* Outreach desktop selected lead skeleton */
 @media (min-width: 900px) {
-  .page-outreach .app {
-    border-radius: 28px !important;
-    overflow: hidden !important;
-  }
 
   .page-outreach #selectedLeadTop .selected-lead-skeleton {
     width: 100%;
@@ -3264,5 +3260,29 @@ html, body {
 
   body.page-outreach main.content.outreach-loading #selectedLeadTop .sk-shape {
     display: block !important;
+  }
+}
+
+
+/* Selected lead card keeps rounded corners; navy app shell stays square */
+@media (min-width: 900px) {
+  .page-outreach .app,
+  .page-outreach .topbar {
+    border-radius: 0 !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead {
+    border-radius: 18px !important;
+    overflow: hidden !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead > .lead-head {
+    border-top-left-radius: 18px !important;
+    border-top-right-radius: 18px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .lead-details {
+    border-bottom-left-radius: 18px !important;
+    border-bottom-right-radius: 18px !important;
   }
 }
