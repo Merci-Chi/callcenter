@@ -661,6 +661,14 @@
       assignments: readPref('new-assignments', true)
     };
 
+    const { data: permission } = await c
+      .from('team_permissions')
+      .select('role,active')
+      .eq('user_id', session.user.id)
+      .maybeSingle();
+
+    const isAdmin = permission?.active === true && permission?.role === 'ADMIN';
+
     const statusText = state.label;
     const phoneText = profile.phone || 'Not set';
 
@@ -737,6 +745,16 @@
       </section>
 
 
+
+      ${isAdmin ? `
+      <section class="settings-section settings-admin-gateway">
+        <div class="settings-section-title">Admin</div>
+        <a class="settings-row" href="admin.html">
+          <span class="settings-icon"><i data-lucide="shield"></i></span>
+          <span class="settings-copy"><strong>Admin Settings</strong><small>Approvals and administrative controls</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </a>
+      </section>` : ''}
 
       <section class="settings-section">
         <div class="settings-section-title">App</div>
