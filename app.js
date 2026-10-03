@@ -66,6 +66,31 @@ function callcenterCalendarICS(details = {}) {
     `SUMMARY:${esc(`Follow up with ${details.company || 'lead'}`)}`,
     `DESCRIPTION:${esc(description)}`,
     `UID:${details.crmId || Date.now()}-${start.getTime()}@steadyhandsop.com`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT60M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${esc(`Call ${details.company || 'lead'} in 1 hour`)}`,
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT30M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${esc(`Call ${details.company || 'lead'} in 30 minutes`)}`,
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT10M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${esc(`Call ${details.company || 'lead'} in 10 minutes`)}`,
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT5M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${esc(`Call ${details.company || 'lead'} in 5 minutes`)}`,
+    'END:VALARM',
+    'BEGIN:VALARM',
+    'TRIGGER:PT0M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${esc(`It is time to call ${details.company || 'lead'}`)}`,
+    'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR'
   ].join('\r\n');
@@ -127,30 +152,56 @@ async function callcenterRequestNotifications() {
   return false;
 }
 
-async function callcenterShowScheduledNotification(schedule, urgent = false) {
+async function callcenterShowScheduledNotification(schedule, reminderMinutes = null) {
   if (!schedule || !('Notification' in window) || Notification.permission !== 'granted') return;
+
   const startsAt = new Date(schedule.startsAt);
-  const body = urgent
-    ? `It's time to call ${schedule.company || 'this lead'}.`
-    : `Scheduled today at ${startsAt.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}.`;
+  const company = schedule.company || 'this lead';
+  const timeText = startsAt.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+
+  let title = 'Call scheduled for today';
+  let body = `Scheduled today at ${timeText}.`;
+  let reminderKey = 'today';
+
+  if (reminderMinutes === 60) {
+    title = 'Call in 1 hour';
+    body = `Your call with ${company} is in 1 hour at ${timeText}.`;
+    reminderKey = '60m';
+  } else if (reminderMinutes === 30) {
+    title = 'Call in 30 minutes';
+    body = `Your call with ${company} is in 30 minutes at ${timeText}.`;
+    reminderKey = '30m';
+  } else if (reminderMinutes === 10) {
+    title = 'Call in 10 minutes';
+    body = `Your call with ${company} is in 10 minutes at ${timeText}.`;
+    reminderKey = '10m';
+  } else if (reminderMinutes === 5) {
+    title = 'Call in 5 minutes';
+    body = `Your call with ${company} is in 5 minutes at ${timeText}.`;
+    reminderKey = '5m';
+  } else if (reminderMinutes === 0) {
+    title = 'Scheduled call is due';
+    body = `It's time to call ${company}.`;
+    reminderKey = 'now';
+  }
 
   try {
+    const options = {
+      body,
+      icon:'images/icon-192.png',
+      badge:'images/icon-192.png',
+      tag:`scheduled-call-${schedule.crmId || schedule.startsAt}-${reminderKey}`,
+      renotify:true,
+      data:{ url: schedule.crmId ? `index.html?crm_id=${encodeURIComponent(schedule.crmId)}` : 'index.html' }
+    };
+
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.ready;
-      await reg.showNotification(
-        urgent ? 'Scheduled call is due' : 'Call scheduled for today',
-        {
-          body,
-          icon:'images/icon-192.png',
-          badge:'images/icon-192.png',
-          tag:`scheduled-call-${schedule.crmId || schedule.startsAt}`,
-          renotify:urgent,
-          data:{ url: schedule.crmId ? `index.html?crm_id=${encodeURIComponent(schedule.crmId)}` : 'index.html' }
-        }
-      );
+      await reg.showNotification(title, options);
       return;
     }
-    new Notification(urgent ? 'Scheduled call is due' : 'Call scheduled for today', { body });
+
+    new Notification(title, options);
   } catch (error) {
     console.warn('Unable to show scheduled notification:', error);
   }
@@ -601,7 +652,7 @@ function setupOutreach() {
         label:'Enable Notifications',
         onClick: async () => {
           const enabled = await callcenterRequestNotifications();
-          if (enabled) callcenterShowScheduledNotification(schedule, urgent);
+          if (enabled) callcenterShowScheduledNotification(schedule, null);
         }
       });
     }
@@ -613,27 +664,61 @@ function setupOutreach() {
     );
   };
 
+  const SCHEDULE_REMINDERS = [60, 30, 10, 5, 0];
+
   const checkScheduledCalls = ({ showPopup = true } = {}) => {
     const today = findTodaySchedules();
     if (!today.length) return;
 
     const now = new Date();
-    const next = today.find(schedule => new Date(schedule.startsAt) >= new Date(now.getTime() - 30 * 60000)) || today[0];
-    const when = new Date(next.startsAt);
-    const minutesAway = Math.round((when - now) / 60000);
-    const urgent = minutesAway <= 15 && minutesAway >= -30;
-    const noticeKey = `steadyhands-schedule-notice:${scheduledCallKey(next)}:${urgent ? 'urgent' : 'today'}`;
 
-    if (!sessionStorage.getItem(noticeKey)) {
-      sessionStorage.setItem(noticeKey, '1');
-      if (showPopup) openTodaySchedulePopup(next);
-      callcenterShowScheduledNotification(next, urgent);
+    // Show the same-day popup once per session for the next relevant call.
+    const next = today.find(schedule =>
+      new Date(schedule.startsAt) >= new Date(now.getTime() - 30 * 60000)
+    ) || today[0];
+
+    const popupKey = `steadyhands-schedule-popup:${scheduledCallKey(next)}:today`;
+    if (showPopup && !sessionStorage.getItem(popupKey)) {
+      sessionStorage.setItem(popupKey, '1');
+      openTodaySchedulePopup(next);
     }
+
+    // Fire separate notifications at 60, 30, 10, 5 and 0 minutes.
+    today.forEach(schedule => {
+      const when = new Date(schedule.startsAt);
+      const minutesUntil = (when.getTime() - now.getTime()) / 60000;
+
+      SCHEDULE_REMINDERS.forEach(reminderMinutes => {
+        // The checker runs once a minute. A two-minute window prevents a
+        // missed alert if the interval wakes a little late, while the
+        // persistent key prevents duplicates after refresh/reopen.
+        const shouldFire =
+          minutesUntil <= reminderMinutes &&
+          minutesUntil > reminderMinutes - 2;
+
+        if (!shouldFire) return;
+
+        const noticeKey =
+          `steadyhands-schedule-reminder:${scheduledCallKey(schedule)}:${reminderMinutes}`;
+
+        if (localStorage.getItem(noticeKey)) return;
+
+        localStorage.setItem(noticeKey, String(Date.now()));
+        callcenterShowScheduledNotification(schedule, reminderMinutes);
+
+        if (reminderMinutes === 0 && showPopup) {
+          openTodaySchedulePopup(schedule);
+        }
+      });
+    });
   };
 
   checkScheduledCalls();
   if (!window.__steadyHandsScheduleTicker) {
-    window.__steadyHandsScheduleTicker = setInterval(() => checkScheduledCalls({ showPopup:true }), 60000);
+    window.__steadyHandsScheduleTicker = setInterval(
+      () => checkScheduledCalls({ showPopup:true }),
+      30000
+    );
   }
 
   const matchesFilter = card => {
