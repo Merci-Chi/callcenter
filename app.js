@@ -508,7 +508,7 @@ async function callcenterEnsurePhoneApproved() {
             }
             if (message) message.textContent = 'Checking your code…';
 
-            const { data, error } = await client.functions.invoke('callcenter-phone-verify-code', {
+            const { data, error } = await client.functions.invoke('twilio-phone-verify-code', {
               body:{ phone, code }
             });
 
@@ -574,7 +574,7 @@ async function callcenterEnsurePhoneApproved() {
             }
             if (message) message.textContent = 'Sending verification code…';
 
-            const { data, error } = await client.functions.invoke('callcenter-phone-send-code', {
+            const { data, error } = await client.functions.invoke('twilio-phone-send-code', {
               body:{ phone }
             });
 
