@@ -73,40 +73,30 @@ function callcenterCalendarICS(details = {}) {
 
 async function callcenterOpenDeviceCalendar(details = {}) {
   const ics = callcenterCalendarICS(details);
-  const safeName = String(details.company || 'lead')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'lead';
 
   try {
-    const file = new File([ics], `follow-up-${safeName}.ics`, {
-      type: 'text/calendar'
-    });
-
-    if (navigator.share && navigator.canShare?.({ files:[file] })) {
-      await navigator.share({
-        title: `Follow up with ${details.company || 'lead'}`,
-        text: 'Add this scheduled call to your calendar.',
-        files: [file]
-      });
-      return true;
-    }
-  } catch (error) {
-    if (error?.name === 'AbortError') return false;
-    console.warn('Native calendar share unavailable:', error);
-  }
-
-  try {
+    // iPhone/iPad: do NOT use navigator.share or a download attribute.
+    // Those routes open the Share Sheet instead of Calendar.
+    // Navigating directly to a text/calendar resource gives iOS the
+    // opportunity to hand the event to the system Calendar importer.
     const blob = new Blob([ics], { type:'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `follow-up-${safeName}.ics`;
-    anchor.type = 'text/calendar';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 15000);
+
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    if (isIOS) {
+      window.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      return true;
+    }
+
+    // Other devices: open the calendar resource directly first.
+    const popup = window.open(url, '_blank');
+    if (!popup) window.location.href = url;
+
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
     return true;
   } catch (error) {
     console.error('Unable to open calendar event:', error);
