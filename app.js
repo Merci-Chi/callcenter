@@ -33,6 +33,65 @@ function showToast(message) {
 }
 
 
+const CALLCENTER_VAPID_PUBLIC_KEY = 'BKV1zdb8AEVnr3llXN6L9a0PsxrkBA-A13xswxHpOIQPTMbtZ-SeTrt_cyM3xBmT30pZV8mxSziuWnDg6QgfrL0';
+
+function callcenterUrlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+}
+
+async function callcenterSyncPushSubscription() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+
+  const client = window.steadyHandsCRMClient;
+  if (!client) return false;
+
+  try {
+    const { data: authData, error: authError } = await client.auth.getSession();
+    if (authError) throw authError;
+    const user = authData?.session?.user;
+    if (!user) return false;
+
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: callcenterUrlBase64ToUint8Array(CALLCENTER_VAPID_PUBLIC_KEY)
+      });
+    }
+
+    const json = subscription.toJSON();
+    const endpoint = json.endpoint || subscription.endpoint;
+    const p256dh = json.keys?.p256dh || '';
+    const auth = json.keys?.auth || '';
+
+    if (!endpoint || !p256dh || !auth) {
+      throw new Error('Push subscription is missing required keys.');
+    }
+
+    const { error } = await client
+      .from('callcenter_push_subscriptions')
+      .upsert({
+        user_id: user.id,
+        endpoint,
+        p256dh,
+        auth,
+        updated_at: new Date().toISOString()
+      }, { onConflict:'user_id,endpoint' });
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.warn('Unable to sync push subscription:', error);
+    return false;
+  }
+}
+
 function callcenterPadCalendar(value) {
   return String(value).padStart(2, '0');
 }
@@ -135,20 +194,28 @@ async function callcenterRequestNotifications() {
     showToast('Notifications are not supported on this device');
     return false;
   }
-  if (Notification.permission === 'granted') return true;
+
   if (Notification.permission === 'denied') {
     showToast('Notifications are blocked in device settings');
     return false;
   }
+
   try {
-    const permission = await Notification.requestPermission();
+    let permission = Notification.permission;
+
+    if (permission !== 'granted') {
+      permission = await Notification.requestPermission();
+    }
+
     if (permission === 'granted') {
-      showToast('Notifications enabled');
+      const pushReady = await callcenterSyncPushSubscription();
+      showToast(pushReady ? 'Notifications enabled' : 'Notifications allowed — finishing setup');
       return true;
     }
   } catch (error) {
     console.warn('Notification permission failed:', error);
   }
+
   return false;
 }
 
@@ -580,14 +647,94 @@ function setupOutreach() {
     });
   };
 
-  const saveScheduledCall = (card, details) => {
+  const saveScheduledCall = async (card, details) => {
     const key = starKey(card);
     scheduledCalls[key] = details;
     localStorage.setItem(SCHEDULE_KEY, JSON.stringify(scheduledCalls));
     card.dataset.scheduled = 'true';
+
+    const client = window.steadyHandsCRMClient;
+    const userId = window.steadyHandsOutreachUserId;
+
+    if (!client || !userId) return details;
+
+    try {
+      const payload = {
+        user_id: userId,
+        crm_id: details.crmId || null,
+        company: details.company || '',
+        contact: details.contact || '',
+        phone: details.number || '',
+        note: details.note || '',
+        starts_at: details.startsAt,
+        active: true,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await client
+        .from('callcenter_scheduled_calls')
+        .insert(payload)
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      details.scheduleId = data?.id || '';
+      scheduledCalls[key] = details;
+      localStorage.setItem(SCHEDULE_KEY, JSON.stringify(scheduledCalls));
+      return details;
+    } catch (error) {
+      console.warn('Unable to save scheduled call to Supabase:', error);
+      showToast('Call saved on this device, but background reminders are not synced');
+      return details;
+    }
   };
 
   syncScheduledCards();
+
+  const hydrateScheduledCallsFromSupabase = async () => {
+    const client = window.steadyHandsCRMClient;
+    const userId = window.steadyHandsOutreachUserId;
+    if (!client || !userId) return;
+
+    try {
+      const { data = [], error } = await client
+        .from('callcenter_scheduled_calls')
+        .select('id,crm_id,company,contact,phone,note,starts_at,active')
+        .eq('user_id', userId)
+        .eq('active', true)
+        .gte('starts_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .order('starts_at', { ascending:true })
+        .limit(200);
+
+      if (error) throw error;
+
+      for (const row of data) {
+        const key = String(row.crm_id || row.company || row.id);
+        scheduledCalls[key] = {
+          scheduleId: row.id,
+          crmId: row.crm_id || '',
+          company: row.company || '',
+          contact: row.contact || '',
+          number: row.phone || '',
+          note: row.note || '',
+          startsAt: row.starts_at
+        };
+      }
+
+      localStorage.setItem(SCHEDULE_KEY, JSON.stringify(scheduledCalls));
+      syncScheduledCards();
+      renderQueue(false);
+    } catch (error) {
+      console.warn('Unable to load scheduled calls from Supabase:', error);
+    }
+  };
+
+  hydrateScheduledCallsFromSupabase();
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    callcenterSyncPushSubscription();
+  }
 
   const scheduledCallKey = schedule =>
     `${schedule.crmId || schedule.company || 'lead'}:${schedule.startsAt || ''}`;
@@ -1187,7 +1334,7 @@ function setupOutreach() {
 
     overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 
-    q('.calendar-save', sheet).addEventListener('click', () => {
+    q('.calendar-save', sheet).addEventListener('click', async () => {
 
       let hour24 = state.hour % 12;
 
@@ -1220,7 +1367,7 @@ function setupOutreach() {
         note
       };
 
-      saveScheduledCall(card, scheduleDetails);
+      await saveScheduledCall(card, scheduleDetails);
 
       if ('Notification' in window && Notification.permission === 'default') {
         callcenterRequestNotifications();
