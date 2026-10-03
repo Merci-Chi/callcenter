@@ -1920,3 +1920,18 @@ html, body {
   font-size: 13px;
   color: #263443;
 }
+
+
+/* Real Skills insights */
+.skill-recent-call {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.skill-recent-call:active {
+  opacity: .82;
+}
