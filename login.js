@@ -19,15 +19,37 @@
     const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY) || '';
     if (savedEmail) {
       email.value = savedEmail;
+      if (saveEmail) saveEmail.checked = true;
+    } else if (saveEmail) {
+      saveEmail.checked = false;
     }
-    if (saveEmail) saveEmail.checked = false;
+
     if (agreeToTerms) agreeToTerms.checked = false;
   } catch {}
 
   saveEmail?.addEventListener('change', () => {
-    if (!saveEmail.checked) {
-      try { localStorage.removeItem(SAVED_EMAIL_KEY); } catch {}
-    }
+    try {
+      if (saveEmail.checked) {
+        const currentEmail = email?.value?.trim() || '';
+        if (currentEmail) {
+          localStorage.setItem(SAVED_EMAIL_KEY, currentEmail);
+        }
+      } else {
+        localStorage.removeItem(SAVED_EMAIL_KEY);
+      }
+    } catch {}
+  });
+
+  email?.addEventListener('input', () => {
+    if (!saveEmail?.checked) return;
+    try {
+      const currentEmail = email.value.trim();
+      if (currentEmail) {
+        localStorage.setItem(SAVED_EMAIL_KEY, currentEmail);
+      } else {
+        localStorage.removeItem(SAVED_EMAIL_KEY);
+      }
+    } catch {}
   });
 
   window.lucide?.createIcons();
