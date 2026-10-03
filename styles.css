@@ -3360,3 +3360,36 @@ html, body {
     visibility: visible !important;
   }
 }
+
+
+/* Keep Lead Queue controls at their original desktop position */
+@media (min-width: 900px) {
+  .page-outreach .content {
+    grid-template-rows: auto auto minmax(0, 1fr) !important;
+    row-gap: 12px !important;
+  }
+
+  .page-outreach .desktop-queue-heading,
+  .page-outreach .desktop-workspace-heading {
+    align-self: end !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .page-outreach .outreach-controls {
+    grid-area: controls !important;
+    align-self: start !important;
+    margin: 0 !important;
+    top: auto !important;
+    transform: none !important;
+  }
+
+  .page-outreach .outreach-controls-live {
+    margin: 0 !important;
+  }
+
+  .page-outreach .outreach-controls-skeleton {
+    inset: 11px !important;
+    margin: 0 !important;
+  }
+}
