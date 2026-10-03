@@ -3114,6 +3114,29 @@ function setupDesktopOutreachPaneScrolling() {
 
   if (!content || !leftPane || !rightPane) return;
 
+  const bounceTimers = new WeakMap();
+
+  const bouncePane = (pane, deltaY) => {
+    const amount = Math.max(-12, Math.min(12, deltaY * 0.055));
+
+    pane.style.setProperty('--pane-bounce-y', `${amount}px`);
+    pane.classList.add('pane-bouncing');
+
+    const current = bounceTimers.get(pane);
+    if (current) clearTimeout(current);
+
+    const timer = setTimeout(() => {
+      pane.style.setProperty('--pane-bounce-y', '0px');
+      pane.classList.add('pane-bounce-back');
+
+      setTimeout(() => {
+        pane.classList.remove('pane-bouncing', 'pane-bounce-back');
+      }, 180);
+    }, 55);
+
+    bounceTimers.set(pane, timer);
+  };
+
   const onWheel = (event) => {
     if (!window.matchMedia('(min-width: 900px)').matches) return;
     if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
@@ -3130,13 +3153,21 @@ function setupDesktopOutreachPaneScrolling() {
     const pane = event.clientX < rightRect.left ? leftPane : rightPane;
 
     const maxScroll = Math.max(0, pane.scrollHeight - pane.clientHeight);
-    if (!maxScroll) return;
+    const atTop = pane.scrollTop <= 0;
+    const atBottom = pane.scrollTop >= maxScroll - 1;
+    const tryingPastTop = event.deltaY < 0 && atTop;
+    const tryingPastBottom = event.deltaY > 0 && atBottom;
 
-    const next = Math.max(0, Math.min(maxScroll, pane.scrollTop + event.deltaY));
-    if (next === pane.scrollTop) return;
+    if (maxScroll > 0 && !tryingPastTop && !tryingPastBottom) {
+      const next = Math.max(0, Math.min(maxScroll, pane.scrollTop + event.deltaY));
+      event.preventDefault();
+      pane.scrollTop = next;
+      return;
+    }
 
+    // Even with no overflow, give the pane a small elastic response.
     event.preventDefault();
-    pane.scrollTop = next;
+    bouncePane(pane, event.deltaY);
   };
 
   document.addEventListener('wheel', onWheel, { passive: false });
