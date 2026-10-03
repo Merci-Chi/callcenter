@@ -12,14 +12,16 @@
   const heading = document.getElementById('loginHeading');
   const subheading = document.getElementById('loginSubheading');
   const saveEmail = document.getElementById('saveEmailToDevice');
+  const agreeToTerms = document.getElementById('agreeToTerms');
   const SAVED_EMAIL_KEY = 'steadyhands-saved-login-email';
 
   try {
     const savedEmail = localStorage.getItem(SAVED_EMAIL_KEY) || '';
     if (savedEmail) {
       email.value = savedEmail;
-      if (saveEmail) saveEmail.checked = true;
     }
+    if (saveEmail) saveEmail.checked = false;
+    if (agreeToTerms) agreeToTerms.checked = false;
   } catch {}
 
   saveEmail?.addEventListener('change', () => {
@@ -187,6 +189,12 @@
         currentMessage.textContent = error?.message || 'Unable to update password. Please request a new reset link.';
         currentButton.disabled = false;
       }
+      return;
+    }
+
+    if (!agreeToTerms?.checked) {
+      message.textContent = 'You must agree to the Terms & Conditions before signing in.';
+      agreeToTerms?.focus();
       return;
     }
 
