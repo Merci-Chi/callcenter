@@ -516,14 +516,6 @@
     const initials = (displayName || emailAddress || 'U')
       .split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 
-    const { data: permission } = await c
-      .from('team_permissions')
-      .select('role,active')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-
-    const isManager = ['ADMIN','MOD'].includes(permission?.role);
-
     const prefKey = key => 'steadyhands-setting-' + key;
     const readPref = (key, fallback=true) => {
       try {
@@ -613,30 +605,7 @@
         </button>
       </section>
 
-      ${isManager ? `
-      <section class="settings-section">
-        <div class="settings-section-title">Team &amp; Admin</div>
-        <button class="settings-row" type="button" data-account-action="team">
-          <span class="settings-icon"><i data-lucide="users"></i></span>
-          <span class="settings-copy"><strong>Team Management</strong><small>Manage team members and access</small></span>
-          <i class="settings-chevron" data-lucide="chevron-right"></i>
-        </button>
-        <button class="settings-row" type="button" data-account-action="inactive">
-          <span class="settings-icon"><i data-lucide="user-x"></i></span>
-          <span class="settings-copy"><strong>Inactive Users</strong><small>Review inactive and disabled callers</small></span>
-          <i class="settings-chevron" data-lucide="chevron-right"></i>
-        </button>
-        <button class="settings-row" type="button" data-account-action="tags">
-          <span class="settings-icon"><i data-lucide="tag"></i></span>
-          <span class="settings-copy"><strong>Tags</strong><small>Manage outreach tags</small></span>
-          <i class="settings-chevron" data-lucide="chevron-right"></i>
-        </button>
-        <button class="settings-row" type="button" data-account-action="alerts">
-          <span class="settings-icon"><i data-lucide="triangle-alert"></i></span>
-          <span class="settings-copy"><strong>Alerts</strong><small>Manage team alerts</small></span>
-          <i class="settings-chevron" data-lucide="chevron-right"></i>
-        </button>
-      </section>` : ''}
+
 
       <section class="settings-section">
         <div class="settings-section-title">App</div>
@@ -792,23 +761,6 @@
               msg.textContent='Microphone access is blocked. Allow it in your browser or device settings.';
             }
           });
-          return;
-        }
-
-        if (action === 'team') {
-          openSheet('Team Management','<p class="settings-sheet-note">Team access is managed from the Steady Hands admin dashboard.</p>');
-          return;
-        }
-        if (action === 'inactive') {
-          location.href='activity.html';
-          return;
-        }
-        if (action === 'tags') {
-          openSheet('Tags','<p class="settings-sheet-note">Outreach tags are managed through the CRM.</p>');
-          return;
-        }
-        if (action === 'alerts') {
-          openSheet('Alerts','<p class="settings-sheet-note">Team alert management can be expanded here as alert controls are added.</p>');
           return;
         }
         if (action === 'about') {
