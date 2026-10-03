@@ -3171,3 +3171,25 @@ html, body {
     background: #c5d0db;
   }
 }
+
+
+/* Selected lead may scroll internally when its content needs more room. */
+@media (min-width: 900px) {
+  .page-outreach #selectedLeadTop {
+    min-height: 0;
+    height: 100%;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead {
+    height: auto !important;
+    min-height: 100%;
+    overflow: visible !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-details {
+    overflow: visible !important;
+  }
+}
