@@ -94,16 +94,69 @@
     if (!profile) return { label:'Unknown', cls:'inactive', days:Infinity };
     if (profile.disabled_at) return { label:'Disabled', cls:'disabled', days:Infinity };
 
-    if (!profile.last_call_at) {
-      const accountAge = ageDays(profile.created_at);
-      if (accountAge >= 90) return { label:'Disabled', cls:'disabled', days:accountAge };
-      return { label:'Inactive', cls:'inactive', days:Infinity };
+    const referenceDate = profile.last_call_at || profile.created_at;
+    const days = ageDays(referenceDate);
+
+    if (days >= 90) return { label:'Disabled', cls:'disabled', days };
+    return { label:'Active', cls:'active', days };
+  }
+
+  async function maybeSendAccountActivityNotification(profile) {
+    if (!profile) return;
+
+    const referenceDate = profile.last_call_at || profile.created_at;
+    if (!referenceDate) return;
+
+    const days = ageDays(referenceDate);
+    const thresholds = [
+      { day:30, title:'30 days without a completed call', body:'Your account is still active. Complete a call before 90 days to keep access.' },
+      { day:60, title:'60 days without a completed call', body:'Your account is still active. Complete a call before 90 days to avoid losing access.' },
+      { day:85, title:'5 days until account access is disabled', body:'Complete a call within the next 5 days to keep your Outreach account active.' },
+      { day:90, title:'Account access disabled', body:'No completed call has been recorded in 90 days. Contact support to renew access.' }
+    ];
+
+    const reached = thresholds.filter(item => days >= item.day).pop();
+    if (!reached) return;
+
+    const referenceKey = new Date(referenceDate).toISOString().slice(0,10);
+    const storageKey = 'steadyhands-account-activity-notice-' + reached.day + '-' + referenceKey;
+
+    try {
+      if (localStorage.getItem(storageKey) === '1') return;
+    } catch {}
+
+    const showBrowserNotification = () => {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+      try {
+        new Notification(reached.title, {
+          body: reached.body,
+          icon: 'images/icon-192.png',
+          badge: 'images/icon-192.png',
+          tag: 'steadyhands-account-activity-' + reached.day
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    let shown = showBrowserNotification();
+
+    if (!shown && 'Notification' in window && Notification.permission === 'default' && reached.day >= 85) {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') shown = showBrowserNotification();
+      } catch {}
     }
 
-    const days = ageDays(profile.last_call_at);
-    if (days >= 90) return { label:'Disabled', cls:'disabled', days };
-    if (days <= 30) return { label:'Active', cls:'active', days };
-    return { label:'Inactive', cls:'inactive', days };
+    if (typeof window.showToast === 'function') {
+      window.showToast(reached.body);
+      shown = true;
+    }
+
+    if (shown) {
+      try { localStorage.setItem(storageKey, '1'); } catch {}
+    }
   }
 
   function showDisabled(profile) {
@@ -738,8 +791,9 @@
         if (action === 'status') {
           openSheet('Account Status', `
             <div class="settings-status-card"><span class="cc-status ${state.cls}">${esc(statusText)}</span>
-              <p>A completed call within the last 30 days keeps your account active.</p>
-              <p>After 90 days without a completed call, access is disabled and support must renew it.</p>
+              <p>Your account stays active unless 90 days pass without a completed call.</p>
+              <p>Activity reminders are sent after 30 days, 60 days, 85 days, and at 90 days without a completed call.</p>
+              <p>At 90 days, access is disabled and support must renew it.</p>
               <p><strong>Last call:</strong> ${profile.last_call_at ? esc(new Date(profile.last_call_at).toLocaleString()) : 'No calls yet'}</p>
             </div>`);
           return;
@@ -1065,6 +1119,8 @@
       renderSetupRequired(schemaError);
       return;
     }
+
+    await maybeSendAccountActivityNotification(profile);
 
     const state = activityState(profile);
     if (state.label === 'Disabled') {
