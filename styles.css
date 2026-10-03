@@ -3560,3 +3560,40 @@ html, body {
 @media (prefers-reduced-motion:reduce){
   .settings-skeleton-circle,.settings-skeleton-line,.settings-skeleton-pill,.settings-skeleton-heading,.settings-skeleton-row{animation:none}
 }
+
+
+/* Admin Settings */
+.admin-topbar-row{display:flex;align-items:center;gap:10px}
+.admin-back-btn{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.08)}
+.admin-back-btn svg{width:20px;height:20px}
+.admin-settings-content{padding-bottom:130px}
+.admin-summary-card{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;margin-top:12px;padding:16px;background:#fff;border:1px solid rgba(20,43,69,.08);border-radius:18px;box-shadow:0 8px 24px rgba(15,33,54,.07)}
+.admin-summary-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#eaf3ff;color:#1772d3}
+.admin-summary-icon svg{width:24px;height:24px}
+.admin-summary-card strong,.admin-summary-card span{display:block}.admin-summary-card strong{font-size:15px;color:#17304c}.admin-summary-card span{margin-top:3px;font-size:11px;color:#7c8998}
+.admin-approval-section{margin-top:18px}
+.admin-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
+.admin-section-head h2{margin:0;font-size:18px;color:#17304c}.admin-section-head p{margin:5px 0 0;color:#7b8999;font-size:11px;line-height:1.4}
+.admin-count{min-width:30px;height:30px;padding:0 9px;border-radius:999px;display:grid;place-items:center;background:#fff3df;color:#a56800;font-size:12px;font-weight:900}
+.admin-approval-list{display:grid;gap:12px}
+.admin-approval-card{background:#fff;border:1px solid rgba(20,43,69,.09);border-radius:18px;padding:14px;box-shadow:0 7px 22px rgba(15,33,54,.06);transition:.18s ease}
+.admin-approval-user{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center}
+.admin-approval-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#eaf3ff;color:#176fc8;font-weight:900}
+.admin-approval-copy{min-width:0}.admin-approval-copy strong,.admin-approval-copy span{display:block}.admin-approval-copy strong{font-size:13px;color:#17304c}.admin-approval-copy span{margin-top:3px;font-size:10px;color:#8793a1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.admin-pending-badge{padding:6px 9px;border-radius:999px;background:#fff3df;color:#a56800;font-size:9px;font-weight:900}
+.admin-phone-box{margin-top:12px;padding:12px;border-radius:13px;background:#f7f9fc;border:1px solid #e8edf2}
+.admin-phone-box span,.admin-phone-box strong,.admin-phone-box small{display:block}.admin-phone-box span{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#8693a1;font-weight:900}.admin-phone-box strong{margin-top:4px;font-size:16px;color:#17304c}.admin-phone-box small{margin-top:3px;color:#8794a3;font-size:10px}
+.admin-approval-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.admin-approval-actions button{min-height:42px;border-radius:12px;font-weight:900;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.admin-approval-actions button svg{width:16px;height:16px}
+.admin-reject-btn{border:1px solid #eccaca;background:#fff;color:#c74646}.admin-approve-btn{border:0;background:#177bdd;color:#fff}.admin-approval-actions button:disabled{opacity:.55;cursor:default}
+.admin-card-removing{opacity:0;transform:scale(.98)}
+.admin-empty,.admin-access-denied{background:#fff;border:1px solid rgba(20,43,69,.08);border-radius:18px;padding:28px 18px;text-align:center;color:#748296}
+.admin-empty svg{width:34px;height:34px;color:#2b9b62;margin-bottom:8px}.admin-empty strong,.admin-empty span{display:block}.admin-empty strong{color:#17304c;font-size:14px}.admin-empty span{font-size:11px;margin-top:5px}
+.admin-access-denied{margin-top:20px}.admin-access-icon{width:52px;height:52px;margin:0 auto 10px;border-radius:16px;display:grid;place-items:center;background:#fdecec;color:#bd4646}.admin-access-icon svg{width:27px;height:27px}.admin-access-denied h2{margin:0;color:#17304c;font-size:20px}.admin-access-denied p{font-size:12px;line-height:1.5}.admin-access-denied a,.admin-access-denied button{display:inline-flex;margin-top:8px;border:0;border-radius:12px;background:#102945;color:#fff;padding:11px 14px;font-weight:900;text-decoration:none}
+@media(min-width:900px){
+  .page-admin-settings .admin-settings-content{display:block !important;max-width:980px;padding-top:30px}
+  .page-admin-settings .admin-summary-card{margin-top:0}
+  .page-admin-settings .admin-approval-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .page-admin-settings .admin-empty{grid-column:1/-1}
+}
