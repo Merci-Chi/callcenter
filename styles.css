@@ -3191,8 +3191,7 @@ html, body {
   }
 }
 
-
-/* Outreach desktop rounded shell + elastic pane feedback */
+/* Outreach desktop rounded shell + stretch overscroll */
 @media (min-width: 900px) {
   .page-outreach .app {
     border-radius: 28px !important;
@@ -3201,17 +3200,46 @@ html, body {
 
   .page-outreach #crmLeadCards,
   .page-outreach #selectedLeadTop {
-    transform: translateY(var(--pane-bounce-y, 0px));
+    transform: scaleY(var(--pane-stretch-scale, 1));
+    transform-origin: var(--pane-stretch-origin, center center);
     will-change: transform;
   }
 
-  .page-outreach #crmLeadCards.pane-bouncing,
-  .page-outreach #selectedLeadTop.pane-bouncing {
-    transition: transform 70ms ease-out;
+  .page-outreach #crmLeadCards.pane-stretching,
+  .page-outreach #selectedLeadTop.pane-stretching {
+    transition: transform 80ms ease-out;
   }
 
-  .page-outreach #crmLeadCards.pane-bounce-back,
-  .page-outreach #selectedLeadTop.pane-bounce-back {
-    transition: transform 180ms cubic-bezier(.2,.85,.35,1);
+  .page-outreach #crmLeadCards.pane-stretch-release,
+  .page-outreach #selectedLeadTop.pane-stretch-release {
+    transition: transform 190ms cubic-bezier(.2,.8,.3,1);
+  }
+
+  .page-outreach #selectedLeadTop .selected-lead-skeleton {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 14px;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .page-outreach #selectedLeadTop .selected-lead-skeleton .sk-row {
+    margin-bottom: 12px;
+  }
+
+  .page-outreach #selectedLeadTop .selected-lead-skeleton .sk-phone,
+  .page-outreach #selectedLeadTop .selected-lead-skeleton .sk-line,
+  .page-outreach #selectedLeadTop .selected-lead-skeleton .sk-preview,
+  .page-outreach #selectedLeadTop .selected-lead-skeleton .sk-note,
+  .page-outreach #selectedLeadTop .selected-lead-skeleton .sk-call {
+    margin-top: 10px;
+  }
+
+  .page-outreach #selectedLeadTop .selected-lead-skeleton .sk-call {
+    min-height: 34px;
+    border-radius: 10px;
   }
 }
+
