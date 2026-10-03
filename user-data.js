@@ -275,17 +275,30 @@
 
   window.callcenterRecordCall = async ({ crmId = null, duration = 0, outcome = '' } = {}) => {
     const c = client();
-    if (!c || !duration) return;
+    if (!c || !duration) return null;
+
     const { data:{ session } = {} } = await c.auth.getSession();
-    if (!session) return;
+    if (!session) return null;
+
     const payload = {
       user_id: session.user.id,
       crm_id: crmId || null,
       duration_seconds: Math.max(0, Number(duration) || 0),
       outcome: String(outcome || '')
     };
-    const { error } = await c.from('callcenter_call_activity').insert(payload);
-    if (error) console.warn('Unable to save call activity:', error.message);
+
+    const { data, error } = await c
+      .from('callcenter_call_activity')
+      .insert(payload)
+      .select('id,user_id,crm_id,duration_seconds,outcome,created_at')
+      .single();
+
+    if (error) {
+      console.warn('Unable to save call activity:', error.message);
+      return null;
+    }
+
+    return data || null;
   };
 
   async function loadEarnings(session, profile) {
