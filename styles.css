@@ -3035,3 +3035,117 @@ html, body {
   }
 }
 
+
+
+/* Outreach desktop fit corrections */
+@media (min-width: 900px) {
+  /* The queue itself scrolls. Individual cards must NEVER shrink to fit it. */
+  .page-outreach #crmLeadCards {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .page-outreach #crmLeadCards > .lead-card,
+  .page-outreach #crmLeadCards > .skeleton-lead,
+  .page-outreach #crmLeadCards > .lead-sort-control {
+    flex: 0 0 auto !important;
+    height: auto !important;
+  }
+
+  .page-outreach #crmLeadCards .lead-card:not(.selected-lead) {
+    min-height: 112px !important;
+    padding: 11px 12px !important;
+  }
+
+  .page-outreach #crmLeadCards .lead-card:not(.selected-lead) .lead-head {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .page-outreach #crmLeadCards .lead-card:not(.selected-lead) .contact-line {
+    margin-top: 8px !important;
+    padding: 8px 0 0 0 !important;
+  }
+
+  .page-outreach #crmLeadCards .lead-card:not(.selected-lead) .compact-lead-meta {
+    display: block !important;
+    margin-top: 7px !important;
+  }
+
+  /* Give the selected lead every pixel available without internal scrolling. */
+  .page-outreach #selectedLeadTop .lead-card.selected-lead > .lead-head {
+    padding: 11px 14px 9px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .company-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .company-icon i {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead .lead-title h2 {
+    font-size: 15px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-card.selected-lead > .contact-line {
+    padding: 7px 14px !important;
+    font-size: 11px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-details {
+    padding: 8px 13px 9px !important;
+    row-gap: 5px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-details > .call-time-status {
+    padding: 6px 8px !important;
+    font-size: 9px !important;
+  }
+
+  .page-outreach #selectedLeadTop .lead-details > .time-row {
+    padding: 5px 7px !important;
+    font-size: 9px !important;
+  }
+
+  .page-outreach #selectedLeadTop .preview-link {
+    min-height: 29px !important;
+  }
+
+  .page-outreach #selectedLeadTop .notes {
+    padding: 7px 9px !important;
+  }
+
+  .page-outreach #selectedLeadTop .notes-title {
+    margin-bottom: 2px !important;
+    font-size: 9px !important;
+  }
+
+  .page-outreach #selectedLeadTop .notes p {
+    max-height: 1.3em !important;
+    -webkit-line-clamp: 1 !important;
+    font-size: 9px !important;
+  }
+
+  .page-outreach #selectedLeadTop .call-btn {
+    min-height: 34px !important;
+    font-size: 11px !important;
+  }
+
+  .page-outreach #selectedLeadTop .quick-btn {
+    min-height: 31px !important;
+    padding: 4px !important;
+    font-size: 8px !important;
+  }
+
+  .page-outreach #selectedLeadTop .quick-btn i {
+    width: 13px !important;
+    height: 13px !important;
+  }
+}
