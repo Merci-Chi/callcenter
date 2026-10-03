@@ -928,9 +928,9 @@
         if (action === 'status') {
           openSheet('Account Status', `
             <div class="settings-status-card"><span class="cc-status ${state.cls}">${esc(statusText)}</span>
-              <p>Your account stays active unless 90 days pass without a completed call.</p>
-              <p>Activity reminders are sent after 30 days, 60 days, 83 days, and at 90 days without a completed call.</p>
-              <p>At 90 days, access is disabled and support must renew it.</p>
+              <p>Your account stays active unless 90 consecutive days pass without a completed call.</p>
+              <p>You will receive activity reminders along the way, including one week before access is disabled.</p>
+              <p>At 90 days without a completed call, access is disabled and support must renew it.</p>
               <p><strong>Last call:</strong> ${profile.last_call_at ? esc(new Date(profile.last_call_at).toLocaleString()) : 'No calls yet'}</p>
             </div>`);
           return;
