@@ -28,12 +28,6 @@ Deno.serve(async (req) => {
   }
 
   const callerId = Deno.env.get('TWILIO_CALLER_ID') || '';
-  if (!callerId) {
-    return new Response(
-      '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Calling is not configured.</Say></Response>',
-      { status: 500, headers: { 'Content-Type': 'text/xml; charset=utf-8' } },
-    );
-  }
 
   try {
     const bodyText = await req.text();
@@ -60,10 +54,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    const callerIdAttribute = callerId
+      ? ' callerId="' + xmlEscape(callerId) + '"'
+      : '';
+
     const twiml =
       '<?xml version="1.0" encoding="UTF-8"?>' +
       '<Response>' +
-        '<Dial answerOnBridge="true" callerId="' + xmlEscape(callerId) + '">' +
+        '<Dial answerOnBridge="true"' + callerIdAttribute + '>' +
           '<Number>' + xmlEscape(destination) + '</Number>' +
         '</Dial>' +
       '</Response>';
