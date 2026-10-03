@@ -111,7 +111,7 @@
     const thresholds = [
       { day:30, title:'30 days without a completed call', body:'Your account is still active. Complete a call before 90 days to keep access.' },
       { day:60, title:'60 days without a completed call', body:'Your account is still active. Complete a call before 90 days to avoid losing access.' },
-      { day:85, title:'5 days until account access is disabled', body:'Complete a call within the next 5 days to keep your Outreach account active.' },
+      { day:83, title:'1 week until account access is disabled', body:'Complete a call within the next 7 days to keep your Outreach account active.' },
       { day:90, title:'Account access disabled', body:'No completed call has been recorded in 90 days. Contact support to renew access.' }
     ];
 
@@ -792,7 +792,7 @@
           openSheet('Account Status', `
             <div class="settings-status-card"><span class="cc-status ${state.cls}">${esc(statusText)}</span>
               <p>Your account stays active unless 90 days pass without a completed call.</p>
-              <p>Activity reminders are sent after 30 days, 60 days, 85 days, and at 90 days without a completed call.</p>
+              <p>Activity reminders are sent after 30 days, 60 days, 83 days, and at 90 days without a completed call.</p>
               <p>At 90 days, access is disabled and support must renew it.</p>
               <p><strong>Last call:</strong> ${profile.last_call_at ? esc(new Date(profile.last_call_at).toLocaleString()) : 'No calls yet'}</p>
             </div>`);
