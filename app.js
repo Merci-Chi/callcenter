@@ -576,6 +576,11 @@ function setupOutreach() {
 
     leadContainer.appendChild(overlay);
 
+    if (selectedLeadTop) {
+      selectedLeadTop.setAttribute('aria-busy', 'true');
+      selectedLeadTop.innerHTML = selectedLeadSkeletonMarkup();
+    }
+
     refreshIcons();
 
     window.setTimeout(() => {
@@ -589,6 +594,8 @@ function setupOutreach() {
       leadContainer.removeAttribute('aria-busy');
 
       leadContainer.style.minHeight = '';
+
+      selectedLeadTop?.removeAttribute('aria-busy');
 
       queueTransition = false;
 
@@ -992,8 +999,6 @@ function setupOutreach() {
   const selectCard = (card, shouldScroll = true) => {
 
     if (!card || !matchesFilter(card)) return;
-
-    showSelectedLeadSkeleton();
 
     changeLeads(() => {
 
@@ -2849,6 +2854,8 @@ async function loadApprovedPreviewCRM(options = {}) {
 
   if (!status || !box) return;
 
+  showSelectedLeadSkeleton();
+
   q('#crmReload')?.addEventListener('click', () => location.reload());
   crmSetupGlobalSearchControls();
 
@@ -3143,30 +3150,6 @@ function setupDesktopOutreachPaneScrolling() {
 
   if (!content || !leftPane || !rightPane) return;
 
-  const stretchTimers = new WeakMap();
-
-  const stretchPane = (pane, deltaY, edge) => {
-    const strength = Math.min(0.028, Math.max(0.008, Math.abs(deltaY) * 0.00016));
-
-    pane.style.setProperty('--pane-stretch-scale', String(1 + strength));
-    pane.style.setProperty('--pane-stretch-origin', edge === 'top' ? 'top center' : 'bottom center');
-    pane.classList.add('pane-stretching');
-
-    const current = stretchTimers.get(pane);
-    if (current) clearTimeout(current);
-
-    const timer = setTimeout(() => {
-      pane.style.setProperty('--pane-stretch-scale', '1');
-      pane.classList.add('pane-stretch-release');
-
-      setTimeout(() => {
-        pane.classList.remove('pane-stretching', 'pane-stretch-release');
-      }, 190);
-    }, 65);
-
-    stretchTimers.set(pane, timer);
-  };
-
   const onWheel = (event) => {
     if (!window.matchMedia('(min-width: 900px)').matches) return;
     if (Math.abs(event.deltaY) < Math.abs(event.deltaX)) return;
@@ -3181,21 +3164,15 @@ function setupDesktopOutreachPaneScrolling() {
 
     const rightRect = rightPane.getBoundingClientRect();
     const pane = event.clientX < rightRect.left ? leftPane : rightPane;
-
     const maxScroll = Math.max(0, pane.scrollHeight - pane.clientHeight);
-    const atTop = pane.scrollTop <= 0;
-    const atBottom = pane.scrollTop >= maxScroll - 1;
-    const tryingPastTop = event.deltaY < 0 && atTop;
-    const tryingPastBottom = event.deltaY > 0 && atBottom;
 
-    if (maxScroll > 0 && !tryingPastTop && !tryingPastBottom) {
-      event.preventDefault();
-      pane.scrollTop = Math.max(0, Math.min(maxScroll, pane.scrollTop + event.deltaY));
-      return;
-    }
+    if (maxScroll <= 0) return;
+
+    const next = Math.max(0, Math.min(maxScroll, pane.scrollTop + event.deltaY));
+    if (next === pane.scrollTop) return;
 
     event.preventDefault();
-    stretchPane(pane, event.deltaY, tryingPastTop ? 'top' : 'bottom');
+    pane.scrollTop = next;
   };
 
   document.addEventListener('wheel', onWheel, { passive: false });
