@@ -424,6 +424,21 @@ function callcenterPhoneApprovalModal(title, body, actions = [{label:'Close'}]) 
   return modal(title, body, actions);
 }
 
+async function callcenterFunctionErrorMessage(error, fallback) {
+  try {
+    const response = error?.context;
+    if (response && typeof response.clone === 'function') {
+      const data = await response.clone().json();
+      if (data?.error) return String(data.error);
+      if (data?.message) return String(data.message);
+    }
+  } catch {}
+
+  const message = String(error?.message || '').trim();
+  if (message && !/non-2xx status code/i.test(message)) return message;
+  return fallback;
+}
+
 async function callcenterEnsurePhoneApproved() {
   const client = await callcenterGetPhoneApprovalClient();
   if (!client) {
@@ -514,7 +529,11 @@ async function callcenterEnsurePhoneApproved() {
 
             if (error || !data?.ok) {
               console.error('Unable to verify phone code:', error || data);
-              if (message) message.textContent = data?.error || error?.message || 'That code could not be verified.';
+              const errorText = data?.error || await callcenterFunctionErrorMessage(
+                error,
+                'That code could not be verified.'
+              );
+              if (message) message.textContent = errorText;
               if (verifyButton) {
                 verifyButton.disabled = false;
                 verifyButton.textContent = 'Verify';
@@ -580,7 +599,11 @@ async function callcenterEnsurePhoneApproved() {
 
             if (error || !data?.ok) {
               console.error('Unable to send phone code:', error || data);
-              if (message) message.textContent = data?.error || error?.message || 'Unable to send the verification code.';
+              const errorText = data?.error || await callcenterFunctionErrorMessage(
+                error,
+                'Unable to send the verification code.'
+              );
+              if (message) message.textContent = errorText;
               if (sendButton) {
                 sendButton.disabled = false;
                 sendButton.textContent = 'Send Code';
