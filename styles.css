@@ -3597,3 +3597,98 @@ html, body {
   .page-admin-settings .admin-approval-list{grid-template-columns:repeat(2,minmax(0,1fr))}
   .page-admin-settings .admin-empty{grid-column:1/-1}
 }
+
+
+/* First-device notification permission popup */
+.device-notification-popup-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  display:grid;
+  place-items:center;
+  padding:22px;
+  background:rgba(7,18,31,.60);
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+.device-notification-popup{
+  width:min(390px,100%);
+  padding:24px 20px 20px;
+  border-radius:22px;
+  background:#fff;
+  color:#17304c;
+  text-align:center;
+  box-shadow:0 24px 70px rgba(0,0,0,.30);
+  animation:deviceNotificationPopupIn .18s ease-out;
+}
+.device-notification-popup-icon{
+  width:58px;
+  height:58px;
+  margin:0 auto 15px;
+  border-radius:18px;
+  display:grid;
+  place-items:center;
+  background:#eaf3ff;
+  color:#1777d3;
+}
+.device-notification-popup-icon svg{width:28px;height:28px}
+.device-notification-popup h2{
+  margin:0;
+  font-size:21px;
+  line-height:1.2;
+}
+.device-notification-popup > p{
+  margin:9px auto 0;
+  max-width:330px;
+  color:#66788b;
+  font-size:13px;
+  line-height:1.5;
+}
+.device-notification-popup-note{
+  margin-top:16px;
+  padding:11px 12px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  background:#f5f8fb;
+  color:#66788b;
+  font-size:11px;
+  font-weight:750;
+}
+.device-notification-popup-note svg{width:16px;height:16px;color:#52708d}
+.device-notification-popup-actions{
+  display:grid;
+  grid-template-columns:1fr 1.35fr;
+  gap:9px;
+  margin-top:18px;
+}
+.device-notification-popup-actions button{
+  min-height:46px;
+  border-radius:13px;
+  font:inherit;
+  font-size:12px;
+  font-weight:900;
+  cursor:pointer;
+}
+.device-notification-not-now{
+  border:1px solid #dce4ec;
+  background:#fff;
+  color:#4d6074;
+}
+.device-notification-allow{
+  border:0;
+  background:#1677e8;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+}
+.device-notification-allow svg{width:16px;height:16px}
+.device-notification-popup-actions button:disabled{opacity:.6;cursor:default}
+@keyframes deviceNotificationPopupIn{
+  from{opacity:0;transform:scale(.96) translateY(8px)}
+  to{opacity:1;transform:scale(1) translateY(0)}
+}
