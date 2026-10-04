@@ -127,21 +127,30 @@
       return;
     }
 
-    if (document.querySelector('.cc-overlay[data-notification-prompt]')) return;
+    if (document.querySelector('.device-notification-popup-overlay')) return;
 
     const overlay = document.createElement('div');
-    overlay.className = 'cc-overlay';
-    overlay.dataset.notificationPrompt = 'true';
+    overlay.className = 'device-notification-popup-overlay';
     overlay.innerHTML = `
-      <div class="cc-disabled" style="text-align:left">
-        <div style="width:46px;height:46px;border-radius:14px;background:#eaf3ff;color:#2378d2;display:grid;place-items:center;margin-bottom:12px">
-          <i data-lucide="bell-ring" style="width:24px;height:24px"></i>
+      <div class="device-notification-popup" role="dialog" aria-modal="true" aria-labelledby="deviceNotificationTitle">
+        <div class="device-notification-popup-icon">
+          <i data-lucide="bell-ring"></i>
         </div>
-        <h2 style="margin:0 0 8px">Allow notifications?</h2>
-        <p style="margin:0 0 16px">Get account activity warnings and other enabled Outreach notifications on this device.</p>
-        <div style="display:flex;gap:10px">
-          <button id="ccNotificationLater" style="flex:1;border:1px solid #d9e2ec;background:#fff;color:#40556c;border-radius:12px;padding:12px 14px;font-weight:900">Not Now</button>
-          <button id="ccNotificationAllow" style="flex:1;border:0;background:#1677e8;color:#fff;border-radius:12px;padding:12px 14px;font-weight:900">Allow</button>
+
+        <h2 id="deviceNotificationTitle">Allow Notifications</h2>
+        <p>Turn on notifications for this device so Outreach can send call reminders, account notices, and other notifications you choose to enable.</p>
+
+        <div class="device-notification-popup-note">
+          <i data-lucide="smartphone"></i>
+          <span>This setting only applies to this device.</span>
+        </div>
+
+        <div class="device-notification-popup-actions">
+          <button type="button" class="device-notification-not-now" id="ccNotificationLater">Not Now</button>
+          <button type="button" class="device-notification-allow" id="ccNotificationAllow">
+            <i data-lucide="bell"></i>
+            Allow Notifications
+          </button>
         </div>
       </div>`;
 
@@ -156,16 +165,21 @@
       overlay.remove();
     };
 
-    document.getElementById('ccNotificationLater')?.addEventListener('click', () => finish(false));
-    document.getElementById('ccNotificationAllow')?.addEventListener('click', async () => {
+    overlay.querySelector('#ccNotificationLater')?.addEventListener('click', () => finish(false));
+
+    overlay.querySelector('#ccNotificationAllow')?.addEventListener('click', async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+
       try {
         const permission = await Notification.requestPermission();
         finish(permission === 'granted');
       } catch {
-        finish(false);
+        button.disabled = false;
       }
     });
   }
+
 
   async function maybeSendAccountActivityNotification(profile) {
     if (!profile) return;
