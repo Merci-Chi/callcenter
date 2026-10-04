@@ -124,7 +124,9 @@ async function ensureDevice() {
 
   device = new Device(token, {
     logLevel: 'warn',
-    closeProtection: true
+    closeProtection: true,
+    enableImprovedSignalingErrorPrecision: true,
+    maxCallSignalingTimeoutMs: 30000
   });
 
   device.on('error', error => {
