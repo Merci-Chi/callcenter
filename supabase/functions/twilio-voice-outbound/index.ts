@@ -46,9 +46,6 @@ Deno.serve(async (req) => {
     }
 
     const destination = normalizeE164(params.get('To') || params.get('to') || '');
-    const transcribe = /^(1|true|yes)$/i.test(params.get('transcribe') || '');
-    const crmId = String(params.get('crm_id') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
-
     if (!/^\+[1-9]\d{7,14}$/.test(destination)) {
       return new Response(
         '<?xml version="1.0" encoding="UTF-8"?><Response><Say>The destination number is invalid.</Say></Response>',
@@ -56,32 +53,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const callbackUrl =
-      Deno.env.get('TWILIO_TRANSCRIPTION_CALLBACK_URL') ||
-      (Deno.env.get('SUPABASE_URL') || '') + '/functions/v1/twilio-transcription-webhook';
-
     const callerIdAttribute = callerId
       ? ' callerId="' + xmlEscape(callerId) + '"'
-      : '';
-
-    const transcription = transcribe && callbackUrl
-      ? '<Start><Transcription' +
-          ' statusCallbackUrl="' + xmlEscape(callbackUrl) + '"' +
-          ' track="both_tracks"' +
-          ' inboundTrackLabel="customer"' +
-          ' outboundTrackLabel="agent"' +
-          ' languageCode="en-US"' +
-          ' partialResults="true"' +
-          ' enableAutomaticPunctuation="true"' +
-          ' transcriptionEngine="auto"' +
-          (crmId ? ' name="' + xmlEscape('crm_' + crmId) + '"' : '') +
-        '/></Start>'
       : '';
 
     const twiml =
       '<?xml version="1.0" encoding="UTF-8"?>' +
       '<Response>' +
-        transcription +
         '<Dial answerOnBridge="true"' + callerIdAttribute + '>' +
           '<Number>' + xmlEscape(destination) + '</Number>' +
         '</Dial>' +
