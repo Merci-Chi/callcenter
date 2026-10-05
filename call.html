@@ -603,10 +603,14 @@
             .invoke('twilio-start-transcription', {
               body: { call_sid: detail.callSid }
             })
-            .then(({ error }) => {
-              if(error){
-                console.error('Unable to start Twilio realtime transcription:', error);
+            .then(({ data, error }) => {
+              if(error || data?.ok === false){
+                console.error('Unable to start Twilio realtime transcription:', error || data);
+                const reason = data?.error
+                  ? (data?.code ? 'Twilio ' + data.code + ': ' + data.error : data.error)
+                  : (error?.message || 'Unknown transcription error');
                 setTranscriptStatus('Call connected · transcription unavailable');
+                alert('Transcription could not start.\n\n' + reason);
                 return;
               }
               subscribeToTwilioTranscript(detail.callSid);
@@ -614,6 +618,7 @@
             .catch(error => {
               console.error('Unable to start Twilio realtime transcription:', error);
               setTranscriptStatus('Call connected · transcription unavailable');
+              alert('Transcription could not start.\n\n' + (error?.message || 'Unknown transcription error'));
             });
         }
       }
