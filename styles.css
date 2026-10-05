@@ -4158,3 +4158,355 @@ html, body {
   font-size:9px;
   font-weight:800;
 }
+
+
+/* Account appearance: light / dark */
+.settings-theme-options{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:10px;
+}
+.settings-theme-option{
+  min-height:76px;
+  border:1px solid #dfe6ed;
+  border-radius:14px;
+  background:#fff;
+  color:#344960;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  font-weight:900;
+}
+.settings-theme-option i{width:22px;height:22px}
+.settings-theme-option.active{
+  border-color:#1688ff;
+  background:#eef6ff;
+  color:#1678db;
+  box-shadow:0 0 0 2px rgba(22,136,255,.10);
+}
+
+/* Call controls use circular icon buttons with labels beneath. */
+.call-control.small > i{
+  width:60px;
+  height:60px;
+  padding:18px;
+}
+.call-control.start-call,
+.call-control.hangup{
+  width:100%;
+  height:auto;
+  min-width:0;
+  max-width:none;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  gap:8px;
+  color:var(--navy-3);
+}
+.call-control.start-call > i,
+.call-control.hangup > i{
+  width:82px;
+  height:82px;
+  padding:23px;
+  border-radius:50%;
+  color:#fff;
+  flex:0 0 auto;
+}
+.call-control.start-call > i{
+  background:#23c977;
+  box-shadow:0 12px 25px rgba(35,201,119,.28);
+}
+.call-control.hangup > i{
+  background:#ff4848;
+  box-shadow:0 12px 25px rgba(255,72,72,.28);
+}
+.call-control.start-call span,
+.call-control.hangup span{
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.1;
+}
+@media(max-width:390px){
+  .call-control.small > i{
+    width:54px;
+    height:54px;
+    padding:16px;
+  }
+  .call-control.start-call,
+  .call-control.hangup{
+    width:100%;
+    height:auto;
+    min-width:0;
+    max-width:none;
+  }
+  .call-control.start-call > i,
+  .call-control.hangup > i{
+    width:74px;
+    height:74px;
+    padding:21px;
+  }
+}
+
+/* Full-app dark mode */
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --navy:#071421;
+  --navy-2:#0c2034;
+  --navy-3:#dce9f7;
+  --page:#07111c;
+  --card:#101f2f;
+  --text:#f4f8fc;
+  --muted:#8fa2b8;
+  --line:#243649;
+  --blue:#42a2ff;
+  --blue-soft:#122b44;
+  --green:#35d985;
+  --green-soft:#123428;
+  --orange:#ffab52;
+  --orange-soft:#382819;
+  --purple:#948bff;
+  --purple-soft:#27233f;
+  --shadow:0 12px 30px rgba(0,0,0,.28);
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .app{
+  background:var(--page);
+  color:var(--text);
+}
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .call-topbar{
+  background:linear-gradient(180deg,#081827 0%,#0b1e31 100%);
+  border-bottom:1px solid #1d3043;
+  box-shadow:0 6px 20px rgba(0,0,0,.30);
+}
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .light-card,
+html[data-theme="dark"] .lead-card,
+html[data-theme="dark"] .call-action-card,
+html[data-theme="dark"] .call-transcript-card,
+html[data-theme="dark"] .starter-script-card,
+html[data-theme="dark"] .settings-profile,
+html[data-theme="dark"] .settings-section,
+html[data-theme="dark"] .settings-sheet,
+html[data-theme="dark"] .settings-status-card,
+html[data-theme="dark"] .cc-live-card,
+html[data-theme="dark"] .cc-live-stat,
+html[data-theme="dark"] .activity-call-row,
+html[data-theme="dark"] .activity-followup-row,
+html[data-theme="dark"] .activity-transcript-sheet,
+html[data-theme="dark"] .admin-summary-card,
+html[data-theme="dark"] .admin-approval-card,
+html[data-theme="dark"] .admin-phone-card,
+html[data-theme="dark"] .admin-add-phone,
+html[data-theme="dark"] .admin-empty,
+html[data-theme="dark"] .admin-access-denied{
+  background:#101f2f;
+  color:var(--text);
+  border-color:#213449;
+  box-shadow:var(--shadow);
+}
+html[data-theme="dark"] .pill,
+html[data-theme="dark"] .mini-select,
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select,
+html[data-theme="dark"] .settings-field,
+html[data-theme="dark"] .admin-add-phone input,
+html[data-theme="dark"] .admin-phone-assign select{
+  background:#0c1a28;
+  color:#edf5fd;
+  border-color:#2a3d51;
+}
+html[data-theme="dark"] .pill{color:#9fb1c4}
+html[data-theme="dark"] .pill.active{
+  background:#1a5790;
+  border-color:#1a5790;
+  color:#fff;
+}
+html[data-theme="dark"] .company-icon,
+html[data-theme="dark"] .settings-icon,
+html[data-theme="dark"] .admin-summary-icon,
+html[data-theme="dark"] .admin-phone-card-icon,
+html[data-theme="dark"] .call-avatar{
+  background:#16314b;
+  color:#61b2ff;
+  border-color:#1a3046;
+}
+html[data-theme="dark"] .lead-title .name,
+html[data-theme="dark"] .contact-line,
+html[data-theme="dark"] .notes p,
+html[data-theme="dark"] .time-row,
+html[data-theme="dark"] .settings-copy small,
+html[data-theme="dark"] .settings-sheet-note,
+html[data-theme="dark"] .cc-muted,
+html[data-theme="dark"] .admin-section-head p{
+  color:#91a4b9;
+}
+html[data-theme="dark"] .settings-row,
+html[data-theme="dark"] .cc-row,
+html[data-theme="dark"] .feedback,
+html[data-theme="dark"] .notes{
+  border-color:#223548;
+}
+html[data-theme="dark"] .settings-row:hover,
+html[data-theme="dark"] .settings-row:active{
+  background:#132638;
+}
+html[data-theme="dark"] .bottom-nav{
+  background:rgba(10,24,38,.96);
+  border-color:#213449;
+  box-shadow:0 -7px 22px rgba(0,0,0,.28);
+}
+html[data-theme="dark"] .nav-item{color:#8093a8}
+html[data-theme="dark"] .nav-item.active{color:#54aaff}
+html[data-theme="dark"] .quick-btn,
+html[data-theme="dark"] .insight,
+html[data-theme="dark"] .bubble,
+html[data-theme="dark"] .transcript-bubble.muted,
+html[data-theme="dark"] .live-transcript-permission,
+html[data-theme="dark"] .admin-phone-box,
+html[data-theme="dark"] .admin-phone-assign,
+html[data-theme="dark"] .settings-permission-row,
+html[data-theme="dark"] .settings-question,
+html[data-theme="dark"] .pc-option,
+html[data-theme="dark"] .pc-confirm-summary{
+  background:#0c1a28;
+  border-color:#26394d;
+  color:#d9e5f2;
+}
+html[data-theme="dark"] .transcript-bubble.prospect{
+  background:#12304b;
+  color:#c9e4ff;
+}
+html[data-theme="dark"] .call-round-btn,
+html[data-theme="dark"] .call-control.small > i,
+html[data-theme="dark"] .call-keypad-close,
+html[data-theme="dark"] .call-keypad-key,
+html[data-theme="dark"] .activity-transcript-btn{
+  background:#122336;
+  color:#dbe8f6;
+  border-color:#263b51;
+  box-shadow:0 8px 20px rgba(0,0,0,.25);
+}
+html[data-theme="dark"] .call-control.small.active > i{
+  background:#173b5d;
+  color:#62b5ff;
+}
+html[data-theme="dark"] .call-control.small span,
+html[data-theme="dark"] .call-control.start-call span,
+html[data-theme="dark"] .call-control.hangup span{
+  color:#9db0c4;
+}
+html[data-theme="dark"] .call-keypad-sheet,
+html[data-theme="dark"] .post-call-sheet,
+html[data-theme="dark"] .call-tool-sheet{
+  background:#0b1724;
+  color:#eef5fc;
+}
+html[data-theme="dark"] .transcript-listening{
+  border-color:#23364a;
+  background:#0c1c2b;
+  color:#8fb2d3;
+}
+html[data-theme="dark"] .live-transcript-enable{
+  background:#167ee8;
+  color:#fff;
+}
+html[data-theme="dark"] .starter-script-tab{
+  background:#122437;
+  border-color:#293e54;
+  color:#a9bbce;
+}
+html[data-theme="dark"] .starter-script-tab.active{
+  background:#1b5d98;
+  color:#fff;
+  border-color:#2b7fc4;
+}
+html[data-theme="dark"] .starter-script-text{
+  color:#c9d7e5;
+}
+html[data-theme="dark"] .activity-search,
+html[data-theme="dark"] .activity-filter{
+  background:#0d1b29;
+  border-color:#263a4f;
+  color:#a7b8ca;
+}
+html[data-theme="dark"] .activity-filter.active{
+  background:#1c5f9e;
+  color:#fff;
+  border-color:#1c5f9e;
+}
+html[data-theme="dark"] .activity-outcome{
+  border-color:transparent;
+}
+html[data-theme="dark"] .activity-transcript-copy{
+  background:#0d1b29;
+  border-color:#263a4f;
+  color:#c4d4e4;
+}
+html[data-theme="dark"] .earn-hero{
+  background:linear-gradient(135deg,#123758,#091f35);
+}
+html[data-theme="dark"] .settings-switch{
+  background:#33475a;
+}
+html[data-theme="dark"] .settings-switch.on{
+  background:#1688ff;
+}
+html[data-theme="dark"] .settings-theme-option{
+  background:#0d1c2b;
+  color:#a9bbce;
+  border-color:#2a3e52;
+}
+html[data-theme="dark"] .settings-theme-option.active{
+  background:#143554;
+  color:#69b8ff;
+  border-color:#2c82ca;
+}
+html[data-theme="dark"] .settings-skeleton-profile,
+html[data-theme="dark"] .settings-skeleton-card{
+  background:#101f2f;
+  border-color:#213449;
+}
+html[data-theme="dark"] .settings-skeleton-circle,
+html[data-theme="dark"] .settings-skeleton-line,
+html[data-theme="dark"] .settings-skeleton-pill,
+html[data-theme="dark"] .settings-skeleton-heading,
+html[data-theme="dark"] .settings-skeleton-row{
+  background:linear-gradient(90deg,#142536 25%,#1b3043 37%,#142536 63%);
+}
+html[data-theme="dark"] .admin-phone-active{
+  background:#143729;
+  color:#4ee097;
+}
+html[data-theme="dark"] .admin-pending-badge,
+html[data-theme="dark"] .cc-status.pending{
+  background:#3a2d18;
+  color:#ffc66f;
+}
+html[data-theme="dark"] .admin-phone-toggle,
+html[data-theme="dark"] .admin-phone-delete,
+html[data-theme="dark"] .admin-phone-ready,
+html[data-theme="dark"] .admin-reject-btn{
+  background:#0d1b29;
+}
+html[data-theme="dark"] .device-notification-popup,
+html[data-theme="dark"] .app-modal,
+html[data-theme="dark"] .scheduled-call-alert{
+  background:#101f2f;
+  color:#eef5fc;
+}
+html[data-theme="dark"] .device-notification-popup-note{
+  background:#0c1a28;
+  color:#9fb1c4;
+}
+html[data-theme="dark"] .app-modal-overlay,
+html[data-theme="dark"] .settings-sheet-overlay,
+html[data-theme="dark"] .activity-transcript-overlay,
+html[data-theme="dark"] .post-call-overlay,
+html[data-theme="dark"] .call-keypad-overlay{
+  background:rgba(0,6,12,.70);
+}
