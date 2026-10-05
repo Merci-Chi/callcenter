@@ -3052,6 +3052,25 @@ async function crmRunGlobalSearch() {
 function crmSetupGlobalSearchControls() {
   const input = q('#crmSearch');
   if (input) {
+    input.onfocus = () => {
+      const selectedLeadTop = q('#selectedLeadTop');
+      const controls = q('.outreach-controls');
+
+      // Collapse the selected lead immediately when Search is tapped,
+      // before iOS finishes opening the keyboard.
+      selectedLeadTop?.replaceChildren();
+
+      if (controls) {
+        const top = window.scrollY + controls.getBoundingClientRect().top - 8;
+        window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'auto' });
+      }
+
+      // Re-assert the position after Safari adjusts the visual viewport.
+      requestAnimationFrame(() => crmKeepSearchControlsAtTop());
+      setTimeout(() => crmKeepSearchControlsAtTop(), 40);
+      setTimeout(() => crmKeepSearchControlsAtTop(), 160);
+    };
+
     input.oninput = () => {
       clearTimeout(crmSearchState.timer);
       crmRunGlobalSearch();
