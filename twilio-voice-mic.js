@@ -10,6 +10,7 @@ let tokenRefreshPromise = null;
 let userMuted = false;
 let held = false;
 let preferredSpeakerDeviceId = null;
+let holdAudioProcessor = null;
 
 function emit(state, extra = {}) {
   window.dispatchEvent(new CustomEvent('steadyhands:voice-state', {
@@ -220,8 +221,71 @@ function hangup() {
 
 function applyTransmitState() {
   if (!activeCall) return false;
-  activeCall.mute(Boolean(userMuted || held));
+  // While held, the local hold-audio processor replaces the microphone.
+  // Do not mute the call itself or the hold audio would also be muted.
+  activeCall.mute(Boolean(held ? false : userMuted));
   return true;
+}
+
+class HoldAudioProcessor {
+  constructor() {
+    this.audioContext = null;
+    this.destination = null;
+    this.oscillator = null;
+    this.gain = null;
+    this.timer = null;
+    this.step = 0;
+  }
+
+  async createProcessedStream() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Hold audio is not supported in this browser.');
+
+    this.audioContext = new AudioContextClass();
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume().catch(() => {});
+    }
+
+    this.destination = this.audioContext.createMediaStreamDestination();
+    this.oscillator = this.audioContext.createOscillator();
+    this.gain = this.audioContext.createGain();
+
+    this.oscillator.type = 'sine';
+    this.gain.gain.value = 0.045;
+
+    this.oscillator.connect(this.gain);
+    this.gain.connect(this.destination);
+
+    const notes = [261.63, 329.63, 392.0, 329.63, 293.66, 349.23, 440.0, 349.23];
+    this.oscillator.frequency.value = notes[0];
+    this.oscillator.start();
+
+    this.timer = setInterval(() => {
+      if (!this.oscillator || !this.audioContext) return;
+      this.step = (this.step + 1) % notes.length;
+      const now = this.audioContext.currentTime;
+      this.oscillator.frequency.cancelScheduledValues(now);
+      this.oscillator.frequency.setTargetAtTime(notes[this.step], now, 0.025);
+    }, 650);
+
+    return this.destination.stream;
+  }
+
+  async destroyProcessedStream() {
+    if (this.timer) clearInterval(this.timer);
+    this.timer = null;
+
+    try { this.oscillator?.stop(); } catch {}
+    try { this.oscillator?.disconnect(); } catch {}
+    try { this.gain?.disconnect(); } catch {}
+    try { this.destination?.disconnect(); } catch {}
+    try { await this.audioContext?.close(); } catch {}
+
+    this.audioContext = null;
+    this.destination = null;
+    this.oscillator = null;
+    this.gain = null;
+  }
 }
 
 function setMuted(muted) {
@@ -230,10 +294,37 @@ function setMuted(muted) {
   return userMuted;
 }
 
-function setHeld(nextHeld) {
-  held = Boolean(nextHeld);
+async function setHeld(nextHeld) {
+  const next = Boolean(nextHeld);
+  if (next === held) return held;
+
+  if (!device?.audio || typeof device.audio.addProcessor !== 'function') {
+    held = next;
+    // Fallback: silence the mic when the browser/SDK cannot inject hold audio.
+    activeCall?.mute(Boolean(held || userMuted));
+    return held;
+  }
+
+  if (next) {
+    holdAudioProcessor = new HoldAudioProcessor();
+    activeCall?.mute(false);
+    await device.audio.addProcessor(holdAudioProcessor, false);
+    held = true;
+    return true;
+  }
+
+  if (holdAudioProcessor) {
+    try {
+      await device.audio.removeProcessor(holdAudioProcessor, false);
+    } catch (error) {
+      console.warn('Unable to remove hold audio processor:', error);
+    }
+  }
+
+  holdAudioProcessor = null;
+  held = false;
   applyTransmitState();
-  return held;
+  return false;
 }
 
 function isHeld() {
