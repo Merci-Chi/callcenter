@@ -382,6 +382,16 @@ async function toggleSpeakerOutput() {
   };
 }
 
+function sendDigits(digits) {
+  if (!activeCall) return false;
+  const value = String(digits || '');
+  if (!/^[0-9A-D*#wW]+$/.test(value)) {
+    throw new Error('Invalid keypad digits.');
+  }
+  activeCall.sendDigits(value);
+  return true;
+}
+
 function isActive() {
   return Boolean(activeCall);
 }
@@ -394,6 +404,7 @@ window.SteadyHandsTwilioVoice = {
   isHeld,
   toggleSpeakerOutput,
   getSpeakerInfo,
+  sendDigits,
   isActive,
   refreshToken
 };
