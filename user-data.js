@@ -414,7 +414,7 @@
 
   window.callcenterRecordCall = async ({ crmId = null, duration = 0, outcome = '' } = {}) => {
     const c = client();
-    if (!c || !duration) return null;
+    if (!c) return null;
 
     const { data:{ session } = {} } = await c.auth.getSession();
     if (!session) return null;
@@ -1070,11 +1070,34 @@
     if (crmIds.length) {
       const { data } = await c
         .from('crm')
-        .select('id,company,name,phone,callbackdate,callbackat,notes,stage,outcome')
+        .select('id,company,name,phone,callbackdate,callbackat,notes,stage,outcome,timezone')
         .in('id', crmIds.slice(0,500));
       leads = data || [];
     }
     const leadMap = new Map(leads.map(lead => [lead.id, lead]));
+
+    const activityIds = activities.map(row => row.id).filter(Boolean);
+    let transcriptRows = [];
+    if (activityIds.length) {
+      const { data, error } = await c
+        .from('callcenter_transcripts')
+        .select('id,call_activity_id,transcript,segments,started_at,ended_at,outcome,created_at')
+        .in('call_activity_id', activityIds.slice(0,500))
+        .order('created_at', { ascending:false });
+
+      if (error) {
+        console.warn('Unable to load Activity transcripts:', error);
+      } else {
+        transcriptRows = data || [];
+      }
+    }
+
+    const transcriptMap = new Map();
+    for (const transcriptRow of transcriptRows) {
+      if (transcriptRow.call_activity_id && !transcriptMap.has(transcriptRow.call_activity_id)) {
+        transcriptMap.set(transcriptRow.call_activity_id, transcriptRow);
+      }
+    }
 
     const formatDuration = seconds => {
       const total = Number(seconds) || 0;
@@ -1091,6 +1114,32 @@
     const formatDate = value => {
       try { return new Date(value).toLocaleDateString([], { month:'short', day:'numeric' }); }
       catch (_) { return ''; }
+    };
+
+    const leadTimeZone = lead => {
+      const explicit = String(lead?.timezone || '').trim();
+      if (explicit) return explicit;
+      try {
+        return window.callcenterLeadZone?.(lead?.phone || '', '')?.zone || '';
+      } catch (_) {
+        return '';
+      }
+    };
+
+    const formatLeadDateTime = (value, lead) => {
+      try {
+        const zone = leadTimeZone(lead);
+        if (!zone) return formatDate(value) + ' · ' + formatTime(value);
+        return new Intl.DateTimeFormat([], {
+          timeZone: zone,
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit'
+        }).format(new Date(value));
+      } catch (_) {
+        return formatDate(value) + ' · ' + formatTime(value);
+      }
     };
 
     const normalizedOutcome = row => String(row.outcome || '').toLowerCase();
@@ -1114,6 +1163,7 @@
       if (/not interested/.test(lower)) return { cls:'notinterested', icon:'ban', label:'Not Interested' };
       if (/follow up/.test(lower)) return { cls:'followup', icon:'users', label:'Follow Up' };
       if (/call back|callback|requested text|requested email/.test(lower)) return { cls:'callback', icon:'calendar-clock', label:'Call Back' };
+      if (/didn.t call/.test(lower)) return { cls:'noanswer', icon:'phone-off', label:"Didn't call" };
       if (/no answer|voicemail|didn.t answer/.test(lower)) return { cls:'noanswer', icon:'phone-missed', label:/voicemail/.test(lower)?'Voicemail':'No Answer' };
       return { cls:'noanswer', icon:'phone', label:text.length > 18 ? 'Called' : text };
     };
@@ -1134,14 +1184,29 @@
       const lead = leadMap.get(row.crm_id);
       const meta = outcomeMeta(row);
       const label = lead?.company || lead?.name || 'Lead';
+      const transcriptRow = transcriptMap.get(row.id);
+      const transcriptAvailable = Boolean(String(transcriptRow?.transcript || '').trim());
+      const yourDateTime = formatDate(row.created_at) + ' · ' + formatTime(row.created_at);
+      const theirDateTime = formatLeadDateTime(row.created_at, lead);
+
       return `<div class="activity-call-row" data-activity-text="${esc((label+' '+(lead?.phone||'')+' '+(row.outcome||'')).toLowerCase())}" data-outcome="${esc(meta.cls)}">
         <div class="activity-avatar">${esc(initialsFor(lead))}</div>
         <div class="activity-call-main">
           <strong>${esc(label)}</strong>
           <small>${lead?.phone ? esc(lead.phone) + ' · ' : ''}${formatDuration(row.duration_seconds)}</small>
+          <div class="activity-call-times">
+            <span><b>You</b> ${esc(yourDateTime)}</span>
+            <span><b>Lead</b> ${esc(theirDateTime)}</span>
+          </div>
         </div>
         <div class="activity-call-side">
-          <time>${formatDate(row.created_at)} · ${formatTime(row.created_at)}</time>
+          <button class="activity-transcript-btn" type="button"
+            data-transcript-id="${transcriptAvailable ? esc(transcriptRow.id) : ''}"
+            aria-label="${transcriptAvailable ? 'View transcript' : 'No transcript available'}"
+            title="${transcriptAvailable ? 'View transcript' : 'No transcript available'}"
+            ${transcriptAvailable ? '' : 'disabled'}>
+            <i data-lucide="captions"></i>
+          </button>
           <span class="activity-outcome ${meta.cls}"><i data-lucide="${meta.icon}"></i>${esc(meta.label)}</span>
         </div>
       </div>`;
@@ -1216,6 +1281,38 @@
         ${renderFollowups(followups.slice(0,4))}
       </section>
     `;
+
+    const openTranscript = transcriptId => {
+      const row = transcriptRows.find(item => String(item.id) === String(transcriptId));
+      if (!row) return;
+
+      document.querySelector('.activity-transcript-overlay')?.remove();
+      const overlay = document.createElement('div');
+      overlay.className = 'activity-transcript-overlay';
+      overlay.innerHTML = `
+        <section class="activity-transcript-sheet" role="dialog" aria-modal="true" aria-label="Call transcript">
+          <div class="activity-transcript-head">
+            <div>
+              <span>Call Transcript</span>
+              <strong>${esc(row.outcome || 'Recent call')}</strong>
+            </div>
+            <button type="button" class="activity-transcript-close" aria-label="Close transcript"><i data-lucide="x"></i></button>
+          </div>
+          <div class="activity-transcript-copy">${esc(String(row.transcript || 'No transcript text was captured.')).replace(/\n/g,'<br>')}</div>
+        </section>`;
+      document.body.appendChild(overlay);
+      overlay.querySelector('.activity-transcript-close')?.addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', event => {
+        if (event.target === overlay) overlay.remove();
+      });
+      window.lucide?.createIcons();
+    };
+
+    main.addEventListener('click', event => {
+      const button = event.target.closest?.('.activity-transcript-btn[data-transcript-id]');
+      if (!button || button.disabled || !button.dataset.transcriptId) return;
+      openTranscript(button.dataset.transcriptId);
+    });
 
     let currentFilter = 'all';
     let showAllRecent = false;
