@@ -73,17 +73,137 @@
   async function loadApprovals(main, session) {
     const c = client();
 
-    const { data: pending = [], error } = await c
-      .from('callcenter_profiles')
-      .select('user_id,display_name,email,phone,phone_verified_at,phone_approval_status,phone_approval_requested_at')
-      .eq('phone_approval_status','pending')
-      .not('phone_verified_at','is',null)
-      .order('phone_approval_requested_at',{ascending:true});
+    const [
+      { data: pending = [], error: pendingError },
+      { data: profiles = [], error: profilesError },
+      { data: phoneNumbers = [], error: phoneNumbersError },
+      { data: assignments = [], error: assignmentsError }
+    ] = await Promise.all([
+      c
+        .from('callcenter_profiles')
+        .select('user_id,display_name,email,phone,phone_verified_at,phone_approval_status,phone_approval_requested_at')
+        .eq('phone_approval_status','pending')
+        .not('phone_verified_at','is',null)
+        .order('phone_approval_requested_at',{ascending:true}),
+      c
+        .from('callcenter_profiles')
+        .select('user_id,display_name,email')
+        .order('display_name',{ascending:true}),
+      c
+        .from('callcenter_phone_numbers')
+        .select('id,phone_number,label,active,created_at')
+        .order('created_at',{ascending:true}),
+      c
+        .from('callcenter_phone_assignments')
+        .select('id,user_id,phone_number_id,updated_at')
+    ]);
 
-    if (error) {
-      errorState(main, error.message);
+    const callerIdSchemaMissing =
+      phoneNumbersError?.code === '42P01' ||
+      assignmentsError?.code === '42P01' ||
+      /callcenter_phone_(numbers|assignments)/i.test(phoneNumbersError?.message || assignmentsError?.message || '');
+
+    if (pendingError || profilesError || (!callerIdSchemaMissing && (phoneNumbersError || assignmentsError))) {
+      errorState(main, (pendingError || profilesError || phoneNumbersError || assignmentsError)?.message);
       return;
     }
+
+    const assignmentByPhone = new Map(
+      (assignments || []).map(row => [String(row.phone_number_id), row])
+    );
+
+    const profileByUser = new Map(
+      (profiles || []).map(row => [String(row.user_id), row])
+    );
+
+    const callerIdSection = callerIdSchemaMissing
+      ? `
+        <section class="admin-approval-section admin-callerid-section">
+          <div class="admin-section-head">
+            <div>
+              <h2>Outbound Phone Numbers</h2>
+              <p>Run the caller-ID SQL migration first, then refresh this page.</p>
+            </div>
+          </div>
+          <div class="admin-empty">
+            <i data-lucide="database-zap"></i>
+            <strong>Caller ID setup required</strong>
+            <span>The callcenter_phone_numbers tables do not exist yet.</span>
+          </div>
+        </section>`
+      : `
+        <section class="admin-approval-section admin-callerid-section">
+          <div class="admin-section-head">
+            <div>
+              <h2>Outbound Phone Numbers</h2>
+              <p>Add Twilio-owned numbers and assign one default caller ID to each account.</p>
+            </div>
+            <span class="admin-count admin-phone-count">${phoneNumbers.length}</span>
+          </div>
+
+          <form class="admin-add-phone" id="adminAddPhoneForm">
+            <label>
+              <span>Twilio number</span>
+              <input id="adminPhoneNumber" type="tel" inputmode="tel" placeholder="+17025550101" required />
+            </label>
+            <label>
+              <span>Label</span>
+              <input id="adminPhoneLabel" type="text" maxlength="60" placeholder="Sales Line 1" />
+            </label>
+            <button type="submit"><i data-lucide="plus"></i>Add Number</button>
+          </form>
+
+          <div class="admin-phone-list" id="adminPhoneList">
+            ${phoneNumbers.length ? phoneNumbers.map(row => {
+              const assignment = assignmentByPhone.get(String(row.id));
+              const assignedUserId = assignment?.user_id || '';
+              const assignedProfile = assignedUserId ? profileByUser.get(String(assignedUserId)) : null;
+              const options = [
+                '<option value="">Unassigned</option>',
+                ...profiles.map(profile => {
+                  const selected = String(profile.user_id) === String(assignedUserId) ? ' selected' : '';
+                  const label = profile.display_name || profile.email || 'Account';
+                  return '<option value="' + esc(profile.user_id) + '"' + selected + '>' + esc(label) + '</option>';
+                })
+              ].join('');
+
+              return `
+                <article class="admin-phone-card" data-phone-id="${esc(row.id)}">
+                  <div class="admin-phone-card-head">
+                    <div class="admin-phone-card-icon"><i data-lucide="phone-call"></i></div>
+                    <div class="admin-phone-card-copy">
+                      <strong>${esc(formatPhone(row.phone_number))}</strong>
+                      <span>${esc(row.label || 'Outbound caller ID')}</span>
+                    </div>
+                    <span class="admin-phone-active">${row.active ? 'Active' : 'Inactive'}</span>
+                  </div>
+
+                  <label class="admin-phone-assign">
+                    <span>Assigned account</span>
+                    <select data-phone-assignment>
+                      ${options}
+                    </select>
+                    <small>${assignedProfile ? 'Calls from ' + esc(assignedProfile.display_name || assignedProfile.email || 'this account') + ' use this number.' : 'This number is not assigned to an account.'}</small>
+                  </label>
+
+                  <div class="admin-phone-actions">
+                    <button type="button" class="admin-phone-toggle" data-phone-toggle>
+                      <i data-lucide="${row.active ? 'pause' : 'play'}"></i>
+                      ${row.active ? 'Disable' : 'Enable'}
+                    </button>
+                    <button type="button" class="admin-phone-delete" data-phone-delete>
+                      <i data-lucide="trash-2"></i>Remove
+                    </button>
+                  </div>
+                </article>`;
+            }).join('') : `
+              <div class="admin-empty">
+                <i data-lucide="phone-call"></i>
+                <strong>No outbound numbers yet</strong>
+                <span>Add a Twilio-owned phone number above.</span>
+              </div>`}
+          </div>
+        </section>`;
 
     main.innerHTML = `
       <section class="admin-summary-card">
@@ -93,6 +213,8 @@
           <span>Signed in as ${esc(session.user.email || '')}</span>
         </div>
       </section>
+
+      ${callerIdSection}
 
       <section class="admin-approval-section">
         <div class="admin-section-head">
@@ -191,6 +313,135 @@
           card.remove();
           updateCount();
         },180);
+      });
+    });
+
+    const normalizeE164 = value => {
+      const raw = String(value || '').trim();
+      const digits = raw.replace(/\D/g,'');
+      if (!digits) return '';
+      if (raw.startsWith('+')) return '+' + digits;
+      if (digits.length === 10) return '+1' + digits;
+      if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+      return '+' + digits;
+    };
+
+    document.getElementById('adminAddPhoneForm')?.addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const number = normalizeE164(document.getElementById('adminPhoneNumber')?.value || '');
+      const label = String(document.getElementById('adminPhoneLabel')?.value || '').trim();
+
+      if (!/^\+[1-9]\d{7,14}$/.test(number)) {
+        alert('Enter a valid phone number, for example +17025550101.');
+        return;
+      }
+
+      const submit = form.querySelector('button[type="submit"]');
+      submit.disabled = true;
+
+      const { error } = await c
+        .from('callcenter_phone_numbers')
+        .insert({
+          phone_number:number,
+          label,
+          active:true,
+          updated_at:new Date().toISOString()
+        });
+
+      if (error) {
+        submit.disabled = false;
+        alert(error.message || 'Unable to add this number.');
+        return;
+      }
+
+      location.reload();
+    });
+
+    main.querySelectorAll('[data-phone-assignment]').forEach(select => {
+      select.addEventListener('change', async () => {
+        const card = select.closest('.admin-phone-card');
+        const phoneNumberId = card?.dataset.phoneId;
+        const userId = select.value || '';
+        if (!phoneNumberId) return;
+
+        select.disabled = true;
+
+        try {
+          const { error:clearPhoneError } = await c
+            .from('callcenter_phone_assignments')
+            .delete()
+            .eq('phone_number_id',phoneNumberId);
+          if (clearPhoneError) throw clearPhoneError;
+
+          if (userId) {
+            const { error:clearUserError } = await c
+              .from('callcenter_phone_assignments')
+              .delete()
+              .eq('user_id',userId);
+            if (clearUserError) throw clearUserError;
+
+            const { error:insertError } = await c
+              .from('callcenter_phone_assignments')
+              .insert({
+                user_id:userId,
+                phone_number_id:phoneNumberId,
+                updated_at:new Date().toISOString()
+              });
+            if (insertError) throw insertError;
+          }
+
+          location.reload();
+        } catch (error) {
+          select.disabled = false;
+          alert(error?.message || 'Unable to update this caller ID assignment.');
+        }
+      });
+    });
+
+    main.querySelectorAll('[data-phone-toggle]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest('.admin-phone-card');
+        const phoneNumberId = card?.dataset.phoneId;
+        const phone = phoneNumbers.find(item => String(item.id) === String(phoneNumberId));
+        if (!phone) return;
+
+        button.disabled = true;
+        const { error } = await c
+          .from('callcenter_phone_numbers')
+          .update({ active:!phone.active, updated_at:new Date().toISOString() })
+          .eq('id',phoneNumberId);
+
+        if (error) {
+          button.disabled = false;
+          alert(error.message || 'Unable to update this number.');
+          return;
+        }
+
+        location.reload();
+      });
+    });
+
+    main.querySelectorAll('[data-phone-delete]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest('.admin-phone-card');
+        const phoneNumberId = card?.dataset.phoneId;
+        if (!phoneNumberId) return;
+        if (!confirm('Remove this outbound phone number from Outreach?')) return;
+
+        button.disabled = true;
+        const { error } = await c
+          .from('callcenter_phone_numbers')
+          .delete()
+          .eq('id',phoneNumberId);
+
+        if (error) {
+          button.disabled = false;
+          alert(error.message || 'Unable to remove this number.');
+          return;
+        }
+
+        location.reload();
       });
     });
 
