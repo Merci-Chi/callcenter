@@ -57,16 +57,52 @@ Deno.serve(async (req) => {
     const params = new URLSearchParams(raw);
     const signature = req.headers.get('x-twilio-signature') || '';
 
-    const callbackUrl =
-      Deno.env.get('TWILIO_TRANSCRIPTION_CALLBACK_URL') || req.url;
+    const canonicalCallbackUrl =
+      supabaseUrl.replace(/\/$/, '') + '/functions/v1/twilio-transcription-webhook';
+    const configuredCallbackUrl = Deno.env.get('TWILIO_TRANSCRIPTION_CALLBACK_URL') || '';
 
-    if (!signature || !(await verifyTwilioSignature(callbackUrl, params, signature, authToken))) {
-      console.warn('Rejected Twilio transcription webhook with invalid signature.');
+    const callbackCandidates = [
+      configuredCallbackUrl,
+      canonicalCallbackUrl,
+      req.url,
+    ].filter((value, index, list) => value && list.indexOf(value) === index);
+
+    let signatureValid = false;
+    if (signature) {
+      for (const callbackUrl of callbackCandidates) {
+        if (await verifyTwilioSignature(callbackUrl, params, signature, authToken)) {
+          signatureValid = true;
+          break;
+        }
+      }
+    }
+
+    if (!signatureValid) {
+      console.warn('Rejected Twilio transcription webhook with invalid signature.', {
+        event: params.get('TranscriptionEvent') || '',
+        callSid: params.get('CallSid') || '',
+      });
       return new Response('Forbidden', { status: 403 });
     }
 
     const event = params.get('TranscriptionEvent') || '';
+
+    if (event === 'transcription-error') {
+      console.error('Twilio realtime transcription error:', {
+        callSid: params.get('CallSid') || '',
+        transcriptionSid: params.get('TranscriptionSid') || '',
+        errorCode: params.get('ErrorCode') || '',
+        errorMessage: params.get('ErrorMessage') || '',
+      });
+      return new Response('ok', { status: 200 });
+    }
+
     if (event !== 'transcription-content') {
+      console.log('Twilio realtime transcription event:', {
+        event,
+        callSid: params.get('CallSid') || '',
+        transcriptionSid: params.get('TranscriptionSid') || '',
+      });
       return new Response('ok', { status: 200 });
     }
 
