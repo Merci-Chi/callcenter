@@ -91,7 +91,7 @@
         .order('display_name',{ascending:true}),
       c
         .from('callcenter_phone_numbers')
-        .select('id,phone_number,label,active,twilio_status,created_at')
+        .select('id,phone_number,label,active,twilio_status,requested_by_user_id,requested_at,created_at')
         .order('created_at',{ascending:true}),
       c
         .from('callcenter_phone_assignments')
@@ -158,6 +158,7 @@
               const assignment = assignmentByPhone.get(String(row.id));
               const assignedUserId = assignment?.user_id || '';
               const assignedProfile = assignedUserId ? profileByUser.get(String(assignedUserId)) : null;
+              const requestedProfile = row.requested_by_user_id ? profileByUser.get(String(row.requested_by_user_id)) : null;
               const options = [
                 '<option value="">Unassigned</option>',
                 ...profiles.map(profile => {
@@ -174,6 +175,7 @@
                     <div class="admin-phone-card-copy">
                       <strong>${esc(formatPhone(row.phone_number))}</strong>
                       <span>${esc(row.label || 'Outbound caller ID')}</span>
+                      ${requestedProfile ? '<small>Requested by ' + esc(requestedProfile.display_name || requestedProfile.email || 'Account') + '</small>' : ''}
                     </div>
                     <span class="admin-phone-active">${row.twilio_status === 'ready' ? 'Twilio Ready' : 'Pending Twilio'}</span>
                   </div>
@@ -418,18 +420,47 @@
         }
 
         button.disabled = true;
-        const { error } = await c
-          .from('callcenter_phone_numbers')
-          .update({ twilio_status:nextStatus, updated_at:new Date().toISOString() })
-          .eq('id',phoneNumberId);
 
-        if (error) {
+        try {
+          const { error } = await c
+            .from('callcenter_phone_numbers')
+            .update({ twilio_status:nextStatus, updated_at:new Date().toISOString() })
+            .eq('id',phoneNumberId);
+
+          if (error) throw error;
+
+          // A number submitted by an account is automatically assigned to that
+          // account when an admin marks it ready.
+          if (nextStatus === 'ready' && phone.requested_by_user_id) {
+            const requestedUserId = String(phone.requested_by_user_id);
+
+            const { error:clearUserError } = await c
+              .from('callcenter_phone_assignments')
+              .delete()
+              .eq('user_id',requestedUserId);
+            if (clearUserError) throw clearUserError;
+
+            const { error:clearPhoneError } = await c
+              .from('callcenter_phone_assignments')
+              .delete()
+              .eq('phone_number_id',phoneNumberId);
+            if (clearPhoneError) throw clearPhoneError;
+
+            const { error:assignError } = await c
+              .from('callcenter_phone_assignments')
+              .insert({
+                user_id:requestedUserId,
+                phone_number_id:phoneNumberId,
+                updated_at:new Date().toISOString()
+              });
+            if (assignError) throw assignError;
+          }
+
+          location.reload();
+        } catch (error) {
           button.disabled = false;
-          alert(error.message || 'Unable to update Twilio verification status.');
-          return;
+          alert(error?.message || 'Unable to update Twilio verification status.');
         }
-
-        location.reload();
       });
     });
 
