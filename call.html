@@ -68,15 +68,15 @@
       <div class="live-transcript-head">
         <div>
           <h2>Transcript</h2>
-          <p>Uses your microphone to create a live transcript.</p>
+          <p>Transcribes both sides of the Twilio call in real time.</p>
         </div>
         <button class="live-transcript-enable" id="enableLiveTranscript" type="button"><i data-lucide="mic"></i> Enable Live Transcript</button>
       </div>
 
       <div class="live-transcript-permission" id="liveTranscriptPermission">
         <strong>Enable live transcript?</strong>
-        <p>Tap the button above, then allow microphone access when your browser asks. If you previously blocked it, open your browser’s site settings and change Microphone to Allow, then try again.</p>
-        <small>This listens to your microphone only.</small>
+        <p>Enable this before dialing to show both your speech and the customer's speech here while the call is active.</p>
+        <small>Powered by Twilio Real-Time Transcriptions.</small>
       </div>
 
       <div class="call-transcript-card">
@@ -436,7 +436,8 @@
 
       await window.SteadyHandsTwilioVoice.start(number, {
         crmId,
-        company
+        company,
+        transcribe: liveTranscriptRequested
       });
     } catch (error) {
       console.error('Unable to start Twilio call:', error);
@@ -453,13 +454,14 @@
           <div class="call-time-confirm-icon"><i data-lucide="captions"></i></div>
           <p class="call-time-confirm-question">Live transcript</p>
           <strong class="call-time-confirm-time" style="font-size:1.25rem">Enable transcript for this call?</strong>
-          <p class="call-time-confirm-hours">Your microphone will be used to create and save a live transcript while you talk.</p>
+          <p class="call-time-confirm-hours">Twilio will transcribe both sides of the call — you and the customer — and stream the text into this call screen.</p>
         </div>`;
 
       modal('Before you call', body, [
         {
           label: 'Not Now',
           onClick: close => {
+            liveTranscriptRequested = false;
             unlockRingbackAudio();
             close();
             resolve('skip');
@@ -468,11 +470,15 @@
         {
           label: 'Enable & Call',
           primary: true,
-          onClick: async close => {
+          onClick: close => {
+            liveTranscriptRequested = true;
+            transcriptStartedAt = Date.now();
+            setTranscriptStatus('Waiting for Twilio transcription…', true);
+            const button = document.getElementById('enableLiveTranscript');
+            if(button) button.innerHTML = '<i data-lucide="captions"></i> Live Transcript On';
             unlockRingbackAudio();
-            const enabled = await enableLiveTranscript();
-            if(!enabled) return;
             close();
+            lucide.createIcons();
             resolve('enabled');
           }
         }
@@ -583,6 +589,9 @@
     if (voiceState === 'connected') {
       stopRingback();
       setState('connected');
+      if(liveTranscriptRequested && detail.callSid){
+        subscribeToTwilioTranscript(detail.callSid);
+      }
       syncMainCallButton();
       return;
     }
@@ -851,6 +860,9 @@
 
   let speechRecognition = null;
   let liveTranscriptEnabled = false;
+  let liveTranscriptRequested = false;
+  let liveTranscriptChannel = null;
+  let currentTranscriptCallSid = '';
   let transcriptStartedAt = null;
   let transcriptSegments = [];
   let callConnectedAt = null;
@@ -894,7 +906,7 @@
         .filter(segment => segment.text);
 
       const plainTranscript = finalSegments
-        .map(segment => segment.text)
+        .map(segment => (segment.speaker === 'customer' ? 'Customer: ' : 'You: ') + segment.text)
         .join('\n')
         .trim();
 
@@ -949,6 +961,83 @@
       console.error('Unable to save call transcript:', error);
       return false;
     }
+  }
+
+  async function subscribeToTwilioTranscript(callSid){
+    const client = window.steadyHandsCRMClient;
+    if(!client || !callSid) return;
+
+    if(liveTranscriptChannel){
+      try{ await client.removeChannel(liveTranscriptChannel); }catch{}
+      liveTranscriptChannel = null;
+    }
+
+    currentTranscriptCallSid = callSid;
+    setTranscriptStatus('Listening to both sides of the call…', true);
+
+    liveTranscriptChannel = client
+      .channel('live-transcript-' + callSid)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'callcenter_live_transcript_events',
+          filter: 'call_sid=eq.' + callSid
+        },
+        payload => renderTwilioTranscriptEvent(payload.new || {})
+      )
+      .subscribe(status => {
+        if(status === 'SUBSCRIBED'){
+          setTranscriptStatus('Listening to both sides of the call…', true);
+        }
+      });
+  }
+
+  function renderTwilioTranscriptEvent(eventRow){
+    const text = String(eventRow?.text || '').trim();
+    if(!text) return;
+
+    const speakerKey = eventRow?.speaker === 'customer' ? 'customer' : 'agent';
+    const speakerLabel = speakerKey === 'customer' ? 'Customer' : 'You';
+    const interim = !eventRow?.is_final;
+
+    const list = document.getElementById('liveTranscriptList');
+    if(!list) return;
+    document.getElementById('liveTranscriptEmpty')?.remove();
+
+    let row = interim
+      ? list.querySelector('.live-transcript-row.interim[data-speaker="' + speakerKey + '"]')
+      : null;
+
+    if(!row){
+      row = document.createElement('div');
+      row.className = 'live-transcript-row' + (interim ? ' interim' : '');
+      row.dataset.speaker = speakerKey;
+      row.innerHTML = '<div class="transcript-meta"><span></span><strong></strong></div><div class="transcript-bubble"></div>';
+      if(speakerKey === 'agent') row.querySelector('.transcript-bubble').classList.add('muted');
+      else row.querySelector('.transcript-bubble').classList.add('prospect');
+      list.appendChild(row);
+    }
+
+    row.querySelector('.transcript-meta span').textContent = transcriptTime();
+    row.querySelector('.transcript-meta strong').textContent = speakerLabel;
+    row.querySelector('.transcript-bubble').textContent = text;
+
+    if(!interim){
+      const existingInterim = list.querySelector('.live-transcript-row.interim[data-speaker="' + speakerKey + '"]');
+      if(existingInterim && existingInterim !== row) existingInterim.remove();
+      row.classList.remove('interim');
+
+      transcriptSegments.push({
+        speaker: speakerKey,
+        start_seconds: transcriptElapsedSeconds(),
+        text,
+        interim: false
+      });
+    }
+
+    row.scrollIntoView({block:'nearest',behavior:'smooth'});
   }
 
   function addTranscriptLine(text, interim=false){
@@ -1060,17 +1149,25 @@
     }
   }
 
-  document.getElementById('enableLiveTranscript')?.addEventListener('click', () => {
-    if(liveTranscriptEnabled && speechRecognition){
-      liveTranscriptEnabled = false;
-      try{ speechRecognition.stop(); }catch{}
-      setTranscriptStatus('Live transcript is off');
-      const button = document.getElementById('enableLiveTranscript');
-      if(button) button.innerHTML = '<i data-lucide="mic"></i> Enable Live Transcript';
-      lucide.createIcons();
+  document.getElementById('enableLiveTranscript')?.addEventListener('click', function(){
+    if(['calling','ringing','connected'].includes(callState)){
+      if(liveTranscriptRequested){
+        alert('Live transcription is already enabled for this call.');
+      }else{
+        alert('Enable live transcription before starting the call so Twilio can capture both sides.');
+      }
       return;
     }
-    enableLiveTranscript();
+
+    liveTranscriptRequested = !liveTranscriptRequested;
+    this.innerHTML = liveTranscriptRequested
+      ? '<i data-lucide="captions"></i> Live Transcript On'
+      : '<i data-lucide="mic"></i> Enable Live Transcript';
+    setTranscriptStatus(
+      liveTranscriptRequested ? 'Live transcript will start with the next call' : 'Live transcript is off',
+      liveTranscriptRequested
+    );
+    lucide.createIcons();
   });
 
   function openPostCallFlow(){
