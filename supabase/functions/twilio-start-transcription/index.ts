@@ -41,6 +41,8 @@ Deno.serve(async (req) => {
     form.set('StatusCallbackUrl', callbackUrl);
     form.set('StatusCallbackMethod', 'POST');
     form.set('LanguageCode', 'en-US');
+    form.set('TranscriptionEngine', 'google');
+    form.set('SpeechModel', 'telephony');
     form.set('PartialResults', 'true');
     form.set('InboundTrackLabel', 'customer');
     form.set('OutboundTrackLabel', 'agent');
@@ -66,12 +68,17 @@ Deno.serve(async (req) => {
 
     if (!twilioResponse.ok) {
       console.error('Twilio start transcription failed:', twilioResponse.status, text);
+      let parsed: any = {};
+      try { parsed = JSON.parse(text); } catch {}
+
       return new Response(JSON.stringify({
-        error: 'Unable to start Twilio transcription',
+        ok: false,
+        error: parsed?.message || 'Unable to start Twilio transcription',
+        code: parsed?.code || null,
         status: twilioResponse.status,
-        detail: text,
+        detail: parsed?.more_info || text,
       }), {
-        status: 502,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
