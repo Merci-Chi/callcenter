@@ -359,6 +359,10 @@
       clearInterval(liveTranscriptPollTimer);
       liveTranscriptPollTimer = null;
     }
+    if(liveTranscriptDiagnosticTimer){
+      clearTimeout(liveTranscriptDiagnosticTimer);
+      liveTranscriptDiagnosticTimer = null;
+    }
     if(liveTranscriptChannel && window.steadyHandsCRMClient){
       try{ window.steadyHandsCRMClient.removeChannel(liveTranscriptChannel); }catch{}
       liveTranscriptChannel = null;
@@ -972,6 +976,7 @@
   let liveTranscriptRequested = false;
   let liveTranscriptChannel = null;
   let liveTranscriptPollTimer = null;
+  let liveTranscriptDiagnosticTimer = null;
   let liveTranscriptLastId = 0;
   const liveTranscriptSeenIds = new Set();
   let currentTranscriptCallSid = '';
@@ -1124,6 +1129,23 @@
     await pollTwilioTranscript(callSid);
     liveTranscriptPollTimer = setInterval(() => pollTwilioTranscript(callSid), 1200);
 
+    liveTranscriptDiagnosticTimer = setTimeout(() => {
+      if(
+        currentTranscriptCallSid === callSid &&
+        liveTranscriptSeenIds.size === 0 &&
+        callState === 'connected'
+      ){
+        setTranscriptStatus(
+          'Twilio accepted transcription, but no webhook events have arrived after 8 seconds.',
+          false
+        );
+        const empty = document.getElementById('liveTranscriptEmpty');
+        if(empty){
+          empty.textContent = 'No Twilio transcription events received yet. The call is connected, but the transcription webhook has not delivered any status or text.';
+        }
+      }
+    }, 8000);
+
     liveTranscriptChannel = client
       .channel('live-transcript-' + callSid)
       .on(
@@ -1156,13 +1178,44 @@
     const text = String(eventRow?.text || '').trim();
     if(!text) return;
 
-    const speakerKey = eventRow?.speaker === 'customer' ? 'customer' : 'agent';
-    const speakerLabel = speakerKey === 'customer' ? 'Customer' : 'You';
-    const interim = !eventRow?.is_final;
-
     const list = document.getElementById('liveTranscriptList');
     if(!list) return;
     document.getElementById('liveTranscriptEmpty')?.remove();
+
+    if(eventRow?.speaker === 'system'){
+      if(liveTranscriptDiagnosticTimer){
+        clearTimeout(liveTranscriptDiagnosticTimer);
+        liveTranscriptDiagnosticTimer = null;
+      }
+
+      const row = document.createElement('div');
+      row.className = 'live-transcript-row transcript-system-row';
+      row.dataset.speaker = 'system';
+      row.innerHTML = '<div class="transcript-meta"><span></span><strong>Transcription Status</strong></div><div class="transcript-bubble muted"></div>';
+      row.querySelector('.transcript-meta span').textContent = transcriptTime();
+      row.querySelector('.transcript-bubble').textContent = text;
+      list.appendChild(row);
+
+      if(/^ERROR\b/i.test(text)){
+        setTranscriptStatus(text, false);
+      } else if(/started/i.test(text)){
+        setTranscriptStatus('Twilio transcription started · waiting for speech', true);
+      } else if(/stopped/i.test(text)){
+        setTranscriptStatus('Twilio transcription stopped', false);
+      }
+
+      row.scrollIntoView({block:'nearest',behavior:'smooth'});
+      return;
+    }
+
+    if(liveTranscriptDiagnosticTimer){
+      clearTimeout(liveTranscriptDiagnosticTimer);
+      liveTranscriptDiagnosticTimer = null;
+    }
+
+    const speakerKey = eventRow?.speaker === 'customer' ? 'customer' : 'agent';
+    const speakerLabel = speakerKey === 'customer' ? 'Customer' : 'You';
+    const interim = !eventRow?.is_final;
 
     let row = interim
       ? list.querySelector('.live-transcript-row.interim[data-speaker="' + speakerKey + '"]')
