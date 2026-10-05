@@ -1661,6 +1661,14 @@
       stage.querySelector('.pc-done').addEventListener('click', async () => {
         const crmId = new URLSearchParams(location.search).get('crm_id') || null;
 
+        const finalOutcome = [
+          data.rating,
+          ...data.outcomes,
+          data.route === 'callback' ? 'Call Back' : data.route === 'notinterested' ? 'Not Interested' : ''
+        ].filter(Boolean).join(' • ') || "Didn't call";
+
+        // Only change the lead's CRM disposition after an actual connected call,
+        // but always record the attempt in Activity — including "Didn't call".
         if (data.rating !== "Didn't call" && connectedSeconds > 0) {
           const client = window.steadyHandsCRMClient;
 
@@ -1720,18 +1728,20 @@
             }
           }
 
-          const finalOutcome = [
-            data.rating,
-            ...data.outcomes,
-            data.route === 'callback' ? 'Call Back' : data.route === 'notinterested' ? 'Not Interested' : ''
-          ].filter(Boolean).join(' • ');
+        }
 
-          const savedActivity = await window.callcenterRecordCall?.({
-            crmId,
-            duration: connectedSeconds,
-            outcome: finalOutcome
-          });
+        const savedActivity = await window.callcenterRecordCall?.({
+          crmId,
+          duration: connectedSeconds,
+          outcome: finalOutcome
+        });
 
+        if(!savedActivity){
+          console.warn('Unable to save call activity.');
+        }
+
+        // Save a transcript only when speech was actually captured.
+        if(transcriptSegments.some(segment => segment?.text && !segment?.interim)){
           const transcriptSaved = await saveCallTranscript({
             activityId: savedActivity?.id || null,
             outcome: finalOutcome
