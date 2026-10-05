@@ -181,6 +181,99 @@
   let questionnaireOpen = false;
   let leadBlockedNotInterested = false;
 
+  let ringbackContext = null;
+  let ringbackOscillators = [];
+  let ringbackGain = null;
+  let ringbackTimer = null;
+
+  function unlockRingbackAudio(){
+    try{
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if(!AudioContextClass) return;
+      if(!ringbackContext) ringbackContext = new AudioContextClass();
+      if(ringbackContext.state === 'suspended') ringbackContext.resume().catch(() => {});
+    }catch(error){
+      console.warn('Unable to prepare ringback audio:', error);
+    }
+  }
+
+  function stopRingback(){
+    if(ringbackTimer){
+      clearInterval(ringbackTimer);
+      ringbackTimer = null;
+    }
+
+    if(ringbackGain){
+      try{
+        const now = ringbackContext?.currentTime || 0;
+        ringbackGain.gain.cancelScheduledValues(now);
+        ringbackGain.gain.setValueAtTime(0, now);
+      }catch{}
+    }
+
+    ringbackOscillators.forEach(oscillator => {
+      try{ oscillator.stop(); }catch{}
+      try{ oscillator.disconnect(); }catch{}
+    });
+    ringbackOscillators = [];
+
+    try{ ringbackGain?.disconnect(); }catch{}
+    ringbackGain = null;
+  }
+
+  function startRingback(){
+    if(ringbackOscillators.length) return;
+
+    try{
+      unlockRingbackAudio();
+      if(!ringbackContext) return;
+
+      const gain = ringbackContext.createGain();
+      gain.gain.value = 0.055;
+      gain.connect(ringbackContext.destination);
+      ringbackGain = gain;
+
+      [440, 480].forEach(frequency => {
+        const oscillator = ringbackContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        oscillator.connect(gain);
+        oscillator.start();
+        ringbackOscillators.push(oscillator);
+      });
+
+      // North American ringback cadence: roughly 2 seconds on, 4 seconds off.
+      let audible = true;
+      ringbackTimer = setInterval(() => {
+        if(!ringbackGain || !ringbackContext) return;
+        audible = !audible;
+        const now = ringbackContext.currentTime;
+        ringbackGain.gain.cancelScheduledValues(now);
+        ringbackGain.gain.setTargetAtTime(audible ? 0.055 : 0, now, 0.015);
+      }, audible ? 2000 : 4000);
+
+      // Replace the simple interval above with the correct 2s-on / 4s-off cadence.
+      clearInterval(ringbackTimer);
+      const cycle = () => {
+        if(!ringbackGain || !ringbackContext) return;
+        const now = ringbackContext.currentTime;
+        ringbackGain.gain.cancelScheduledValues(now);
+        ringbackGain.gain.setTargetAtTime(0.055, now, 0.015);
+        ringbackTimer = setTimeout(() => {
+          if(!ringbackGain || !ringbackContext) return;
+          const offNow = ringbackContext.currentTime;
+          ringbackGain.gain.cancelScheduledValues(offNow);
+          ringbackGain.gain.setTargetAtTime(0, offNow, 0.015);
+          ringbackTimer = setTimeout(cycle, 4000);
+        }, 2000);
+      };
+      cycle();
+    }catch(error){
+      console.warn('Unable to play ringback audio:', error);
+      stopRingback();
+    }
+  }
+
   function showNotInterestedWarning() {
     alert('This client is listed as not interested');
   }
@@ -256,6 +349,7 @@
   setState('idle');
 
   function stopCall(){
+    stopRingback();
     stateTimers.forEach(clearTimeout);
     stateTimers = [];
     if(timerTick) clearInterval(timerTick);
@@ -325,6 +419,40 @@
     }
   }
 
+  function confirmLiveTranscriptBeforeCall(){
+    return new Promise(resolve => {
+      const body = `
+        <div class="call-time-confirm">
+          <div class="call-time-confirm-icon"><i data-lucide="captions"></i></div>
+          <p class="call-time-confirm-question">Live transcript</p>
+          <strong class="call-time-confirm-time" style="font-size:1.25rem">Enable transcript for this call?</strong>
+          <p class="call-time-confirm-hours">Your microphone will be used to create and save a live transcript while you talk.</p>
+        </div>`;
+
+      modal('Before you call', body, [
+        {
+          label: 'Not Now',
+          onClick: close => {
+            unlockRingbackAudio();
+            close();
+            resolve('skip');
+          }
+        },
+        {
+          label: 'Enable & Call',
+          primary: true,
+          onClick: async close => {
+            unlockRingbackAudio();
+            const enabled = await enableLiveTranscript();
+            if(!enabled) return;
+            close();
+            resolve('enabled');
+          }
+        }
+      ]);
+    });
+  }
+
   function confirmCallTime() {
     const theirTime = window.callcenterLocalTimeText
       ? window.callcenterLocalTimeText(number, storedTimezone)
@@ -372,8 +500,13 @@
     }
 
     if(callState === 'idle' || callState === 'ended'){
+      unlockRingbackAudio();
       const confirmed = await confirmCallTime();
       if (!confirmed) return;
+
+      const transcriptChoice = await confirmLiveTranscriptBeforeCall();
+      if (!transcriptChoice) return;
+
       await startCall();
       return;
     }
@@ -408,17 +541,20 @@
 
     if (voiceState === 'calling') {
       setState('calling');
+      startRingback();
       syncMainCallButton();
       return;
     }
 
     if (voiceState === 'ringing') {
       setState('ringing');
+      startRingback();
       syncMainCallButton();
       return;
     }
 
     if (voiceState === 'connected') {
+      stopRingback();
       setState('connected');
       syncMainCallButton();
       return;
@@ -775,10 +911,12 @@
   }
 
   async function enableLiveTranscript(){
+    if(liveTranscriptEnabled && speechRecognition) return true;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition){
       alert('Live speech transcription is not supported by this browser.');
-      return;
+      return false;
     }
 
     try{
@@ -834,10 +972,12 @@
       };
 
       speechRecognition.start();
+      return true;
     }catch(error){
       console.error('Unable to enable microphone:',error);
       setTranscriptStatus('Microphone permission is blocked');
       alert('Microphone access is required. Allow microphone access for this site in your browser settings, then try again.');
+      return false;
     }
   }
 
