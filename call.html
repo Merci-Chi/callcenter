@@ -610,24 +610,32 @@
 
   syncMainCallButton();
 
-  document.getElementById('holdBtn')?.addEventListener('click', function(){
+  document.getElementById('holdBtn')?.addEventListener('click', async function(){
     if(callState !== 'connected') return;
 
-    holdActive = !holdActive;
-    const actualHeld = window.SteadyHandsTwilioVoice?.setHeld?.(holdActive);
-    if(typeof actualHeld === 'boolean') holdActive = actualHeld;
+    const nextHeld = !holdActive;
+    this.disabled = true;
 
-    this.classList.toggle('active', holdActive);
-    this.innerHTML = holdActive
-      ? '<i data-lucide="play"></i><span>Resume</span>'
-      : '<i data-lucide="pause"></i><span>Hold</span>';
+    try{
+      const actualHeld = await window.SteadyHandsTwilioVoice?.setHeld?.(nextHeld);
+      holdActive = typeof actualHeld === 'boolean' ? actualHeld : nextHeld;
 
-    // Hold and mute are intentionally independent. Hold never changes the mute button.
-    if(holdActive) setTranscriptStatus('Call is on hold', false);
-    else if(liveTranscriptEnabled) setTranscriptStatus('Listening to microphone…', true);
-    else setTranscriptStatus('Live transcript is off');
+      this.classList.toggle('active', holdActive);
+      this.innerHTML = holdActive
+        ? '<i data-lucide="play"></i><span>Resume</span>'
+        : '<i data-lucide="pause"></i><span>Hold</span>';
 
-    lucide.createIcons();
+      // Hold and mute remain independent. The caller hears hold audio while held.
+      if(holdActive) setTranscriptStatus('Call is on hold · hold audio playing', false);
+      else if(liveTranscriptEnabled) setTranscriptStatus('Listening to microphone…', true);
+      else setTranscriptStatus('Live transcript is off');
+    }catch(error){
+      console.error('Unable to change hold state:', error);
+      alert(error?.message || 'Unable to put this call on hold.');
+    }finally{
+      this.disabled = false;
+      lucide.createIcons();
+    }
   });
 
   document.getElementById('speakerBtn')?.addEventListener('click', async function(){
