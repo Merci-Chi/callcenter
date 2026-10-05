@@ -642,6 +642,20 @@
     }
 
     if (voiceState === 'error') {
+      const numericCode = Number(detail.code || 0);
+
+      // Twilio 31000 is a generic SDK error. If audio already connected,
+      // do not interrupt an otherwise useful call/transcript with a modal
+      // that contains no actionable detail.
+      if(numericCode === 31000 && (callState === 'connected' || callConnectedAt)){
+        console.warn('Twilio generic 31000 after connection:', detail);
+        const currentStatus = document.getElementById('liveTranscriptStatus');
+        if(currentStatus && !/ERROR\b/i.test(currentStatus.textContent || '')){
+          setTranscriptStatus('Call audio ended · transcript retained', false);
+        }
+        return;
+      }
+
       const code = detail.code ? 'Twilio ' + detail.code + ': ' : '';
       const parts = [
         detail.message,
