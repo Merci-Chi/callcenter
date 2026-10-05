@@ -68,8 +68,8 @@ Deno.serve(async (req) => {
       ? '<Start><Transcription' +
           ' statusCallbackUrl="' + xmlEscape(callbackUrl) + '"' +
           ' track="both_tracks"' +
-          ' inboundTrackLabel="agent"' +
-          ' outboundTrackLabel="customer"' +
+          ' inboundTrackLabel="customer"' +
+          ' outboundTrackLabel="agent"' +
           ' languageCode="en-US"' +
           ' partialResults="true"' +
           ' enableAutomaticPunctuation="true"' +
