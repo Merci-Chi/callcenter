@@ -683,6 +683,29 @@
 
     const isAdmin = permission?.active === true && permission?.role === 'ADMIN';
 
+    let requestedCallerNumber = null;
+    try {
+      const { data: callerRows = [], error: callerError } = await c
+        .from('callcenter_phone_numbers')
+        .select('id,phone_number,twilio_status,active,requested_at,created_at')
+        .eq('requested_by_user_id', session.user.id)
+        .order('created_at', { ascending:false })
+        .limit(1);
+
+      if (!callerError) requestedCallerNumber = callerRows[0] || null;
+      else if (callerError.code !== '42P01' && !/requested_by_user_id/i.test(callerError.message || '')) {
+        console.warn('Unable to load outbound number request:', callerError);
+      }
+    } catch (error) {
+      console.warn('Unable to load outbound number request:', error);
+    }
+
+    const callerNumberStatus = requestedCallerNumber
+      ? (requestedCallerNumber.twilio_status === 'ready' && requestedCallerNumber.active
+          ? 'Ready · ' + formatPhone(requestedCallerNumber.phone_number)
+          : 'Pending approval · ' + formatPhone(requestedCallerNumber.phone_number))
+      : 'Add a number';
+
     const statusText = state.label;
     const phoneText = profile.phone || 'Not set';
 
@@ -717,6 +740,11 @@
 
       <section class="settings-section">
         <div class="settings-section-title">Calling</div>
+        <button class="settings-row" type="button" data-account-action="caller-number">
+          <span class="settings-icon"><i data-lucide="phone-forwarded"></i></span>
+          <span class="settings-copy"><strong>Outbound Phone Number</strong><small>${esc(callerNumberStatus)}</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
         <button class="settings-row" type="button" data-account-action="audio">
           <span class="settings-icon"><i data-lucide="mic"></i></span>
           <span class="settings-copy"><strong>Microphone &amp; Audio</strong><small id="microphoneStatus">Check microphone access</small></span>
@@ -916,6 +944,78 @@
     main.querySelectorAll('[data-account-action]').forEach(row => {
       row.addEventListener('click', async () => {
         const action = row.dataset.accountAction;
+
+        if (action === 'caller-number') {
+          const normalizeE164 = value => {
+            const raw = String(value || '').trim();
+            const digits = raw.replace(/\D/g,'');
+            if (!digits) return '';
+            if (raw.startsWith('+')) return '+' + digits;
+            if (digits.length === 10) return '+1' + digits;
+            if (digits.length === 11 && digits.startsWith('1')) return '+' + digits;
+            return '+' + digits;
+          };
+
+          if (requestedCallerNumber) {
+            const ready = requestedCallerNumber.twilio_status === 'ready' && requestedCallerNumber.active;
+            openSheet('Outbound Phone Number', `
+              <div class="settings-status-card">
+                <span class="cc-status ${ready ? 'active' : 'pending'}">${ready ? 'Ready' : 'Pending approval'}</span>
+                <p><strong>${esc(formatPhone(requestedCallerNumber.phone_number))}</strong></p>
+                <p>${ready
+                  ? 'This number is ready to be used for your outbound calls.'
+                  : 'Your number request has been received. You can keep calling while it is being reviewed.'}</p>
+              </div>`);
+            return;
+          }
+
+          const overlay = openSheet('Outbound Phone Number', `
+            <p class="settings-sheet-note">Add the phone number you want associated with your outbound calls. It will show as pending until an administrator finishes setup.</p>
+            <label class="settings-field-label">Phone number
+              <input class="settings-field" id="settingsOutboundNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="(702) 555-0101">
+            </label>
+            <button class="settings-primary-btn" id="settingsRequestOutboundNumber" type="button">Submit Number</button>
+            <div class="settings-inline-message" id="settingsOutboundNumberMessage"></div>
+          `);
+
+          overlay.querySelector('#settingsRequestOutboundNumber')?.addEventListener('click', async e => {
+            const btn = e.currentTarget;
+            const msg = overlay.querySelector('#settingsOutboundNumberMessage');
+            const phoneNumber = normalizeE164(overlay.querySelector('#settingsOutboundNumber')?.value || '');
+
+            if (!/^\+[1-9]\d{7,14}$/.test(phoneNumber)) {
+              msg.textContent = 'Enter a valid phone number.';
+              return;
+            }
+
+            btn.disabled = true;
+            msg.textContent = 'Submitting…';
+
+            const { error } = await c
+              .from('callcenter_phone_numbers')
+              .insert({
+                phone_number: phoneNumber,
+                label: displayName + ' requested number',
+                active: true,
+                twilio_status: 'pending',
+                requested_by_user_id: session.user.id,
+                requested_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+
+            if (error) {
+              btn.disabled = false;
+              msg.textContent = error.code === '23505'
+                ? 'That phone number is already in the system.'
+                : (error.message || 'Unable to submit this number.');
+              return;
+            }
+
+            msg.textContent = 'Submitted. Your number is pending approval.';
+            setTimeout(() => location.reload(), 650);
+          });
+          return;
+        }
 
         if (action === 'profile') {
           const overlay = openSheet('Edit Profile', `
