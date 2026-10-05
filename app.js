@@ -2889,9 +2889,14 @@ async function crmFetchPreviewURLs(client, ids) {
 function crmShowLiveSearchLoading(query) {
   const box = q('#crmLeadCards');
   const status = q('#crmStatus');
+  const selectedLeadTop = q('#selectedLeadTop');
   if (!box || !status) return;
 
-  showSelectedLeadSkeleton();
+  // While actively searching/filtering, keep the controls at the top.
+  // Do not insert the expanded selected-lead skeleton above the search bar.
+  const searching = Boolean(query) || crmSearchState.tags?.size > 0;
+  if (searching) selectedLeadTop?.replaceChildren();
+  else showSelectedLeadSkeleton();
 
   status.style.display = '';
   status.textContent = query ? `Searching for “${query}”…` : 'Loading leads...';
