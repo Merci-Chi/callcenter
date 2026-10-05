@@ -1,0 +1,11 @@
+[functions.twilio-voice-token]
+verify_jwt = true
+
+[functions.twilio-start-transcription]
+verify_jwt = true
+
+[functions.twilio-voice-outbound]
+verify_jwt = false
+
+[functions.twilio-transcription-webhook]
+verify_jwt = false
