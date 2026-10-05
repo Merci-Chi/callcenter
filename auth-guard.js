@@ -97,6 +97,12 @@
         .resume-actions button{border:0;border-radius:14px;padding:13px 14px;font-size:15px;font-weight:800;cursor:pointer}
         .resume-start-fresh{background:#edf1f5;color:#24374d}
         .resume-continue{background:#102945;color:#fff}
+        html[data-theme="dark"] .resume-dialog{background:#101f2f;color:#eef6ff}
+        html[data-theme="dark"] .resume-icon{background:#16314b;color:#65b7ff}
+        html[data-theme="dark"] .resume-dialog h2{color:#eef6ff}
+        html[data-theme="dark"] .resume-dialog p{color:#97aabd}
+        html[data-theme="dark"] .resume-start-fresh{background:#172a3c;color:#d8e6f3}
+        html[data-theme="dark"] .resume-continue{background:#1677e8;color:#fff}
       `;
 
       document.head.appendChild(style);
