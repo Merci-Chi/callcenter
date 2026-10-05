@@ -3882,3 +3882,114 @@ html, body {
   from{opacity:0;transform:scale(.96) translateY(8px)}
   to{opacity:1;transform:scale(1) translateY(0)}
 }
+
+
+/* Activity recent-call metadata + transcript access */
+.activity-call-row{
+  grid-template-columns:38px minmax(0,1fr) auto;
+  align-items:start;
+}
+.activity-call-times{
+  display:flex;
+  flex-wrap:wrap;
+  gap:3px 10px;
+  margin-top:6px;
+  color:#7b8a9d;
+  font-size:9px;
+  line-height:1.35;
+}
+.activity-call-times span{white-space:nowrap}
+.activity-call-times b{color:#50647b;font-weight:900;margin-right:2px}
+.activity-call-side{
+  min-width:96px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:7px;
+}
+.activity-transcript-btn{
+  width:34px;
+  height:34px;
+  border:1px solid #d8e4ef;
+  border-radius:10px;
+  background:#fff;
+  color:#2386ea;
+  display:grid;
+  place-items:center;
+  box-shadow:0 4px 12px rgba(22,57,91,.07);
+}
+.activity-transcript-btn i{width:18px;height:18px}
+.activity-transcript-btn:disabled{
+  color:#aab6c4;
+  background:#f2f5f8;
+  box-shadow:none;
+  opacity:.62;
+}
+.activity-transcript-overlay{
+  position:fixed;
+  inset:0;
+  z-index:10040;
+  background:rgba(6,18,31,.58);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+.activity-transcript-sheet{
+  width:min(520px,100%);
+  max-height:82vh;
+  overflow:auto;
+  background:#f7f9fc;
+  border-radius:26px 26px 0 0;
+  padding:18px 20px calc(24px + env(safe-area-inset-bottom));
+  box-shadow:0 -20px 50px rgba(7,25,43,.24);
+}
+.activity-transcript-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:14px;
+}
+.activity-transcript-head span{
+  display:block;
+  color:#2386ea;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+}
+.activity-transcript-head strong{
+  display:block;
+  margin-top:3px;
+  color:var(--text);
+  font-size:20px;
+  line-height:1.2;
+}
+.activity-transcript-close{
+  width:38px;
+  height:38px;
+  flex:0 0 auto;
+  border:0;
+  border-radius:50%;
+  background:#e8eef4;
+  color:#28425e;
+  display:grid;
+  place-items:center;
+}
+.activity-transcript-close i{width:18px;height:18px}
+.activity-transcript-copy{
+  background:#fff;
+  border:1px solid #dce5ee;
+  border-radius:16px;
+  padding:15px;
+  color:#40556c;
+  font-size:12px;
+  line-height:1.55;
+  white-space:normal;
+}
+@media(min-width:700px){
+  .activity-transcript-overlay{align-items:center;padding:18px}
+  .activity-transcript-sheet{border-radius:26px}
+}
