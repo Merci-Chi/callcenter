@@ -43,6 +43,7 @@
     </section>
     <section class="call-controls">
       <button class="call-control small" id="muteBtn"><i data-lucide="mic"></i><span>Mute</span></button>
+      <button class="call-control small" id="keypadBtn"><i data-lucide="grid-3x3"></i><span>Keypad</span></button>
       <button class="call-control start-call" id="hangupBtn" aria-label="Start call"><i data-lucide="phone"></i><span>Start Call</span></button>
       <button class="call-control small" id="holdBtn"><i data-lucide="pause"></i><span>Hold</span></button>
       <button class="call-control small" id="speakerBtn"><i data-lucide="volume-2"></i><span>Speaker</span></button>
@@ -377,6 +378,13 @@
       speakerControl.disabled = false;
     }
 
+    const keypadControl = document.getElementById('keypadBtn');
+    if(keypadControl){
+      keypadControl.classList.remove('active');
+      keypadControl.disabled = false;
+    }
+    document.querySelector('.call-keypad-overlay')?.remove();
+
     stateTimers.forEach(clearTimeout);
     stateTimers = [];
     if(timerTick) clearInterval(timerTick);
@@ -645,6 +653,74 @@
       this.disabled = false;
       lucide.createIcons();
     }
+  });
+
+  document.getElementById('keypadBtn')?.addEventListener('click', function(){
+    if(callState !== 'connected'){
+      alert('Start the call before using the keypad.');
+      return;
+    }
+
+    document.querySelector('.call-keypad-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'call-keypad-overlay';
+    overlay.innerHTML = `
+      <section class="call-keypad-sheet" role="dialog" aria-modal="true" aria-label="Call keypad">
+        <div class="call-keypad-head">
+          <div>
+            <span class="call-keypad-kicker">DTMF</span>
+            <h2>Keypad</h2>
+          </div>
+          <button class="call-keypad-close" type="button" aria-label="Close keypad"><i data-lucide="x"></i></button>
+        </div>
+        <div class="call-keypad-display" id="callKeypadDisplay">&nbsp;</div>
+        <div class="call-keypad-grid">
+          ${[
+            ['1',''],['2','ABC'],['3','DEF'],
+            ['4','GHI'],['5','JKL'],['6','MNO'],
+            ['7','PQRS'],['8','TUV'],['9','WXYZ'],
+            ['*',''],['0','+'],['#','']
+          ].map(([digit,letters]) => `
+            <button type="button" class="call-keypad-key" data-digit="${digit}">
+              <strong>${digit}</strong>
+              <span>${letters}</span>
+            </button>`).join('')}
+        </div>
+      </section>`;
+
+    document.body.appendChild(overlay);
+    this.classList.add('active');
+
+    const close = () => {
+      overlay.remove();
+      this.classList.remove('active');
+    };
+
+    overlay.querySelector('.call-keypad-close')?.addEventListener('click', close);
+    overlay.addEventListener('click', event => {
+      if(event.target === overlay) close();
+    });
+
+    const display = overlay.querySelector('#callKeypadDisplay');
+
+    overlay.querySelectorAll('[data-digit]').forEach(button => {
+      button.addEventListener('click', () => {
+        const digit = button.dataset.digit || '';
+        if(!digit) return;
+
+        try{
+          window.SteadyHandsTwilioVoice?.sendDigits?.(digit);
+          const current = (display.textContent || '').replace(/\s/g,'');
+          display.textContent = (current + digit).slice(-24);
+        }catch(error){
+          console.error('Unable to send keypad digit:', error);
+          alert(error?.message || 'Unable to send keypad tone.');
+        }
+      });
+    });
+
+    lucide.createIcons();
   });
 
   document.getElementById('speakerBtn')?.addEventListener('click', async function(){
