@@ -162,7 +162,13 @@ function bindCall(call) {
   };
 
   call.on('ringing', () => emit('ringing'));
-  call.on('accept', () => emit('connected'));
+  call.on('accept', () => {
+    const callSid =
+      call?.parameters?.CallSid ||
+      call?.parameters?.CallSID ||
+      '';
+    emit('connected', { callSid });
+  });
 
   call.on('disconnect', () => finish('disconnect'));
   call.on('cancel', () => finish('cancel'));
@@ -201,7 +207,8 @@ async function start(destination, metadata = {}) {
   const params = {
     To: to,
     crm_id: String(metadata.crmId || ''),
-    company: String(metadata.company || '').slice(0, 80)
+    company: String(metadata.company || '').slice(0, 80),
+    transcribe: metadata.transcribe ? 'true' : 'false'
   };
 
   const call = await readyDevice.connect({ params });
