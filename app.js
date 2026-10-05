@@ -2886,6 +2886,23 @@ async function crmFetchPreviewURLs(client, ids) {
   return map;
 }
 
+function crmKeepSearchControlsAtTop() {
+  const controls = q('.outreach-controls');
+  const search = q('#crmSearch');
+  if (!controls || !search) return;
+
+  const reposition = () => {
+    if (document.activeElement !== search) return;
+    const top = window.scrollY + controls.getBoundingClientRect().top - 8;
+    window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'auto' });
+  };
+
+  // Run after the selected-lead area collapses, then once more after
+  // iOS Safari finishes moving the viewport for the on-screen keyboard.
+  requestAnimationFrame(reposition);
+  setTimeout(reposition, 90);
+}
+
 function crmShowLiveSearchLoading(query) {
   const box = q('#crmLeadCards');
   const status = q('#crmStatus');
@@ -2895,8 +2912,12 @@ function crmShowLiveSearchLoading(query) {
   // While actively searching/filtering, keep the controls at the top.
   // Do not insert the expanded selected-lead skeleton above the search bar.
   const searching = Boolean(query) || crmSearchState.tags?.size > 0;
-  if (searching) selectedLeadTop?.replaceChildren();
-  else showSelectedLeadSkeleton();
+  if (searching) {
+    selectedLeadTop?.replaceChildren();
+    crmKeepSearchControlsAtTop();
+  } else {
+    showSelectedLeadSkeleton();
+  }
 
   status.style.display = '';
   status.textContent = query ? `Searching for “${query}”…` : 'Loading leads...';
