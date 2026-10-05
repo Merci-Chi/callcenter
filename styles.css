@@ -389,7 +389,7 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .call-action-icon i { width:31px; height:31px; }
 .call-action-icon.green { color:var(--green); }
 .call-action-icon.alert b { position:absolute; right:-6px; top:-7px; width:21px; height:21px; border-radius:50%; display:grid; place-items:center; background:#ff4949; color:#fff; font-size:11px; box-shadow:0 2px 7px rgba(255,73,73,.28); }
-.call-controls { display:grid; grid-template-columns:1fr 1.2fr 1fr 1fr; align-items:center; gap:12px; margin:22px 18px 24px; }
+.call-controls { display:grid; grid-template-columns:1fr 1fr 1.25fr 1fr 1fr; align-items:center; gap:8px; margin:22px 10px 24px; }
 .call-control { border:0; cursor:pointer; display:grid; place-items:center; }
 .call-control.small { width:72px; justify-self:center; background:transparent; color:var(--navy-3); gap:7px; }
 .call-control.small > i { width:60px; height:60px; padding:18px; border-radius:50%; background:#fff; box-shadow:var(--shadow); }
@@ -397,6 +397,98 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .call-control.small.active > i { background:var(--blue-soft); color:var(--blue); }
 .call-control.hangup { width:86px; height:86px; justify-self:center; border-radius:50%; color:#fff; background:#ff4848; box-shadow:0 12px 25px rgba(255,72,72,.25); }
 .call-control.hangup i { width:36px; height:36px; }
+
+.call-keypad-overlay {
+  position:fixed;
+  inset:0;
+  z-index:10020;
+  background:rgba(6,18,31,.52);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+.call-keypad-sheet {
+  width:min(430px,100%);
+  background:#f7f9fc;
+  border-radius:28px 28px 0 0;
+  padding:18px 24px calc(24px + env(safe-area-inset-bottom));
+  box-shadow:0 -20px 50px rgba(7,25,43,.24);
+}
+.call-keypad-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:8px;
+}
+.call-keypad-kicker {
+  display:block;
+  color:var(--blue);
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+.call-keypad-head h2 {
+  margin:2px 0 0;
+  font-size:28px;
+  color:var(--text);
+}
+.call-keypad-close {
+  width:42px;
+  height:42px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:var(--navy-3);
+  display:grid;
+  place-items:center;
+  box-shadow:var(--shadow);
+}
+.call-keypad-close i {
+  width:20px;
+  height:20px;
+}
+.call-keypad-display {
+  min-height:38px;
+  text-align:center;
+  font-size:24px;
+  font-weight:900;
+  letter-spacing:.08em;
+  color:var(--text);
+  margin:4px 0 12px;
+}
+.call-keypad-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px 18px;
+  justify-items:center;
+}
+.call-keypad-key {
+  width:74px;
+  height:74px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  box-shadow:var(--shadow);
+}
+.call-keypad-key strong {
+  font-size:28px;
+  line-height:1;
+}
+.call-keypad-key span {
+  min-height:12px;
+  margin-top:3px;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.12em;
+  color:var(--muted);
+}
 .call-transcript-section h2 { margin:0 0 10px; font-size:22px; letter-spacing:-.4px; color:var(--text); }
 .call-transcript-card { overflow:hidden; background:#fff; border:1px solid rgba(20,43,69,.07); border-radius:18px; box-shadow:var(--shadow); }
 .transcript-entry { padding:14px 14px 4px; }
