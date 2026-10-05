@@ -42,8 +42,6 @@ Deno.serve(async (req) => {
     form.set('StatusCallbackMethod', 'POST');
     form.set('LanguageCode', 'en-US');
     form.set('PartialResults', 'true');
-    form.set('EnableAutomaticPunctuation', 'true');
-    form.set('TranscriptionEngine', 'auto');
     form.set('InboundTrackLabel', 'customer');
     form.set('OutboundTrackLabel', 'agent');
 
