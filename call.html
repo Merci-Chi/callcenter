@@ -354,6 +354,16 @@
 
   function stopCall(){
     stopRingback();
+
+    if(liveTranscriptPollTimer){
+      clearInterval(liveTranscriptPollTimer);
+      liveTranscriptPollTimer = null;
+    }
+    if(liveTranscriptChannel && window.steadyHandsCRMClient){
+      try{ window.steadyHandsCRMClient.removeChannel(liveTranscriptChannel); }catch{}
+      liveTranscriptChannel = null;
+    }
+    currentTranscriptCallSid = '';
     holdActive = false;
     userMuted = false;
 
@@ -961,6 +971,9 @@
   let liveTranscriptEnabled = false;
   let liveTranscriptRequested = false;
   let liveTranscriptChannel = null;
+  let liveTranscriptPollTimer = null;
+  let liveTranscriptLastId = 0;
+  const liveTranscriptSeenIds = new Set();
   let currentTranscriptCallSid = '';
   let transcriptStartedAt = null;
   let transcriptSegments = [];
@@ -1062,6 +1075,34 @@
     }
   }
 
+  async function pollTwilioTranscript(callSid){
+    const client = window.steadyHandsCRMClient;
+    if(!client || !callSid || currentTranscriptCallSid !== callSid) return;
+
+    try{
+      let query = client
+        .from('callcenter_live_transcript_events')
+        .select('*')
+        .eq('call_sid', callSid)
+        .order('id', { ascending:true });
+
+      if(liveTranscriptLastId > 0){
+        query = query.gt('id', liveTranscriptLastId);
+      }
+
+      const { data, error } = await query.limit(100);
+      if(error) throw error;
+
+      for(const row of data || []){
+        const rowId = Number(row?.id || 0);
+        if(rowId > liveTranscriptLastId) liveTranscriptLastId = rowId;
+        renderTwilioTranscriptEvent(row);
+      }
+    }catch(error){
+      console.warn('Transcript polling failed:', error);
+    }
+  }
+
   async function subscribeToTwilioTranscript(callSid){
     const client = window.steadyHandsCRMClient;
     if(!client || !callSid) return;
@@ -1070,9 +1111,18 @@
       try{ await client.removeChannel(liveTranscriptChannel); }catch{}
       liveTranscriptChannel = null;
     }
+    if(liveTranscriptPollTimer){
+      clearInterval(liveTranscriptPollTimer);
+      liveTranscriptPollTimer = null;
+    }
 
+    liveTranscriptSeenIds.clear();
+    liveTranscriptLastId = 0;
     currentTranscriptCallSid = callSid;
     setTranscriptStatus('Listening to both sides of the call…', true);
+
+    await pollTwilioTranscript(callSid);
+    liveTranscriptPollTimer = setInterval(() => pollTwilioTranscript(callSid), 1200);
 
     liveTranscriptChannel = client
       .channel('live-transcript-' + callSid)
@@ -1084,7 +1134,12 @@
           table: 'callcenter_live_transcript_events',
           filter: 'call_sid=eq.' + callSid
         },
-        payload => renderTwilioTranscriptEvent(payload.new || {})
+        payload => {
+          const row = payload.new || {};
+          const rowId = Number(row?.id || 0);
+          if(rowId > liveTranscriptLastId) liveTranscriptLastId = rowId;
+          renderTwilioTranscriptEvent(row);
+        }
       )
       .subscribe(status => {
         if(status === 'SUBSCRIBED'){
@@ -1094,6 +1149,10 @@
   }
 
   function renderTwilioTranscriptEvent(eventRow){
+    const eventId = Number(eventRow?.id || 0);
+    if(eventId && liveTranscriptSeenIds.has(eventId)) return;
+    if(eventId) liveTranscriptSeenIds.add(eventId);
+
     const text = String(eventRow?.text || '').trim();
     if(!text) return;
 
