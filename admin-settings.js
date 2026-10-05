@@ -91,7 +91,7 @@
         .order('display_name',{ascending:true}),
       c
         .from('callcenter_phone_numbers')
-        .select('id,phone_number,label,active,created_at')
+        .select('id,phone_number,label,active,twilio_status,created_at')
         .order('created_at',{ascending:true}),
       c
         .from('callcenter_phone_assignments')
@@ -175,7 +175,7 @@
                       <strong>${esc(formatPhone(row.phone_number))}</strong>
                       <span>${esc(row.label || 'Outbound caller ID')}</span>
                     </div>
-                    <span class="admin-phone-active">${row.active ? 'Active' : 'Inactive'}</span>
+                    <span class="admin-phone-active">${row.twilio_status === 'ready' ? 'Twilio Ready' : 'Pending Twilio'}</span>
                   </div>
 
                   <label class="admin-phone-assign">
@@ -187,6 +187,10 @@
                   </label>
 
                   <div class="admin-phone-actions">
+                    <button type="button" class="admin-phone-ready" data-phone-ready>
+                      <i data-lucide="${row.twilio_status === 'ready' ? 'shield-check' : 'shield-alert'}"></i>
+                      ${row.twilio_status === 'ready' ? 'Mark Pending' : 'Mark Twilio Ready'}
+                    </button>
                     <button type="button" class="admin-phone-toggle" data-phone-toggle>
                       <i data-lucide="${row.active ? 'pause' : 'play'}"></i>
                       ${row.active ? 'Disable' : 'Enable'}
@@ -346,6 +350,7 @@
           phone_number:number,
           label,
           active:true,
+          twilio_status:'pending',
           updated_at:new Date().toISOString()
         });
 
@@ -396,6 +401,35 @@
           select.disabled = false;
           alert(error?.message || 'Unable to update this caller ID assignment.');
         }
+      });
+    });
+
+    main.querySelectorAll('[data-phone-ready]').forEach(button => {
+      button.addEventListener('click', async () => {
+        const card = button.closest('.admin-phone-card');
+        const phoneNumberId = card?.dataset.phoneId;
+        const phone = phoneNumbers.find(item => String(item.id) === String(phoneNumberId));
+        if (!phone) return;
+
+        const nextStatus = phone.twilio_status === 'ready' ? 'pending' : 'ready';
+
+        if (nextStatus === 'ready' && !confirm('Only mark this number Twilio Ready after it is purchased/verified and usable as an outbound caller ID in Twilio. Continue?')) {
+          return;
+        }
+
+        button.disabled = true;
+        const { error } = await c
+          .from('callcenter_phone_numbers')
+          .update({ twilio_status:nextStatus, updated_at:new Date().toISOString() })
+          .eq('id',phoneNumberId);
+
+        if (error) {
+          button.disabled = false;
+          alert(error.message || 'Unable to update Twilio verification status.');
+          return;
+        }
+
+        location.reload();
       });
     });
 
