@@ -119,14 +119,22 @@ Deno.serve(async (req) => {
     }
 
     if (event === 'transcription-error') {
-      const errorCode = params.get('ErrorCode') || '';
-      const errorMessage = params.get('ErrorMessage') || 'Twilio reported a realtime transcription error.';
+      const errorCode =
+        params.get('TranscriptionErrorCode') ||
+        params.get('ErrorCode') ||
+        '';
+      const errorMessage =
+        params.get('TranscriptionError') ||
+        params.get('ErrorMessage') ||
+        'Twilio reported a realtime transcription error.';
+
       console.error('Twilio realtime transcription error:', {
         callSid: diagnosticCallSid,
         transcriptionSid: diagnosticTranscriptionSid,
         errorCode,
         errorMessage,
       });
+
       await storeDiagnostic(
         'ERROR' + (errorCode ? ' ' + errorCode : '') + ': ' + errorMessage
       );
