@@ -597,9 +597,29 @@
     if (voiceState === 'connected') {
       stopRingback();
       setState('connected');
+
       if(liveTranscriptRequested && detail.callSid){
-        subscribeToTwilioTranscript(detail.callSid);
+        const client = window.steadyHandsCRMClient;
+        if(client){
+          client.functions
+            .invoke('twilio-start-transcription', {
+              body: { call_sid: detail.callSid }
+            })
+            .then(({ error }) => {
+              if(error){
+                console.error('Unable to start Twilio realtime transcription:', error);
+                setTranscriptStatus('Call connected · transcription unavailable');
+                return;
+              }
+              subscribeToTwilioTranscript(detail.callSid);
+            })
+            .catch(error => {
+              console.error('Unable to start Twilio realtime transcription:', error);
+              setTranscriptStatus('Call connected · transcription unavailable');
+            });
+        }
       }
+
       syncMainCallButton();
       return;
     }
