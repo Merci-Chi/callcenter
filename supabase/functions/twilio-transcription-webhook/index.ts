@@ -93,9 +93,12 @@ Deno.serve(async (req) => {
       return new Response('ok', { status: 200 });
     }
 
+    // For an outbound Twilio call, inbound_track is the customer
+    // (audio Twilio receives from the called party) and outbound_track is the
+    // agent (audio Twilio sends toward the called party).
     const speaker =
-      track === 'inbound_track' ? 'agent' :
-      track === 'outbound_track' ? 'customer' :
+      track === 'inbound_track' ? 'customer' :
+      track === 'outbound_track' ? 'agent' :
       'unknown';
 
     const timestamp = params.get('Timestamp') || null;
