@@ -3993,3 +3993,151 @@ html, body {
   .activity-transcript-overlay{align-items:center;padding:18px}
   .activity-transcript-sheet{border-radius:26px}
 }
+
+
+/* Admin outbound caller ID assignments */
+.admin-callerid-section{margin-top:20px}
+.admin-phone-count{background:#eaf3ff;color:#176fc8}
+.admin-add-phone{
+  display:grid;
+  grid-template-columns:1.2fr 1fr auto;
+  gap:9px;
+  align-items:end;
+  padding:13px;
+  margin-bottom:12px;
+  background:#fff;
+  border:1px solid rgba(20,43,69,.09);
+  border-radius:16px;
+  box-shadow:0 7px 22px rgba(15,33,54,.05);
+}
+.admin-add-phone label span,
+.admin-phone-assign>span{
+  display:block;
+  margin-bottom:6px;
+  color:#748397;
+  font-size:9px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+.admin-add-phone input,
+.admin-phone-assign select{
+  width:100%;
+  min-height:42px;
+  border:1px solid #dbe4ec;
+  border-radius:11px;
+  background:#fff;
+  color:#17304c;
+  padding:0 11px;
+  font:inherit;
+  font-size:12px;
+  outline:none;
+}
+.admin-add-phone button{
+  min-height:42px;
+  border:0;
+  border-radius:11px;
+  padding:0 14px;
+  background:#177bdd;
+  color:#fff;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.admin-add-phone button svg{width:16px;height:16px}
+.admin-phone-list{display:grid;gap:12px}
+.admin-phone-card{
+  padding:14px;
+  border:1px solid rgba(20,43,69,.09);
+  border-radius:18px;
+  background:#fff;
+  box-shadow:0 7px 22px rgba(15,33,54,.06);
+}
+.admin-phone-card-head{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
+}
+.admin-phone-card-icon{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  background:#eaf3ff;
+  color:#176fc8;
+}
+.admin-phone-card-icon svg{width:20px;height:20px}
+.admin-phone-card-copy{min-width:0}
+.admin-phone-card-copy strong,
+.admin-phone-card-copy span{display:block}
+.admin-phone-card-copy strong{font-size:14px;color:#17304c}
+.admin-phone-card-copy span{
+  margin-top:3px;
+  font-size:10px;
+  color:#8592a1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.admin-phone-active{
+  padding:6px 8px;
+  border-radius:999px;
+  background:#e7f8ef;
+  color:#158651;
+  font-size:9px;
+  font-weight:900;
+}
+.admin-phone-assign{
+  display:block;
+  margin-top:12px;
+  padding:12px;
+  border-radius:13px;
+  background:#f7f9fc;
+  border:1px solid #e8edf2;
+}
+.admin-phone-assign small{
+  display:block;
+  margin-top:6px;
+  color:#8491a0;
+  font-size:9px;
+  line-height:1.35;
+}
+.admin-phone-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:10px;
+}
+.admin-phone-actions button{
+  min-height:40px;
+  border-radius:11px;
+  font:inherit;
+  font-size:11px;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+}
+.admin-phone-actions button svg{width:15px;height:15px}
+.admin-phone-toggle{
+  border:1px solid #d7e1ea;
+  background:#fff;
+  color:#496078;
+}
+.admin-phone-delete{
+  border:1px solid #eccaca;
+  background:#fff;
+  color:#c74646;
+}
+@media(max-width:680px){
+  .admin-add-phone{grid-template-columns:1fr}
+  .admin-add-phone button{width:100%}
+}
+@media(min-width:900px){
+  .admin-phone-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
