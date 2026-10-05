@@ -3,6 +3,9 @@ import { Device } from 'https://esm.sh/@twilio/voice-sdk@2.18.5';
 let device = null;
 let activeCall = null;
 let tokenRefreshPromise = null;
+let userMuted = false;
+let held = false;
+let preferredSpeakerDeviceId = null;
 
 function emit(state, extra = {}) {
   window.dispatchEvent(new CustomEvent('steadyhands:voice-state', {
@@ -127,9 +130,14 @@ async function ensureDevice() {
 
   device.on('error', error => {
     console.error('Twilio Device error:', error);
+    const detail = error?.twilioError || error;
     emit('error', {
-      code: error?.code || '',
-      message: error?.message || 'The browser phone encountered an error.'
+      code: detail?.code || error?.code || '',
+      message: detail?.message || error?.message || 'The browser phone encountered an error.',
+      description: detail?.description || '',
+      explanation: detail?.explanation || '',
+      causes: Array.isArray(detail?.causes) ? detail.causes : [],
+      solutions: Array.isArray(detail?.solutions) ? detail.solutions : []
     });
   });
 
@@ -157,9 +165,14 @@ function bindCall(call) {
 
   call.on('error', error => {
     console.error('Twilio Call error:', error);
+    const detail = error?.twilioError || error;
     emit('error', {
-      code: error?.code || '',
-      message: error?.message || 'The call could not be completed.'
+      code: detail?.code || error?.code || '',
+      message: detail?.message || error?.message || 'The call could not be completed.',
+      description: detail?.description || '',
+      explanation: detail?.explanation || '',
+      causes: Array.isArray(detail?.causes) ? detail.causes : [],
+      solutions: Array.isArray(detail?.solutions) ? detail.solutions : []
     });
     finish('error');
   });
@@ -167,6 +180,8 @@ function bindCall(call) {
 
 async function start(destination, metadata = {}) {
   if (activeCall) throw new Error('A call is already active.');
+  userMuted = false;
+  held = false;
 
   const to = cleanNumber(destination);
   if (!/^\+[1-9]\d{7,14}$/.test(to)) {
@@ -199,10 +214,70 @@ function hangup() {
   }
 }
 
-function setMuted(muted) {
+function applyTransmitState() {
   if (!activeCall) return false;
-  activeCall.mute(Boolean(muted));
-  return activeCall.isMuted?.() ?? Boolean(muted);
+  activeCall.mute(Boolean(userMuted || held));
+  return true;
+}
+
+function setMuted(muted) {
+  userMuted = Boolean(muted);
+  applyTransmitState();
+  return userMuted;
+}
+
+function setHeld(nextHeld) {
+  held = Boolean(nextHeld);
+  applyTransmitState();
+  return held;
+}
+
+function isHeld() {
+  return held;
+}
+
+async function getSpeakerInfo() {
+  const audio = device?.audio;
+  const collection = audio?.speakerDevices;
+  const available = audio?.availableOutputDevices;
+
+  if (!collection || !available || typeof collection.set !== 'function') {
+    return { supported: false, devices: [], active: [] };
+  }
+
+  const devices = [...available.values()].map(item => ({
+    deviceId: item.deviceId,
+    label: item.label || 'Audio output'
+  }));
+  const active = [...collection.get()].map(item => item.deviceId);
+
+  return { supported: devices.length > 0, devices, active };
+}
+
+async function toggleSpeakerOutput() {
+  const info = await getSpeakerInfo();
+  if (!info.supported) {
+    return { supported: false, active: false, label: 'System audio' };
+  }
+
+  const devices = info.devices;
+  if (!devices.length) {
+    return { supported: false, active: false, label: 'System audio' };
+  }
+
+  const currentId = info.active[0] || preferredSpeakerDeviceId || devices[0].deviceId;
+  const currentIndex = Math.max(0, devices.findIndex(item => item.deviceId === currentId));
+  const next = devices[(currentIndex + 1) % devices.length];
+
+  await device.audio.speakerDevices.set(next.deviceId);
+  preferredSpeakerDeviceId = next.deviceId;
+
+  return {
+    supported: true,
+    active: true,
+    deviceId: next.deviceId,
+    label: next.label || 'Speaker'
+  };
 }
 
 function isActive() {
@@ -213,6 +288,10 @@ window.SteadyHandsTwilioVoice = {
   start,
   hangup,
   setMuted,
+  setHeld,
+  isHeld,
+  toggleSpeakerOutput,
+  getSpeakerInfo,
   isActive,
   refreshToken
 };
