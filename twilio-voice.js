@@ -88,6 +88,20 @@ async function requestMicrophonePermission() {
   );
 }
 
+async function fetchAuthenticatedUserId() {
+  const client = window.steadyHandsCRMClient;
+  if (!client) return '';
+
+  try {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    return String(data?.session?.user?.id || '');
+  } catch (error) {
+    console.warn('Unable to resolve signed-in caller account:', error);
+    return '';
+  }
+}
+
 async function fetchToken() {
   const client = window.steadyHandsCRMClient;
   if (!client) throw new Error('The signed-in CRM session is not ready yet.');
@@ -198,13 +212,15 @@ async function start(destination, metadata = {}) {
   await requestMicrophonePermission();
 
   const readyDevice = await ensureDevice();
+  const agentUserId = await fetchAuthenticatedUserId();
   emit('calling');
 
   const params = {
     To: to,
     crm_id: String(metadata.crmId || ''),
     company: String(metadata.company || '').slice(0, 80),
-    transcribe: metadata.transcribe ? 'true' : 'false'
+    transcribe: metadata.transcribe ? 'true' : 'false',
+    agent_user_id: agentUserId
   };
 
   const call = await readyDevice.connect({ params });
