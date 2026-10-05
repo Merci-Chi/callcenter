@@ -582,14 +582,12 @@
 
     if (voiceState === 'calling') {
       setState('calling');
-      startRingback();
       syncMainCallButton();
       return;
     }
 
     if (voiceState === 'ringing') {
       setState('ringing');
-      startRingback();
       syncMainCallButton();
       return;
     }
