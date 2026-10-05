@@ -45,6 +45,7 @@
       <button class="call-control small" id="muteBtn"><i data-lucide="mic"></i><span>Mute</span></button>
       <button class="call-control start-call" id="hangupBtn" aria-label="Start call"><i data-lucide="phone"></i><span>Start Call</span></button>
       <button class="call-control small" id="holdBtn"><i data-lucide="pause"></i><span>Hold</span></button>
+      <button class="call-control small" id="speakerBtn"><i data-lucide="volume-2"></i><span>Speaker</span></button>
     </section>
     <section class="starter-script-card" id="starterScriptCard">
       <div class="starter-script-head">
@@ -181,7 +182,7 @@
   let questionnaireOpen = false;
   let leadBlockedNotInterested = false;
   let holdActive = false;
-  let mutedBeforeHold = false;
+  let userMuted = false;
 
   let ringbackContext = null;
   let ringbackOscillators = [];
@@ -353,7 +354,7 @@
   function stopCall(){
     stopRingback();
     holdActive = false;
-    mutedBeforeHold = false;
+    userMuted = false;
 
     const muteControl = document.getElementById('muteBtn');
     if(muteControl){
@@ -366,6 +367,14 @@
     if(holdControl){
       holdControl.classList.remove('active');
       holdControl.innerHTML = '<i data-lucide="pause"></i><span>Hold</span>';
+      holdControl.disabled = false;
+    }
+
+    const speakerControl = document.getElementById('speakerBtn');
+    if(speakerControl){
+      speakerControl.classList.remove('active');
+      speakerControl.innerHTML = '<i data-lucide="volume-2"></i><span>Speaker</span>';
+      speakerControl.disabled = false;
     }
 
     stateTimers.forEach(clearTimeout);
@@ -542,12 +551,12 @@
   }, 0);
 
   document.getElementById('muteBtn')?.addEventListener('click', function(){
-    if(callState !== 'connected' || holdActive) return;
-    const nextMuted = !this.classList.contains('active');
-    const actualMuted = window.SteadyHandsTwilioVoice?.setMuted(nextMuted);
-    const muted = typeof actualMuted === 'boolean' ? actualMuted : nextMuted;
-    this.classList.toggle('active', muted);
-    this.innerHTML = muted
+    if(callState !== 'connected') return;
+    userMuted = !userMuted;
+    const actualMuted = window.SteadyHandsTwilioVoice?.setMuted(userMuted);
+    if(typeof actualMuted === 'boolean') userMuted = actualMuted;
+    this.classList.toggle('active', userMuted);
+    this.innerHTML = userMuted
       ? '<i data-lucide="mic-off"></i><span>Unmute</span>'
       : '<i data-lucide="mic"></i><span>Mute</span>';
     lucide.createIcons();
@@ -579,7 +588,16 @@
     }
 
     if (voiceState === 'error') {
-      if (detail.message) alert(detail.message);
+      const code = detail.code ? 'Twilio ' + detail.code + ': ' : '';
+      const parts = [
+        detail.message,
+        detail.description,
+        detail.explanation,
+        ...(Array.isArray(detail.causes) ? detail.causes.slice(0,2) : [])
+      ].filter(Boolean);
+
+      const unique = [...new Set(parts.map(value => String(value).trim()).filter(Boolean))];
+      alert(code + (unique.join('\n\n') || 'The call encountered an error.'));
       return;
     }
 
@@ -595,43 +613,41 @@
   document.getElementById('holdBtn')?.addEventListener('click', function(){
     if(callState !== 'connected') return;
 
-    const muteControl = document.getElementById('muteBtn');
+    holdActive = !holdActive;
+    const actualHeld = window.SteadyHandsTwilioVoice?.setHeld?.(holdActive);
+    if(typeof actualHeld === 'boolean') holdActive = actualHeld;
 
-    if(!holdActive){
-      mutedBeforeHold = Boolean(muteControl?.classList.contains('active'));
-      window.SteadyHandsTwilioVoice?.setMuted(true);
-      holdActive = true;
+    this.classList.toggle('active', holdActive);
+    this.innerHTML = holdActive
+      ? '<i data-lucide="play"></i><span>Resume</span>'
+      : '<i data-lucide="pause"></i><span>Hold</span>';
 
-      this.classList.add('active');
-      this.innerHTML = '<i data-lucide="play"></i><span>Resume</span>';
-
-      if(muteControl){
-        muteControl.disabled = true;
-        muteControl.classList.add('active');
-        muteControl.innerHTML = '<i data-lucide="mic-off"></i><span>Muted</span>';
-      }
-
-      setTranscriptStatus('Call is on hold', false);
-    }else{
-      window.SteadyHandsTwilioVoice?.setMuted(mutedBeforeHold);
-      holdActive = false;
-
-      this.classList.remove('active');
-      this.innerHTML = '<i data-lucide="pause"></i><span>Hold</span>';
-
-      if(muteControl){
-        muteControl.disabled = false;
-        muteControl.classList.toggle('active', mutedBeforeHold);
-        muteControl.innerHTML = mutedBeforeHold
-          ? '<i data-lucide="mic-off"></i><span>Unmute</span>'
-          : '<i data-lucide="mic"></i><span>Mute</span>';
-      }
-
-      if(liveTranscriptEnabled) setTranscriptStatus('Listening to microphone…', true);
-      else setTranscriptStatus('Live transcript is off');
-    }
+    // Hold and mute are intentionally independent. Hold never changes the mute button.
+    if(holdActive) setTranscriptStatus('Call is on hold', false);
+    else if(liveTranscriptEnabled) setTranscriptStatus('Listening to microphone…', true);
+    else setTranscriptStatus('Live transcript is off');
 
     lucide.createIcons();
+  });
+
+  document.getElementById('speakerBtn')?.addEventListener('click', async function(){
+    if(callState !== 'connected') return;
+
+    try{
+      const result = await window.SteadyHandsTwilioVoice?.toggleSpeakerOutput?.();
+
+      if(!result?.supported){
+        alert('This browser does not let websites switch between earpiece and speaker. On iPhone, use the system audio/AirPlay control to change the call output.');
+        return;
+      }
+
+      this.classList.add('active');
+      this.innerHTML = '<i data-lucide="volume-2"></i><span>' + (result.label || 'Speaker') + '</span>';
+      lucide.createIcons();
+    }catch(error){
+      console.error('Unable to switch speaker output:', error);
+      alert(error?.message || 'Unable to switch audio output on this browser.');
+    }
   });
 
   function toolSheet(title, body){
