@@ -4150,3 +4150,11 @@ html, body {
 @media(max-width:520px){
   .admin-phone-actions{grid-template-columns:1fr}
 }
+
+.admin-phone-card-copy small{
+  display:block;
+  margin-top:4px;
+  color:#6f7f92;
+  font-size:9px;
+  font-weight:800;
+}
