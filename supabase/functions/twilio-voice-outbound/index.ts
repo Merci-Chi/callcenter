@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
               supabaseUrl.replace(/\/$/, '') +
                 '/rest/v1/callcenter_phone_numbers?id=eq.' +
                 encodeURIComponent(phoneNumberId) +
-                '&active=eq.true&select=phone_number&limit=1',
+                '&active=eq.true&twilio_status=eq.ready&select=phone_number&limit=1',
               {
                 headers: {
                   apikey: serviceRoleKey,
