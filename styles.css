@@ -389,14 +389,112 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .call-action-icon i { width:31px; height:31px; }
 .call-action-icon.green { color:var(--green); }
 .call-action-icon.alert b { position:absolute; right:-6px; top:-7px; width:21px; height:21px; border-radius:50%; display:grid; place-items:center; background:#ff4949; color:#fff; font-size:11px; box-shadow:0 2px 7px rgba(255,73,73,.28); }
-.call-controls { display:grid; grid-template-columns:1fr 1fr 1.25fr 1fr 1fr; align-items:center; gap:8px; margin:22px 10px 24px; }
-.call-control { border:0; cursor:pointer; display:grid; place-items:center; }
-.call-control.small { width:72px; justify-self:center; background:transparent; color:var(--navy-3); gap:7px; }
-.call-control.small > i { width:60px; height:60px; padding:18px; border-radius:50%; background:#fff; box-shadow:var(--shadow); }
-.call-control.small span { color:var(--muted); font-size:12px; font-weight:800; }
-.call-control.small.active > i { background:var(--blue-soft); color:var(--blue); }
-.call-control.hangup { width:86px; height:86px; justify-self:center; border-radius:50%; color:#fff; background:#ff4848; box-shadow:0 12px 25px rgba(255,72,72,.25); }
-.call-control.hangup i { width:36px; height:36px; }
+.call-controls {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  align-items:end;
+  gap:4px;
+  width:100%;
+  margin:22px 0 24px;
+  padding:0 8px;
+  box-sizing:border-box;
+}
+.call-control {
+  border:0;
+  cursor:pointer;
+  min-width:0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-end;
+  background:transparent;
+  box-sizing:border-box;
+}
+.call-control.small {
+  width:100%;
+  justify-self:stretch;
+  color:var(--navy-3);
+  gap:7px;
+}
+.call-control.small > i {
+  width:50px;
+  height:50px;
+  padding:14px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:var(--shadow);
+  flex:0 0 auto;
+}
+.call-control.small span {
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.1;
+  font-weight:800;
+  white-space:nowrap;
+  text-align:center;
+}
+.call-control.small.active > i {
+  background:var(--blue-soft);
+  color:var(--blue);
+}
+.call-control.start-call,
+.call-control.hangup {
+  width:92px;
+  height:92px;
+  min-width:92px;
+  max-width:92px;
+  justify-self:center;
+  align-self:end;
+  margin:0 auto;
+  border-radius:50%;
+  color:#fff;
+  gap:5px;
+}
+.call-control.start-call {
+  background:#23c977;
+  box-shadow:0 12px 25px rgba(35,201,119,.25);
+}
+.call-control.hangup {
+  background:#ff4848;
+  box-shadow:0 12px 25px rgba(255,72,72,.25);
+}
+.call-control.start-call i,
+.call-control.hangup i {
+  width:30px;
+  height:30px;
+  flex:0 0 auto;
+}
+.call-control.start-call span,
+.call-control.hangup span {
+  color:#fff;
+  font-size:11px;
+  line-height:1.05;
+  font-weight:900;
+  white-space:nowrap;
+  text-align:center;
+}
+@media (max-width:390px) {
+  .call-controls {
+    gap:2px;
+    padding:0 4px;
+  }
+  .call-control.small > i {
+    width:46px;
+    height:46px;
+    padding:13px;
+  }
+  .call-control.small span {
+    font-size:10px;
+  }
+  .call-control.start-call,
+  .call-control.hangup {
+    width:86px;
+    height:86px;
+    min-width:86px;
+    max-width:86px;
+  }
+}
 
 .call-keypad-overlay {
   position:fixed;
