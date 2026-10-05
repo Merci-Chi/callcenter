@@ -389,7 +389,7 @@ button:active, .nav-item:active, .setting-row:active, .profile-card:active { tra
 .call-action-icon i { width:31px; height:31px; }
 .call-action-icon.green { color:var(--green); }
 .call-action-icon.alert b { position:absolute; right:-6px; top:-7px; width:21px; height:21px; border-radius:50%; display:grid; place-items:center; background:#ff4949; color:#fff; font-size:11px; box-shadow:0 2px 7px rgba(255,73,73,.28); }
-.call-controls { display:grid; grid-template-columns:1fr 1.2fr 1fr; align-items:center; gap:18px; margin:22px 22px 24px; }
+.call-controls { display:grid; grid-template-columns:1fr 1.2fr 1fr 1fr; align-items:center; gap:12px; margin:22px 18px 24px; }
 .call-control { border:0; cursor:pointer; display:grid; place-items:center; }
 .call-control.small { width:72px; justify-self:center; background:transparent; color:var(--navy-3); gap:7px; }
 .call-control.small > i { width:60px; height:60px; padding:18px; border-radius:50%; background:#fff; box-shadow:var(--shadow); }
