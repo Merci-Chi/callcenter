@@ -180,6 +180,8 @@
   let stateTimers = [];
   let questionnaireOpen = false;
   let leadBlockedNotInterested = false;
+  let holdActive = false;
+  let mutedBeforeHold = false;
 
   let ringbackContext = null;
   let ringbackOscillators = [];
@@ -350,6 +352,22 @@
 
   function stopCall(){
     stopRingback();
+    holdActive = false;
+    mutedBeforeHold = false;
+
+    const muteControl = document.getElementById('muteBtn');
+    if(muteControl){
+      muteControl.classList.remove('active');
+      muteControl.innerHTML = '<i data-lucide="mic"></i><span>Mute</span>';
+      muteControl.disabled = false;
+    }
+
+    const holdControl = document.getElementById('holdBtn');
+    if(holdControl){
+      holdControl.classList.remove('active');
+      holdControl.innerHTML = '<i data-lucide="pause"></i><span>Hold</span>';
+    }
+
     stateTimers.forEach(clearTimeout);
     stateTimers = [];
     if(timerTick) clearInterval(timerTick);
@@ -524,14 +542,14 @@
   }, 0);
 
   document.getElementById('muteBtn')?.addEventListener('click', function(){
-    if(callState !== 'connected') return;
+    if(callState !== 'connected' || holdActive) return;
     const nextMuted = !this.classList.contains('active');
-    window.SteadyHandsTwilioVoice?.setMuted(nextMuted);
-    this.classList.toggle('active', nextMuted);
-    const span = this.querySelector('span');
-    span.textContent = nextMuted ? 'Unmute' : 'Mute';
-    const icon = this.querySelector('i');
-    icon.setAttribute('data-lucide', nextMuted ? 'mic-off' : 'mic');
+    const actualMuted = window.SteadyHandsTwilioVoice?.setMuted(nextMuted);
+    const muted = typeof actualMuted === 'boolean' ? actualMuted : nextMuted;
+    this.classList.toggle('active', muted);
+    this.innerHTML = muted
+      ? '<i data-lucide="mic-off"></i><span>Unmute</span>'
+      : '<i data-lucide="mic"></i><span>Mute</span>';
     lucide.createIcons();
   });
 
@@ -576,7 +594,44 @@
 
   document.getElementById('holdBtn')?.addEventListener('click', function(){
     if(callState !== 'connected') return;
-    alert('Hold will be enabled after the first live browser-call test.');
+
+    const muteControl = document.getElementById('muteBtn');
+
+    if(!holdActive){
+      mutedBeforeHold = Boolean(muteControl?.classList.contains('active'));
+      window.SteadyHandsTwilioVoice?.setMuted(true);
+      holdActive = true;
+
+      this.classList.add('active');
+      this.innerHTML = '<i data-lucide="play"></i><span>Resume</span>';
+
+      if(muteControl){
+        muteControl.disabled = true;
+        muteControl.classList.add('active');
+        muteControl.innerHTML = '<i data-lucide="mic-off"></i><span>Muted</span>';
+      }
+
+      setTranscriptStatus('Call is on hold', false);
+    }else{
+      window.SteadyHandsTwilioVoice?.setMuted(mutedBeforeHold);
+      holdActive = false;
+
+      this.classList.remove('active');
+      this.innerHTML = '<i data-lucide="pause"></i><span>Hold</span>';
+
+      if(muteControl){
+        muteControl.disabled = false;
+        muteControl.classList.toggle('active', mutedBeforeHold);
+        muteControl.innerHTML = mutedBeforeHold
+          ? '<i data-lucide="mic-off"></i><span>Unmute</span>'
+          : '<i data-lucide="mic"></i><span>Mute</span>';
+      }
+
+      if(liveTranscriptEnabled) setTranscriptStatus('Listening to microphone…', true);
+      else setTranscriptStatus('Live transcript is off');
+    }
+
+    lucide.createIcons();
   });
 
   function toolSheet(title, body){
@@ -995,6 +1050,7 @@
   });
 
   function openPostCallFlow(){
+    if(questionnaireOpen || document.querySelector('.post-call-overlay')) return;
     questionnaireOpen = true;
     const overlay = document.createElement('div');
     overlay.className = 'post-call-overlay';
