@@ -4108,7 +4108,7 @@ html, body {
 }
 .admin-phone-actions{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
   margin-top:10px;
 }
@@ -4140,4 +4140,13 @@ html, body {
 }
 @media(min-width:900px){
   .admin-phone-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+.admin-phone-ready{
+  border:1px solid #cfe0f1;
+  background:#eef6ff;
+  color:#176fc8;
+}
+@media(max-width:520px){
+  .admin-phone-actions{grid-template-columns:1fr}
 }
