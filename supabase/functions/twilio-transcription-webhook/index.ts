@@ -86,23 +86,82 @@ Deno.serve(async (req) => {
     }
 
     const event = params.get('TranscriptionEvent') || '';
+    const diagnosticCallSid = params.get('CallSid') || '';
+    const diagnosticTranscriptionSid = params.get('TranscriptionSid') || '';
+
+    async function storeDiagnostic(message: string) {
+      if (!diagnosticCallSid || !message) return false;
+      const response = await fetch(
+        supabaseUrl + '/rest/v1/callcenter_live_transcript_events',
+        {
+          method: 'POST',
+          headers: {
+            apikey: serviceRoleKey,
+            Authorization: 'Bearer ' + serviceRoleKey,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify({
+            call_sid: diagnosticCallSid,
+            transcription_sid: diagnosticTranscriptionSid || null,
+            track: 'system',
+            speaker: 'system',
+            text: message,
+            is_final: true,
+          }),
+        },
+      );
+      if (!response.ok) {
+        console.error('Unable to store transcription diagnostic:', response.status, await response.text());
+        return false;
+      }
+      return true;
+    }
 
     if (event === 'transcription-error') {
+      const errorCode = params.get('ErrorCode') || '';
+      const errorMessage = params.get('ErrorMessage') || 'Twilio reported a realtime transcription error.';
       console.error('Twilio realtime transcription error:', {
-        callSid: params.get('CallSid') || '',
-        transcriptionSid: params.get('TranscriptionSid') || '',
-        errorCode: params.get('ErrorCode') || '',
-        errorMessage: params.get('ErrorMessage') || '',
+        callSid: diagnosticCallSid,
+        transcriptionSid: diagnosticTranscriptionSid,
+        errorCode,
+        errorMessage,
       });
+      await storeDiagnostic(
+        'ERROR' + (errorCode ? ' ' + errorCode : '') + ': ' + errorMessage
+      );
+      return new Response('ok', { status: 200 });
+    }
+
+    if (event === 'transcription-started') {
+      console.log('Twilio realtime transcription started:', {
+        callSid: diagnosticCallSid,
+        transcriptionSid: diagnosticTranscriptionSid,
+      });
+      await storeDiagnostic(
+        'Twilio transcription started' +
+        (diagnosticTranscriptionSid ? ' (' + diagnosticTranscriptionSid + ')' : '') +
+        '. Waiting for speech.'
+      );
+      return new Response('ok', { status: 200 });
+    }
+
+    if (event === 'transcription-stopped') {
+      console.log('Twilio realtime transcription stopped:', {
+        callSid: diagnosticCallSid,
+        transcriptionSid: diagnosticTranscriptionSid,
+      });
+      await storeDiagnostic('Twilio transcription stopped.');
       return new Response('ok', { status: 200 });
     }
 
     if (event !== 'transcription-content') {
       console.log('Twilio realtime transcription event:', {
         event,
-        callSid: params.get('CallSid') || '',
-        transcriptionSid: params.get('TranscriptionSid') || '',
+        callSid: diagnosticCallSid,
+        transcriptionSid: diagnosticTranscriptionSid,
       });
+      await storeDiagnostic('Twilio callback received: ' + (event || 'unknown event'));
       return new Response('ok', { status: 200 });
     }
 
