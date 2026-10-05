@@ -800,6 +800,11 @@
 
       <section class="settings-section">
         <div class="settings-section-title">App</div>
+        <button class="settings-row" type="button" data-account-action="appearance">
+          <span class="settings-icon"><i data-lucide="circle-half"></i></span>
+          <span class="settings-copy"><strong>Appearance</strong><small>${profile.theme_preference === 'dark' ? 'Dark mode' : 'Light mode'}</small></span>
+          <i class="settings-chevron" data-lucide="chevron-right"></i>
+        </button>
         <button class="settings-row" type="button" data-account-action="permissions">
           <span class="settings-icon"><i data-lucide="lock-keyhole"></i></span>
           <span class="settings-copy"><strong>Permissions</strong><small>Microphone and notification access</small></span>
@@ -944,6 +949,62 @@
     main.querySelectorAll('[data-account-action]').forEach(row => {
       row.addEventListener('click', async () => {
         const action = row.dataset.accountAction;
+
+        if (action === 'appearance') {
+          const currentTheme = window.SteadyHandsTheme?.current?.() || profile.theme_preference || 'light';
+          const overlay = openSheet('Appearance', `
+            <p class="settings-sheet-note">Choose how Outreach looks on every device signed into this account.</p>
+            <div class="settings-theme-options">
+              <button type="button" class="settings-theme-option ${currentTheme === 'light' ? 'active' : ''}" data-theme-choice="light">
+                <i data-lucide="sun"></i>
+                <span>Light</span>
+              </button>
+              <button type="button" class="settings-theme-option ${currentTheme === 'dark' ? 'active' : ''}" data-theme-choice="dark">
+                <i data-lucide="moon"></i>
+                <span>Dark</span>
+              </button>
+            </div>
+            <div class="settings-inline-message" id="settingsThemeMessage"></div>
+          `);
+
+          overlay.querySelectorAll('[data-theme-choice]').forEach(button => {
+            button.addEventListener('click', async () => {
+              const nextTheme = button.dataset.themeChoice === 'dark' ? 'dark' : 'light';
+              const message = overlay.querySelector('#settingsThemeMessage');
+              overlay.querySelectorAll('[data-theme-choice]').forEach(item => item.disabled = true);
+              message.textContent = 'Saving…';
+
+              const { error } = await c
+                .from('callcenter_profiles')
+                .update({
+                  theme_preference: nextTheme,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_id', session.user.id);
+
+              if (error) {
+                overlay.querySelectorAll('[data-theme-choice]').forEach(item => item.disabled = false);
+                message.textContent = error.message || 'Unable to save appearance.';
+                return;
+              }
+
+              profile.theme_preference = nextTheme;
+              window.SteadyHandsTheme?.apply?.(nextTheme);
+              overlay.querySelectorAll('[data-theme-choice]').forEach(item => {
+                item.classList.toggle('active', item.dataset.themeChoice === nextTheme);
+                item.disabled = false;
+              });
+
+              const appearanceRow = main.querySelector('[data-account-action="appearance"] .settings-copy small');
+              if (appearanceRow) appearanceRow.textContent = nextTheme === 'dark' ? 'Dark mode' : 'Light mode';
+              message.textContent = nextTheme === 'dark' ? 'Dark mode saved to your account.' : 'Light mode saved to your account.';
+              window.lucide?.createIcons();
+            });
+          });
+
+          window.lucide?.createIcons();
+          return;
+        }
 
         if (action === 'caller-number') {
           const normalizeE164 = value => {
