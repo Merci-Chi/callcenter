@@ -1227,7 +1227,10 @@
       liveTranscriptDiagnosticTimer = null;
     }
 
-    const speakerKey = eventRow?.speaker === 'customer' ? 'customer' : 'agent';
+    const speakerKey =
+      eventRow?.track === 'outbound_track' ? 'customer' :
+      eventRow?.track === 'inbound_track' ? 'agent' :
+      eventRow?.speaker === 'customer' ? 'customer' : 'agent';
     const speakerLabel = speakerKey === 'customer' ? 'Customer' : 'You';
     const interim = !eventRow?.is_final;
 
