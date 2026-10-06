@@ -439,6 +439,7 @@
     connectedSeconds = 0;
     callConnectedAt = null;
     callEndedAt = null;
+    currentCallSid = '';
     transcriptStartedAt = null;
     transcriptSegments = [];
     transcriptSavedForCall = false;
@@ -609,6 +610,7 @@
 
     if (voiceState === 'connected') {
       stopRingback();
+      if (detail.callSid) currentCallSid = String(detail.callSid);
       setState('connected');
 
       if(liveTranscriptRequested && detail.callSid){
@@ -999,6 +1001,7 @@
   let transcriptSegments = [];
   let callConnectedAt = null;
   let callEndedAt = null;
+  let currentCallSid = '';
   let transcriptSavedForCall = false;
 
   function transcriptElapsedSeconds(){
@@ -1737,7 +1740,10 @@
         const savedActivity = await window.callcenterRecordCall?.({
           crmId,
           duration: connectedSeconds,
-          outcome: finalOutcome
+          outcome: finalOutcome,
+          callSid: currentCallSid,
+          connectedAt: callConnectedAt,
+          endedAt: callEndedAt || Date.now()
         });
 
         if(!savedActivity){
