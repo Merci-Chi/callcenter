@@ -412,7 +412,14 @@
     render();
   }
 
-  window.callcenterRecordCall = async ({ crmId = null, duration = 0, outcome = '' } = {}) => {
+  window.callcenterRecordCall = async ({
+    crmId = null,
+    duration = 0,
+    outcome = '',
+    callSid = '',
+    connectedAt = null,
+    endedAt = null
+  } = {}) => {
     const c = client();
     if (!c) return null;
 
@@ -423,18 +430,41 @@
       user_id: session.user.id,
       crm_id: crmId || null,
       duration_seconds: Math.max(0, Number(duration) || 0),
-      outcome: String(outcome || '')
+      outcome: String(outcome || ''),
+      call_sid: String(callSid || '').trim() || null,
+      connected_at: connectedAt ? new Date(connectedAt).toISOString() : null,
+      ended_at: endedAt ? new Date(endedAt).toISOString() : null
     };
 
     const { data, error } = await c
       .from('callcenter_call_activity')
       .insert(payload)
-      .select('id,user_id,crm_id,duration_seconds,outcome,created_at')
+      .select('id,user_id,crm_id,duration_seconds,outcome,call_sid,caller_id_used,connected_at,ended_at,created_at')
       .single();
 
     if (error) {
       console.warn('Unable to save call activity:', error.message);
       return null;
+    }
+
+    // Ask the authenticated server function to enrich this row with the
+    // actual Twilio PSTN caller ID and authoritative Twilio timestamps.
+    // The call is still saved if the enrichment function is unavailable.
+    if (data?.id && data?.call_sid) {
+      try {
+        const { data: details, error: detailsError } = await c.functions.invoke(
+          'twilio-call-details',
+          { body: { activity_id: data.id, call_sid: data.call_sid } }
+        );
+
+        if (detailsError || details?.ok === false) {
+          console.warn('Unable to enrich call activity from Twilio:', detailsError || details);
+        } else if (details?.activity) {
+          Object.assign(data, details.activity);
+        }
+      } catch (detailsError) {
+        console.warn('Unable to enrich call activity from Twilio:', detailsError);
+      }
     }
 
     return data || null;
