@@ -436,11 +436,29 @@
       ended_at: endedAt ? new Date(endedAt).toISOString() : null
     };
 
-    const { data, error } = await c
+    let { data, error } = await c
       .from('callcenter_call_activity')
       .insert(payload)
       .select('id,user_id,crm_id,duration_seconds,outcome,call_sid,caller_id_used,connected_at,ended_at,created_at')
       .single();
+
+    // Keep call logging working while the new diagnostic columns are being
+    // rolled out. Once the migration exists, the richer insert is used.
+    if (error && /call_sid|caller_id_used|connected_at|ended_at/i.test(error.message || '')) {
+      const legacyPayload = {
+        user_id: payload.user_id,
+        crm_id: payload.crm_id,
+        duration_seconds: payload.duration_seconds,
+        outcome: payload.outcome
+      };
+      const legacyResult = await c
+        .from('callcenter_call_activity')
+        .insert(legacyPayload)
+        .select('id,user_id,crm_id,duration_seconds,outcome,created_at')
+        .single();
+      data = legacyResult.data;
+      error = legacyResult.error;
+    }
 
     if (error) {
       console.warn('Unable to save call activity:', error.message);
