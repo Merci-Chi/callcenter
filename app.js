@@ -2658,6 +2658,17 @@ function startLeadCallTimeTicker() {
 
 // Batch 1: only never-contacted leads belong in fresh Outreach.
 // A completed call is still visible in Activity and assigned follow-up workflows.
+// Batch 3: territories are explicitly assigned by admins; no fallback to all leads.
+let callcenterAssignedState = '';
+let callcenterAssignedTimeZone = '';
+async function callcenterLoadTerritory(client) {
+  const { data, error } = await client.rpc('callcenter_my_territory');
+  if (error) throw new Error('Territory configuration unavailable: ' + error.message);
+  callcenterAssignedState = String(data?.state_code || '').trim().toUpperCase();
+  callcenterAssignedTimeZone = String(data?.timezone || '').trim();
+  return Boolean(callcenterAssignedState && callcenterAssignedTimeZone);
+}
+
 function callcenterIsFreshLead(lead) {
   if (!lead) return false;
   if (lead.lastcalled) return false;
@@ -2899,9 +2910,10 @@ async function crmFetchAllForPhoneSearch(client, selectedTags = []) {
   for (let from = 0; ; from += PAGE_SIZE) {
     let page = client
       .from('crm')
-      .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
+      .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview,state_code')
       .is('lastcalled', null)
       .neq('stage', 'notinterested')
+      .eq('state_code', callcenterAssignedState)
       .range(from, from + PAGE_SIZE - 1);
 
     if (selectedTags.length) {
@@ -3010,6 +3022,18 @@ async function crmRunGlobalSearch() {
 
   crmShowLiveSearchLoading(query);
 
+  try {
+    if (!await callcenterLoadTerritory(client)) {
+      status.textContent = 'No calling territory assigned. Ask your administrator.';
+      box.replaceChildren();
+      return;
+    }
+  } catch (error) {
+    status.textContent = error.message;
+    box.replaceChildren();
+    return;
+  }
+
   if (!query && !selectedTags.length) {
     await loadApprovedPreviewCRM({ preserveSearch: true });
     return;
@@ -3033,9 +3057,10 @@ async function crmRunGlobalSearch() {
   } else {
     let db = client
       .from('crm')
-      .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
+      .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview,state_code')
       .is('lastcalled', null)
       .neq('stage', 'notinterested')
+      .eq('state_code', callcenterAssignedState)
       .limit(100);
 
     if (query) {
@@ -3080,7 +3105,7 @@ async function crmRunGlobalSearch() {
   let leads = (data || []).filter(lead => {
     const values = [lead.stage, lead.outcome, ...crmTags(lead)]
       .map(value => crmText(value).toLowerCase());
-    return callcenterIsFreshLead(lead);
+    return lead.state_code === callcenterAssignedState && callcenterIsFreshLead(lead);
   });
 
   const matches = new Map();
@@ -3259,6 +3284,20 @@ async function loadApprovedPreviewCRM(options = {}) {
     return;
   }
 
+  try {
+    if (!await callcenterLoadTerritory(client)) {
+      status.textContent = 'No calling territory assigned. Ask your administrator.';
+      box.replaceChildren();
+      finishInitialOutreachLoad();
+      return;
+    }
+  } catch (error) {
+    status.textContent = error.message;
+    box.replaceChildren();
+    finishInitialOutreachLoad();
+    return;
+  }
+
   status.textContent = 'Loading leads...';
 
   box.innerHTML = Array.from({ length: 6 }, () => `
@@ -3278,7 +3317,7 @@ async function loadApprovedPreviewCRM(options = {}) {
   try {
     const TARGET_LEADS = 80;
     const INVENTORY_PAGE = 100;
-    const MAX_INVENTORY_PAGES = 2;
+    const MAX_INVENTORY_PAGES = 30;
     const byCRM = new Map();
 
     let forcedRandom = null;
@@ -3395,12 +3434,13 @@ async function loadApprovedPreviewCRM(options = {}) {
       const { data, error } = await client
         .from('crm')
         .select(
-          'id,company,name,phone,notes,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier'
+          'id,company,name,phone,notes,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,state_code'
         )
         .in(
           'id',
           ids.slice(i, i + 80)
-        );
+        )
+        .eq('state_code', callcenterAssignedState);
 
       if (error) {
         throw new Error(
@@ -3446,7 +3486,7 @@ async function loadApprovedPreviewCRM(options = {}) {
         ...crmTags(lead)
       ].map(value => crmText(value).toLowerCase());
 
-      return callcenterIsFreshLead(lead);
+      return lead.state_code === callcenterAssignedState && callcenterIsFreshLead(lead);
     });
 
     box.replaceChildren(
