@@ -2666,7 +2666,7 @@ async function callcenterLoadTerritory(client) {
   if (error) throw new Error('Territory configuration unavailable: ' + error.message);
   callcenterAssignedState = String(data?.state_code || '').trim().toUpperCase();
   callcenterAssignedTimeZone = String(data?.timezone || '').trim();
-  return Boolean(callcenterAssignedState && callcenterAssignedTimeZone);
+  return true; // Territory is a preference, not a prerequisite for Outreach.
 }
 
 function callcenterIsFreshLead(lead) {
@@ -3060,7 +3060,6 @@ async function crmRunGlobalSearch() {
       .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview,state_code')
       .is('lastcalled', null)
       .neq('stage', 'notinterested')
-      .eq('state_code', callcenterAssignedState)
       .limit(100);
 
     if (query) {
@@ -3105,7 +3104,7 @@ async function crmRunGlobalSearch() {
   let leads = (data || []).filter(lead => {
     const values = [lead.stage, lead.outcome, ...crmTags(lead)]
       .map(value => crmText(value).toLowerCase());
-    return lead.state_code === callcenterAssignedState && callcenterIsFreshLead(lead);
+    return callcenterIsFreshLead(lead);
   });
 
   const matches = new Map();
@@ -3440,7 +3439,7 @@ async function loadApprovedPreviewCRM(options = {}) {
           'id',
           ids.slice(i, i + 80)
         )
-        .eq('state_code', callcenterAssignedState);
+        ;
 
       if (error) {
         throw new Error(
@@ -3459,7 +3458,9 @@ async function loadApprovedPreviewCRM(options = {}) {
 
     // Keep Outreach fast: randomize the already-loaded leads in memory
     // instead of issuing extra database queries just to randomize their order.
-    const randomizedLeads = callcenterShuffle(leads);
+    const randomizedLeads = callcenterShuffle(leads).sort((a,b) =>
+      Number(String(b.state_code || '').toUpperCase() === callcenterAssignedState && !!callcenterAssignedState) -
+      Number(String(a.state_code || '').toUpperCase() === callcenterAssignedState && !!callcenterAssignedState));
     leads.splice(0, leads.length, ...randomizedLeads);
 
     if (forcedRandom?.crm_id) {
@@ -3486,7 +3487,7 @@ async function loadApprovedPreviewCRM(options = {}) {
         ...crmTags(lead)
       ].map(value => crmText(value).toLowerCase());
 
-      return lead.state_code === callcenterAssignedState && callcenterIsFreshLead(lead);
+      return callcenterIsFreshLead(lead);
     });
 
     box.replaceChildren(
