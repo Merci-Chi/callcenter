@@ -276,10 +276,8 @@
     const state = {
       step: 0,
       name: profile.display_name || '',
-      phone: profile.phone || '',
-      referral: '',
-      commissionOk: !!profile.commission_acknowledged,
-      referralsOk: !!profile.referrals_acknowledged
+      phone: profile.phone || ''
+      commissionOk: !!profile.commission_acknowledged
     };
 
     const screens = [
@@ -298,12 +296,6 @@
         <label class="cc-check"><input id="ccCommissionOk" type="checkbox" ${state.commissionOk?'checked':''}><span>I understand how the commission stages work.</span></label>
       `,
       () => `
-        <h2>Direct referrals</h2>
-        <p>After referring someone, you get <strong>$50 from their first commission</strong>, and <strong>$10 per commission they receive after</strong>.</p>
-        <div class="cc-question"><label>Were you referred by someone? <span style="font-weight:600;color:#8a96a6">(optional)</span></label><input id="ccReferral" value="${esc(state.referral)}" placeholder="Enter referral code"></div>
-        <label class="cc-check"><input id="ccReferralsOk" type="checkbox" ${state.referralsOk?'checked':''}><span>I understand how direct referral earnings work.</span></label>
-      `,
-      () => `
         <h2>Account activity</h2>
         <p>An account is considered <strong>Active</strong> when it has completed a call within the last 30 days.</p>
         <div class="cc-question"><strong>30 days</strong><p class="cc-muted">At least one completed call in the last 30 days keeps the account Active.</p></div>
@@ -314,14 +306,10 @@
     const saveInputs = () => {
       const name = document.getElementById('ccName');
       const phone = document.getElementById('ccPhone');
-      const referral = document.getElementById('ccReferral');
       const commissionOk = document.getElementById('ccCommissionOk');
-      const referralsOk = document.getElementById('ccReferralsOk');
       if (name) state.name = name.value.trim();
       if (phone) state.phone = phone.value.trim();
-      if (referral) state.referral = referral.value.trim().toUpperCase();
       if (commissionOk) state.commissionOk = commissionOk.checked;
-      if (referralsOk) state.referralsOk = referralsOk.checked;
     };
 
     async function finish() {
@@ -338,37 +326,12 @@
         render();
         return;
       }
-      if (!state.referralsOk) {
-        alert('Please confirm that you understand referrals.');
-        state.step = 2;
-        render();
-        return;
-      }
-
-      let referredBy = null;
-      if (state.referral) {
-        const { data, error } = await c
-          .from('callcenter_referral_codes')
-          .select('user_id')
-          .eq('code', state.referral)
-          .maybeSingle();
-        if (error || !data?.user_id || data.user_id === session.user.id) {
-          alert('That referral code is not valid.');
-          state.step = 2;
-          render();
-          return;
-        }
-        referredBy = data.user_id;
-      }
-
       const { error } = await c
         .from('callcenter_profiles')
         .update({
           display_name: state.name,
           phone: state.phone,
-          referred_by_user_id: referredBy,
           commission_acknowledged: true,
-          referrals_acknowledged: true,
           onboarding_completed: true,
           updated_at: new Date().toISOString()
         })
@@ -401,7 +364,6 @@
         saveInputs();
         if (state.step === 0 && !state.name) return alert('Please enter your name.');
         if (state.step === 1 && !state.commissionOk) return alert('Please confirm that you understand the commission stages.');
-        if (state.step === 2 && !state.referralsOk) return alert('Please confirm that you understand referrals.');
         if (state.step === screens.length - 1) return finish();
         state.step++;
         render();
@@ -494,26 +456,10 @@
     const c = client();
     const stateBox = document.getElementById('earningsState');
 
-    const [
-      { data: commissions = [], error: commissionsError },
-      { data: bonuses = [], error: bonusesError },
-      { data: referred = [], error: referredError }
-    ] = await Promise.all([
-      c.from('callcenter_commissions')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending:false }),
-      c.from('callcenter_referral_bonuses')
-        .select('*')
-        .eq('referrer_user_id', session.user.id)
-        .order('created_at', { ascending:false }),
-      c.from('callcenter_profiles')
-        .select('user_id,display_name,email,last_call_at,created_at,disabled_at')
-        .eq('referred_by_user_id', session.user.id)
-        .order('created_at', { ascending:false })
-    ]);
+    const { data: commissions = [], error: commissionsError } = await c.from('callcenter_commissions')
+      .select('*').eq('user_id', session.user.id).order('created_at', { ascending:false });
 
-    const firstError = commissionsError || bonusesError || referredError;
+    const firstError = commissionsError;
     if (firstError) {
       console.error('Unable to load earnings data:', firstError);
       if (stateBox) {
@@ -532,16 +478,8 @@
     const commissionComplete = completed.reduce((sum,row) => sum + (Number(row.commission_amount_cents) || 0), 0);
     const commissionPending = pending.reduce((sum,row) => sum + (Number(row.commission_amount_cents) || 0), 0);
 
-    const referralComplete = bonuses
-      .filter(row => row.status === 'complete')
-      .reduce((sum,row) => sum + (Number(row.amount_cents) || 0), 0);
-
-    const referralPending = bonuses
-      .filter(row => row.status === 'pending')
-      .reduce((sum,row) => sum + (Number(row.amount_cents) || 0), 0);
-
-    const totalEarned = commissionComplete + referralComplete;
-    const totalPending = commissionPending + referralPending;
+    const totalEarned = commissionComplete;
+    const totalPending = commissionPending;
 
     const allSalesValue = commissions.reduce(
       (sum,row) => sum + (Number(row.sale_amount_cents) || 0),
@@ -558,10 +496,6 @@
     setText('pendingPayoutTotal', money(totalPending));
     setText('closedDeals', commissions.length);
     setText('pipelineValue', money(allSalesValue));
-    setText('referralCode', profile.referral_code || '—');
-    setText('activeReferralCount', referred.filter(user => activityState(user).label === 'Active').length);
-    setText('pendingReferralTotal', money(referralPending));
-    setText('referralEarnedTotal', money(referralComplete));
 
     const chart = document.getElementById('weeklyEarningsChart');
     if (chart) {
@@ -629,62 +563,6 @@
           '<div class="payout-side"><strong>' + amount + '</strong><span class="badge ' + badgeClass + '">' + statusLabel + '</span></div>' +
         '</div>';
       }).join('') : '<div class="cc-empty">No sales or payouts yet.</div>';
-    }
-
-    const referredUsers = document.getElementById('referredUsers');
-    if (referredUsers) {
-      referredUsers.innerHTML = referred.length ? referred.map(user => {
-        const state = activityState(user);
-        const completeForUser = bonuses
-          .filter(b => b.referred_user_id === user.user_id && b.status === 'complete')
-          .reduce((sum,b) => sum + (Number(b.amount_cents) || 0), 0);
-
-        const pendingForUser = bonuses
-          .filter(b => b.referred_user_id === user.user_id && b.status === 'pending')
-          .reduce((sum,b) => sum + (Number(b.amount_cents) || 0), 0);
-
-        const display = user.display_name || user.email || 'User';
-        const initials = display
-          .split(/\\s+/)
-          .filter(Boolean)
-          .slice(0,2)
-          .map(part => part[0])
-          .join('')
-          .toUpperCase();
-
-        let moneyText = 'No referral earnings yet';
-        if (completeForUser) moneyText = money(completeForUser) + ' earned';
-        else if (pendingForUser) moneyText = money(pendingForUser) + ' pending';
-
-        return '<div class="user-row">' +
-          '<div class="user-avatar">' + esc(initials || 'U') + '</div>' +
-          '<div class="user-info"><strong>' + esc(display) + '</strong><small>Joined ' + new Date(user.created_at).toLocaleDateString() + '</small></div>' +
-          '<div class="user-side"><span class="badge ' + (state.label === 'Active' ? 'active' : state.label === 'Disabled' ? 'pending' : 'pending') + '">' + state.label + '</span><small>' + moneyText + '</small></div>' +
-        '</div>';
-      }).join('') : '<div class="cc-empty">No direct referrals yet.</div>';
-    }
-
-    const copyButton = document.getElementById('copyReferralCode');
-    if (copyButton) {
-      copyButton.onclick = async () => {
-        try { await navigator.clipboard.writeText(profile.referral_code || ''); } catch {}
-        if (window.showToast) window.showToast('Referral code copied');
-      };
-    }
-
-    const shareButton = document.getElementById('shareReferral');
-    if (shareButton) {
-      shareButton.onclick = async () => {
-        const text = 'Join with my referral code: ' + (profile.referral_code || '');
-        if (navigator.share) {
-          try {
-            await navigator.share({ title:'Invite & Earn', text });
-            return;
-          } catch {}
-        }
-        try { await navigator.clipboard.writeText(text); } catch {}
-        if (window.showToast) window.showToast('Invite copied');
-      };
     }
 
     window.lucide?.createIcons();
