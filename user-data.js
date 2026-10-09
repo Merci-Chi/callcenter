@@ -1278,6 +1278,18 @@
     }
     const leadMap = new Map(leads.map(lead => [lead.id, lead]));
 
+    // Batch 4: active callback queue comes from the current CRM owner/status,
+    // not every historical activity labelled Call Back.
+    const { data: ownedCallbacks = [], error: callbackError } = await c
+      .from('crm')
+      .select('id,company,name,phone,callbackdate,callbackat,notes,stage,outcome,timezone,callback_owner_id')
+      .eq('callback_owner_id', selectedUserId)
+      .eq('stage', 'callback')
+      .order('callbackdate', { ascending: true, nullsFirst: false })
+      .limit(500);
+    if (callbackError) console.warn('Unable to load owned callbacks:', callbackError);
+    for (const lead of ownedCallbacks) leadMap.set(lead.id, lead);
+
     const activityIds = activities.map(row => row.id).filter(Boolean);
     let transcriptRows = [];
     if (activityIds.length) {
@@ -1372,15 +1384,14 @@
 
     const recentRows = activities.slice(0, 30);
 
-    const followups = activities
-      .filter(isCallback)
-      .map(row => ({ row, lead: leadMap.get(row.crm_id) }))
-      .sort((a,b) => {
-        const aDate = a.lead?.callbackdate || a.row.created_at;
-        const bDate = b.lead?.callbackdate || b.row.created_at;
-        return new Date(aDate) - new Date(bDate);
-      })
-      .slice(0, 12);
+    const followups = ownedCallbacks.map(lead => ({
+      lead,
+      row: { crm_id: lead.id, created_at: lead.callbackdate || new Date().toISOString() }
+    })).sort((a, b) => {
+      const da = a.lead.callbackdate || '9999-12-31';
+      const db = b.lead.callbackdate || '9999-12-31';
+      return String(da).localeCompare(String(db));
+    });
 
     const renderRecent = rows => rows.length ? rows.map(row => {
       const lead = leadMap.get(row.crm_id);
@@ -1430,7 +1441,7 @@
         </div>
         <div class="activity-followup-side">
           <time>${esc(callbackTime || '')}</time>
-          ${row.crm_id ? '<a class="activity-call-btn" href="index.html?crm_id=' + encodeURIComponent(row.crm_id) + '">Call</a>' : ''}
+          ${row.crm_id ? '<a class="activity-call-btn" href="call.html?crm_id=' + encodeURIComponent(row.crm_id) + '">Open</a>' : ''}
         </div>
       </div>`;
     }).join('') : '<div class="activity-empty">No upcoming call backs.</div>';
@@ -1445,7 +1456,7 @@
         </div>
         <div class="activity-stat">
           <div class="activity-stat-icon orange"><i data-lucide="calendar-clock"></i></div>
-          <strong>${callbacks.length}</strong><span>Call Backs</span>
+          <strong>${followups.length}</strong><span>Call Backs</span>
         </div>
         <div class="activity-stat">
           <div class="activity-stat-icon red"><i data-lucide="ban"></i></div>
