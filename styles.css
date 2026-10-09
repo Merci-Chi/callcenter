@@ -4897,3 +4897,48 @@ html[data-theme="dark"] .page-activity .activity-skeleton-row{border-bottom-colo
 html[data-theme="dark"] .page-activity .activity-sk{background:linear-gradient(100deg,#192b43 12%,#29425e 47%,#192b43 82%)!important;background-size:210% 100%!important}
 @media(max-width:390px){.page-activity .activity-skeleton-stat{padding:9px}.page-activity .activity-skeleton-row{grid-template-columns:32px minmax(0,1fr) 70px;gap:8px;padding:11px 9px}.page-activity .activity-sk-avatar{height:32px;width:32px}.page-activity .activity-sk-date{width:60px}.page-activity .activity-sk-status{width:57px}}
 @media(prefers-reduced-motion:reduce){.page-activity .activity-sk{animation:none!important}}
+
+/* Single dark popup system — dialog wrappers and nested controls. */
+html[data-theme="dark"] :is(
+ .app-modal,.cc-sheet,.post-call-sheet,.calendar-sheet,.call-keypad-sheet,
+ .call-tool-sheet,.settings-sheet,.activity-transcript-sheet,
+ .device-notification-popup,.scheduled-call-alert,.tag-filter-sheet,
+ .tag-filter-panel,.main-filter-menu,.lead-sort-panel,.settings-panel,
+ [role="dialog"],[aria-modal="true"]
+){
+ --popup-bg:#111f33;--popup-field:#0b1a2b;--popup-line:#30445d;
+ background:#111f33!important;color:#eff5ff!important;
+ border-color:#30445d!important;box-shadow:0 24px 60px rgba(0,0,0,.5)!important;
+}
+html[data-theme="dark"] :is(
+ .app-modal,.cc-sheet,.post-call-sheet,.calendar-sheet,.call-keypad-sheet,
+ .call-tool-sheet,.settings-sheet,.activity-transcript-sheet,
+ .device-notification-popup,.scheduled-call-alert,.tag-filter-sheet,
+ .tag-filter-panel,.main-filter-menu,.lead-sort-panel
+) :is(h1,h2,h3,h4,strong,label,p,li,span){
+ color:inherit;
+}
+html[data-theme="dark"] :is(
+ .app-modal,.cc-sheet,.post-call-sheet,.calendar-sheet,.call-keypad-sheet,
+ .call-tool-sheet,.settings-sheet,.activity-transcript-sheet,
+ .device-notification-popup,.scheduled-call-alert,.tag-filter-sheet,
+ .tag-filter-panel,.main-filter-menu,.lead-sort-panel
+) :is(input,textarea,select,.modal-input,.modal-textarea,.settings-field,.cc-question){
+ background:#0b1a2b!important;color:#eff5ff!important;border-color:#38516e!important;
+}
+html[data-theme="dark"] :is(
+ .app-modal,.cc-sheet,.post-call-sheet,.calendar-sheet,.call-keypad-sheet,
+ .call-tool-sheet,.settings-sheet,.activity-transcript-sheet,
+ .device-notification-popup,.scheduled-call-alert,.tag-filter-sheet,
+ .tag-filter-panel,.main-filter-menu,.lead-sort-panel
+) :is(input,textarea)::placeholder{color:#8fa6c2!important}
+html[data-theme="dark"] :is(.tag-filter-help,.modal-help,.modal-label,.settings-sheet-note,.cc-muted,.device-notification-popup-note){color:#a9bdd6!important}
+html[data-theme="dark"] :is(.tag-filter-clear,.modal-action:not(.primary):not(.danger),.settings-sheet-close,.app-modal-close,.activity-transcript-close,.call-tool-close,.post-call-close,.calendar-sheet-close){
+ background:#1a304a!important;color:#e7f1ff!important;border-color:#3b526d!important;
+}
+html[data-theme="dark"] :is(.modal-tags span,.device-notification-popup-note,.modal-note,.cc-question,.tag-filter-sheet .tag-filter-choice:not(.source-facebook):not(.source-instagram):not(.source-nextdoor):not(.source-google):not(.source-other)){
+ background:#172d46!important;color:#c9e0ff!important;border-color:#3b526d!important;
+}
+html[data-theme="dark"] :is(.app-modal-overlay,.settings-sheet-overlay,.activity-transcript-overlay,.post-call-overlay,.call-keypad-overlay,.calendar-sheet-overlay,.call-tool-overlay,.device-notification-popup-overlay,.cc-overlay){
+ background:rgba(1,6,14,.78)!important;
+}
