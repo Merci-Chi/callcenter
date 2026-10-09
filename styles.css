@@ -4759,3 +4759,42 @@ html[data-theme="dark"] :is(hr,.divider) {border-color:#293c55!important}
 @media (min-width:900px) {
  html[data-theme="dark"] .bottom-nav {background:#091727!important;border-right:1px solid #223653!important}
 }
+
+/* Targeted dark-surface repair: explicit desktop selectors outrank legacy white styling. */
+html[data-theme="dark"] .page-outreach .outreach-controls,
+html[data-theme="dark"] .page-outreach .crm-toolbar,
+html[data-theme="dark"] .page-outreach .outreach-controls .filter-row {
+ background:#111f33!important;color:#f2f7ff!important;border-color:#293d57!important;
+}
+html[data-theme="dark"] .page-outreach #crmReload {background:#12243a!important;color:#b8d7ff!important;border-color:#3b5371!important}
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead > .lead-head,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead > .contact-line,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-details,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-details > .time-row,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .notes {
+ background:#111f33!important;color:#edf5ff!important;border-color:#293c55!important;
+}
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead > .lead-head {
+ background:linear-gradient(180deg,#15263e,#111f33)!important;
+}
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead .lead-title h2,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead .lead-title .name,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead .contact-line,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-card.selected-lead .contact-line *,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .notes-title,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .notes p,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-details > .time-row,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-details > .time-row span {
+ color:#e9f2ff!important;-webkit-text-fill-color:currentColor!important;opacity:1!important;
+}
+html[data-theme="dark"] .page-outreach #selectedLeadTop .notes p,
+html[data-theme="dark"] .page-outreach #selectedLeadTop .lead-details > .time-row {color:#bdcee5!important}
+html[data-theme="dark"] .page-outreach #selectedLeadTop .quick-btn {
+ background:#0c192a!important;color:#eaf3ff!important;border:1px solid #304663!important;
+}
+html[data-theme="dark"] .page-outreach #selectedLeadTop .quick-btn * {color:inherit!important}
+html[data-theme="dark"] .page-outreach #crmLeadCards .contact-line {border-top-color:#293c55!important}
+html[data-theme="dark"] .page-outreach #selectedLeadTop .preview-link {background:#10243b!important;color:#5aaeff!important;border:1px solid #288aff!important}
+html[data-theme="dark"] .page-outreach .outreach-controls .pill:not(.active) {background:#0e1d31!important;color:#d5e6fc!important;border:1px solid #3a526f!important}
+html[data-theme="dark"] .page-outreach #selectedLeadTop:empty {background:#111f33!important;border-color:#304862!important}
