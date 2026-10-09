@@ -2780,7 +2780,7 @@ function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
     ${searchMatch ? `<div class="search-match-reason"><i data-lucide="search-check"></i><span><strong>“${crmEscape(searchMatch.query)}”</strong> found in ${crmEscape(searchMatch.label)}: <strong>${crmEscape(searchMatch.value)}</strong></span></div>` : ''}
 
     <div class="compact-lead-meta">
-      ${tags.length ? `<div class="tag-row compact-tag-row">${tags.map((t,i)=>`<span class="tag ${['blue','purple','orange'][i%3]}">${crmEscape(t)}</span>`).join('')}</div>` : ''}
+      ${tags.length ? `<div class="tag-row compact-tag-row">${tags.map((t,i)=>`<span class="tag ${crmSourceClass(t)}">${crmEscape(t)}</span>`).join('')}</div>` : ''}
       <div class="compact-call-row">
         <span class="call-time-status call-time-${callTiming.state}" data-live-call-status data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="phone-call"></i> ${crmEscape(callTiming.label)}</span>
         <span class="compact-local-time" data-live-call-time data-phone="${crmEscape(phone)}" data-timezone="${crmEscape(lead.timezone || '')}"><i data-lucide="clock-3"></i> ${crmEscape(callcenterCompactLocalTimeText(phone, lead.timezone))} · ${crmEscape(callcenterZoneLabel(callTiming.zone))}</span>
@@ -2819,7 +2819,7 @@ const CRM_SEARCH_TAGS = [
   'No Website','Spanish?'
 ];
 
-const CRM_SEARCH_SOURCES = ['Facebook','Instagram','Nextdoor','Google','Google Maps','Found Online','Other'];
+const CRM_SEARCH_SOURCES = ['Facebook','Instagram','Nextdoor','Google','Google Maps','Found online','Yelp','LinkedIn','TikTok','Booksy','ViewYourSite','Other'];
 const crmNormalizeSource = v => crmText(v).trim().toLowerCase().replace(/[ _-]+/g,' ');
 const crmSourceClass = v => { const x=crmNormalizeSource(v); return x.includes('instagram')?'source-instagram':x.includes('facebook')?'source-facebook':x.includes('nextdoor')?'source-nextdoor':x.includes('google')?'source-google': 'source-other'; };
 const crmList = value => { if(Array.isArray(value)) return value; if(typeof value === 'string'){try { const parsed=JSON.parse(value);return Array.isArray(parsed)?parsed:[value]; }catch {return value?[value]:[]}} return []; };
@@ -2910,7 +2910,7 @@ function crmFindSearchMatch(lead, query) {
 }
 
 function crmApplyCategoryFilters(db,tags,sources) {
- const clauses=(key,values)=>values.map(value=>key+'.cs.'+JSON.stringify([value]).replace(/,/g,'\\,'));
+ const clauses=(key,values)=>values.map(value=>key+'.cs.'+JSON.stringify([value]));
  if(tags.length && sources.length && crmSearchState.combine==='OR') return db.or([...clauses('tags',tags),...clauses('sources',sources)].join(','));
  if(tags.length) db=db.or(clauses('tags',tags).join(','));
  if(sources.length) db=db.or(clauses('sources',sources).join(','));
