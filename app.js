@@ -661,7 +661,7 @@ function setupOutreach() {
   const originalOrder = [...leadCards];
   const isSearchMode = () => {
     const query = (q('#crmSearch')?.value || '').trim();
-    return !!query || (typeof crmSearchState !== 'undefined' && crmSearchState.tags?.size > 0);
+    return !!query || (typeof crmSearchState !== 'undefined' && (crmSearchState.tags?.size > 0 || crmSearchState.sources?.size > 0));
   };
 
   let activeFilter = crmSearchState?.mainFilter || 'All';
@@ -2819,9 +2819,15 @@ const CRM_SEARCH_TAGS = [
   'No Website','Spanish?'
 ];
 
+const CRM_SEARCH_SOURCES = ['Facebook','Instagram','Nextdoor','Google','Google Maps','Found Online','Other'];
+const crmNormalizeSource = v => crmText(v).trim().toLowerCase().replace(/[ _-]+/g,' ');
+const crmSourceClass = v => { const x=crmNormalizeSource(v); return x.includes('instagram')?'source-instagram':x.includes('facebook')?'source-facebook':x.includes('nextdoor')?'source-nextdoor':x.includes('google')?'source-google': 'source-other'; };
+const crmList = value => { if(Array.isArray(value)) return value; if(typeof value === 'string'){try { const parsed=JSON.parse(value);return Array.isArray(parsed)?parsed:[value]; }catch {return value?[value]:[]}} return []; };
 const crmSearchState = {
   query: '',
   tags: new Set(),
+  sources: new Set(),
+  combine: 'AND',
   mainFilter: 'All',
   timer: null,
   requestId: 0
@@ -2903,7 +2909,15 @@ function crmFindSearchMatch(lead, query) {
   return null;
 }
 
-async function crmFetchAllForPhoneSearch(client, selectedTags = []) {
+function crmApplyCategoryFilters(db,tags,sources) {
+ const clauses=(key,values)=>values.map(value=>key+'.cs.'+JSON.stringify([value]).replace(/,/g,'\\,'));
+ if(tags.length && sources.length && crmSearchState.combine==='OR') return db.or([...clauses('tags',tags),...clauses('sources',sources)].join(','));
+ if(tags.length) db=db.or(clauses('tags',tags).join(','));
+ if(sources.length) db=db.or(clauses('sources',sources).join(','));
+ return db;
+}
+
+async function crmFetchAllForPhoneSearch(client, selectedTags = [], selectedSources = []) {
   const rows = [];
   const PAGE_SIZE = 1000;
 
@@ -2913,12 +2927,9 @@ async function crmFetchAllForPhoneSearch(client, selectedTags = []) {
       .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview,state_code')
       .is('lastcalled', null)
       .neq('stage', 'notinterested')
-      .eq('state_code', callcenterAssignedState)
       .range(from, from + PAGE_SIZE - 1);
 
-    if (selectedTags.length) {
-      page = page.contains('tags', selectedTags);
-    }
+    page = crmApplyCategoryFilters(page,selectedTags,selectedSources);
 
     const { data, error } = await page;
     if (error) throw error;
@@ -2983,7 +2994,7 @@ function crmShowLiveSearchLoading(query) {
 
   // While actively searching/filtering, keep the controls at the top.
   // Do not insert the expanded selected-lead skeleton above the search bar.
-  const searching = Boolean(query) || crmSearchState.tags?.size > 0;
+  const searching = Boolean(query) || crmSearchState.tags?.size > 0 || crmSearchState.sources?.size > 0;
   if (searching) {
     selectedLeadTop?.replaceChildren();
     crmKeepSearchControlsAtTop();
@@ -3018,6 +3029,7 @@ async function crmRunGlobalSearch() {
   const query = crmNormalizeSearch(q('#crmSearch')?.value);
   crmSearchState.query = query;
   const selectedTags = [...crmSearchState.tags];
+  const selectedSources = [...crmSearchState.sources];
   const requestId = ++crmSearchState.requestId;
 
   crmShowLiveSearchLoading(query);
@@ -3034,7 +3046,7 @@ async function crmRunGlobalSearch() {
     return;
   }
 
-  if (!query && !selectedTags.length) {
+  if (!query && !selectedTags.length && !selectedSources.length) {
     await loadApprovedPreviewCRM({ preserveSearch: true });
     return;
   }
@@ -3044,7 +3056,7 @@ async function crmRunGlobalSearch() {
 
   if (query && crmIsPhoneSearch(query)) {
     try {
-      const allRows = await crmFetchAllForPhoneSearch(client, selectedTags);
+      const allRows = await crmFetchAllForPhoneSearch(client, selectedTags, selectedSources);
       const queryDigits = crmDigits(query);
 
       data = allRows.filter(lead =>
@@ -3081,9 +3093,7 @@ async function crmRunGlobalSearch() {
       db = db.or(terms.join(','));
     }
 
-    if (selectedTags.length) {
-      db = db.contains('tags', selectedTags);
-    }
+    db = crmApplyCategoryFilters(db,selectedTags,selectedSources);
 
     const result = await db;
     data = result.data || [];
@@ -3164,51 +3174,42 @@ function crmSetupGlobalSearchControls() {
   }
 
   const tagButton = q('#crmTagFilter');
-  if (tagButton) {
-    tagButton.onclick = () => {
-      const body = `
-        <div class="tag-filter-sheet">
-          <p class="tag-filter-help">Select one or more CRM tags. Search and tag filters work together.</p>
-          <div class="tag-filter-grid">
-            ${CRM_SEARCH_TAGS.map(tag => `<button type="button" class="tag-filter-choice ${crmSearchState.tags.has(tag) ? 'selected' : ''}" data-filter-tag="${crmEscape(tag)}">${crmEscape(tag)}</button>`).join('')}
-          </div>
-          <div class="tag-filter-actions">
-            <button type="button" class="tag-filter-clear">Clear</button>
-            <button type="button" class="tag-filter-apply">Apply</button>
-          </div>
-        </div>`;
-
-      const overlay = modal('Filter by tags', body, []);
-      const staged = new Set(crmSearchState.tags);
-
-      qa('[data-filter-tag]', overlay).forEach(btn => {
-        btn.onclick = () => {
-          const tag = btn.dataset.filterTag;
-          if (staged.has(tag)) staged.delete(tag);
-          else staged.add(tag);
-          btn.classList.toggle('selected', staged.has(tag));
-        };
-      });
-
-      q('.tag-filter-clear', overlay).onclick = () => {
-        staged.clear();
-        qa('[data-filter-tag]', overlay).forEach(btn => btn.classList.remove('selected'));
-      };
-
-      q('.tag-filter-apply', overlay).onclick = () => {
-        crmSearchState.tags = staged;
+  if(tagButton) tagButton.onclick = () => {
+    let tab='tags';
+    const stagedTags=new Set(crmSearchState.tags),stagedSources=new Set(crmSearchState.sources);
+    let combine=crmSearchState.combine;
+    const overlay=modal('Filter tags & sources', '<div class="filter-multisheet"></div>', []);
+    const panel=q('.filter-multisheet',overlay);
+    const draw=()=>{
+      const values=tab==='tags'?CRM_SEARCH_TAGS:CRM_SEARCH_SOURCES;
+      const chosen=tab==='tags'?stagedTags:stagedSources;
+      panel.innerHTML=`
+        <div class="filter-category-tabs" role="tablist" aria-label="Filter categories">
+          <button type="button" class="${tab==='tags'?'active':''}" data-tab="tags" role="tab" aria-selected="${tab==='tags'}">Tags <small>${stagedTags.size||''}</small></button>
+          <button type="button" class="${tab==='sources'?'active':''}" data-tab="sources" role="tab" aria-selected="${tab==='sources'}">Sources <small>${stagedSources.size||''}</small></button>
+        </div>
+        <p class="tag-filter-help">${tab==='tags'?'Choose call status and lead tags.':'Choose where leads were found.'} Select multiple options.</p>
+        <div class="tag-filter-grid">${values.map(value=>`<button type="button" class="tag-filter-choice ${tab==='sources'?crmSourceClass(value):'tag-neutral'} ${chosen.has(value)?'selected':''}" data-pick="${crmEscape(value)}" aria-pressed="${chosen.has(value)}">${crmEscape(value)}</button>`).join('')}</div>
+        <div class="filter-match-controls"><span>Combine Tags + Sources</span>
+          <button type="button" class="${combine==='AND'?'active':''}" data-combine="AND">AND</button>
+          <button type="button" class="${combine==='OR'?'active':''}" data-combine="OR">OR</button>
+        </div>
+        <p class="tag-filter-help">Within each category, matching any selected option is enough. AND requires both categories; OR matches either.</p>
+        <div class="tag-filter-actions"><button type="button" class="tag-filter-clear">Clear ${tab}</button><button type="button" class="tag-filter-apply">Apply filters</button></div>`;
+      qa('[data-tab]',panel).forEach(btn=>btn.onclick=()=>{tab=btn.dataset.tab;draw()});
+      qa('[data-pick]',panel).forEach(btn=>btn.onclick=()=>{const v=btn.dataset.pick;if(chosen.has(v))chosen.delete(v);else chosen.add(v);draw()});
+      qa('[data-combine]',panel).forEach(btn=>btn.onclick=()=>{combine=btn.dataset.combine;draw()});
+      q('.tag-filter-clear',panel).onclick=()=>{chosen.clear();draw()};
+      q('.tag-filter-apply',panel).onclick=()=>{
+        crmSearchState.tags=stagedTags;crmSearchState.sources=stagedSources;crmSearchState.combine=combine;
         overlay.remove();
-
-        const count = q('#crmTagFilterCount');
-        if (count) {
-          count.hidden = !staged.size;
-          count.textContent = staged.size ? String(staged.size) : '';
-        }
-        tagButton.classList.toggle('active', staged.size > 0);
-        crmRunGlobalSearch();
+        const count=q('#crmTagFilterCount'),total=stagedTags.size+stagedSources.size;
+        if(count){count.hidden=!total;count.textContent=total?String(total):''}
+        tagButton.classList.toggle('active',total>0);crmRunGlobalSearch();
       };
     };
-  }
+    draw();
+  };
 }
 
 function finishInitialOutreachLoad() {
