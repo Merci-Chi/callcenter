@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png" />
   <title>Activity</title>
-  <link rel="stylesheet" href="styles.css?v=20261009-unified-dark" />
+  <link rel="stylesheet" href="styles.css?v=20261009-activity-skeletons" />
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="app-update.js" defer></script>
   <script src="theme.js?v=20261005-account-theme"></script>
@@ -26,10 +26,25 @@
   </header>
 
   <main class="content" id="activityContent">
-    <section class="card light-card" style="text-align:center;padding:28px 18px">
-      <div style="font-weight:900;margin-bottom:6px">Loading activity…</div>
-      <div style="font-size:12px;color:#738196">Call history and user activity will appear here.</div>
-    </section>
+
+    <div class="activity-skeleton" role="status" aria-label="Loading activity" aria-busy="true">
+      <div class="activity-skeleton-stats" aria-hidden="true">
+        <div class="activity-skeleton-stat"><span class="activity-sk activity-sk-icon"></span><span class="activity-sk activity-sk-number"></span><span class="activity-sk activity-sk-label"></span></div><div class="activity-skeleton-stat"><span class="activity-sk activity-sk-icon"></span><span class="activity-sk activity-sk-number"></span><span class="activity-sk activity-sk-label"></span></div><div class="activity-skeleton-stat"><span class="activity-sk activity-sk-icon"></span><span class="activity-sk activity-sk-number"></span><span class="activity-sk activity-sk-label"></span></div>
+      </div>
+      <div class="activity-skeleton-tools" aria-hidden="true">
+        <span class="activity-sk activity-sk-search"></span>
+        <div class="activity-skeleton-filters"><span class="activity-sk activity-sk-filter" style="width:92px"></span><span class="activity-sk activity-sk-filter" style="width:105px"></span><span class="activity-sk activity-sk-filter" style="width:121px"></span><span class="activity-sk activity-sk-filter" style="width:75px"></span><span class="activity-sk activity-sk-filter" style="width:104px"></span></div>
+      </div>
+      <div class="activity-skeleton-section" aria-hidden="true">
+        <div class="activity-skeleton-title"><span class="activity-sk activity-sk-heading"></span><span class="activity-sk activity-sk-view"></span></div>
+        <div class="activity-skeleton-list"><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span><span class="activity-sk activity-sk-detail short"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span><span class="activity-sk activity-sk-detail short"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span><span class="activity-sk activity-sk-detail short"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span><span class="activity-sk activity-sk-detail short"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span><span class="activity-sk activity-sk-detail short"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div></div>
+      </div>
+      <div class="activity-skeleton-section" aria-hidden="true">
+        <div class="activity-skeleton-title"><span class="activity-sk activity-sk-heading"></span><span class="activity-sk activity-sk-view"></span></div>
+        <div class="activity-skeleton-list"><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div><div class="activity-skeleton-row"><span class="activity-sk activity-sk-avatar"></span><div class="activity-skeleton-info"><span class="activity-sk activity-sk-business"></span><span class="activity-sk activity-sk-detail"></span></div><div class="activity-skeleton-right"><span class="activity-sk activity-sk-date"></span><span class="activity-sk activity-sk-status"></span></div></div></div>
+      </div>
+      <span class="sr-only">Loading call history and follow-ups…</span>
+    </div>
   </main>
 
   <nav class="bottom-nav">
