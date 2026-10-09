@@ -1674,9 +1674,9 @@
           data.route === 'callback' ? 'Call Back' : data.route === 'notinterested' ? 'Not Interested' : ''
         ].filter(Boolean).join(' • ') || "Didn't call";
 
-        // Only change the lead's CRM disposition after an actual connected call,
-        // but always record the attempt in Activity — including "Didn't call".
-        if (data.rating !== "Didn't call" && connectedSeconds > 0) {
+        // A completed dialing attempt is no longer a new lead, even if nobody answered.
+        // "Didn't call" does not consume the lead; its questionnaire is still logged.
+        if (data.rating !== "Didn't call") {
           const client = window.steadyHandsCRMClient;
 
           if (client && crmId && data.route) {
@@ -1717,8 +1717,8 @@
                   tags: mergedTags
                 }
               : {
-                  stage: 'outreach',
-                  outcome: data.outcomes[0] || 'Call Completed',
+                  stage: 'callback',
+                  outcome: 'Call Back',
                   lastcalled: new Date().toISOString(),
                   notes: nextNotes,
                   tags: mergedTags
