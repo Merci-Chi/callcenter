@@ -4644,3 +4644,18 @@ html[data-theme="dark"] .save-email-check{
   border-color:#3a5066 !important;
 }
 html[data-theme="dark"] .login-foot{color:#768ba0 !important}
+
+/* Desktop sidebar scrolls independently of the main page. */
+@media (min-width: 900px) {
+  .app > .bottom-nav {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(196,208,220,.45) transparent;
+  }
+  .app > .bottom-nav > .nav-item {
+    flex-shrink: 0;
+  }
+}
