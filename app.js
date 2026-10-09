@@ -2668,6 +2668,53 @@ function callcenterIsFreshLead(lead) {
   return true;
 }
 
+// Batch 2: refresh only lead availability; never reload an ongoing call or the page.
+let callcenterAvailabilityTicker = null;
+let callcenterAvailabilityBusy = false;
+async function callcenterRefreshAvailability() {
+  if (callcenterAvailabilityBusy || document.hidden) return;
+  const client = window.steadyHandsCRMClient;
+  const cards = document.querySelectorAll('#crmLeadCards .lead-card, #selectedLeadTop .lead-card');
+  if (!client || !cards.length) return;
+  callcenterAvailabilityBusy = true;
+  try {
+    const { data: ids, error } = await client.rpc('callcenter_unavailable_leads');
+    if (error) throw error;
+    const blocked = new Set((ids || []).map(String));
+    for (const card of cards) {
+      if (!blocked.has(String(card.dataset.crmId))) continue;
+      if (card.closest('#selectedLeadTop')) {
+        card.remove();
+      } else {
+        card.remove();
+      }
+    }
+  } catch (error) {
+    console.warn('Lead availability refresh failed; retrying shortly:', error);
+  } finally { callcenterAvailabilityBusy = false; }
+}
+function callcenterStartAvailabilitySync() {
+  if (callcenterAvailabilityTicker) return;
+  callcenterRefreshAvailability();
+  callcenterAvailabilityTicker = window.setInterval(callcenterRefreshAvailability, 10000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) callcenterRefreshAvailability();
+  });
+  window.addEventListener('focus', callcenterRefreshAvailability);
+  const client = window.steadyHandsCRMClient;
+  if (client) {
+    client.channel('outreach-crm-dispositions').on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'crm'
+    }, payload => {
+      const lead = payload.new;
+      if (!lead || callcenterIsFreshLead(lead)) return;
+      document.querySelectorAll('#crmLeadCards .lead-card, #selectedLeadTop .lead-card').forEach(card => {
+        if (String(card.dataset.crmId) === String(lead.id)) card.remove();
+      });
+    }).subscribe();
+  }
+}
+
 function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
@@ -3060,6 +3107,7 @@ async function crmRunGlobalSearch() {
 
   setupCopyButtons();
   setupOutreach();
+  callcenterRefreshAvailability();
   refreshIcons();
 }
 
@@ -3415,6 +3463,7 @@ async function loadApprovedPreviewCRM(options = {}) {
 
     // User-specific Outreach stats are loaded from callcenter_call_activity in user-data.js.\n\n    setupCopyButtons();
     setupOutreach();
+    callcenterStartAvailabilitySync();
     startLeadCallTimeTicker();
     refreshIcons();
     finishInitialOutreachLoad();
