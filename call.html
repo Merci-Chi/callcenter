@@ -1750,9 +1750,15 @@
               ...data.tags
             ])];
 
+            const { data: authData, error: authError } = await client.auth.getUser();
+            if (authError || !authData?.user?.id) {
+              alert('Please sign in again before saving your call result.');
+              return;
+            }
             const crmUpdate = data.route === 'notinterested'
               ? {
                   stage: 'notinterested',
+                  callback_owner_id: null,
                   outcome: 'Not Interested',
                   lastcalled: new Date().toISOString(),
                   notes: nextNotes,
@@ -1760,6 +1766,7 @@
                 }
               : {
                   stage: 'callback',
+                  callback_owner_id: authData.user.id,
                   outcome: 'Call Back',
                   lastcalled: new Date().toISOString(),
                   notes: nextNotes,
