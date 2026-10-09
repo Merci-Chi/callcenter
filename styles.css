@@ -4863,3 +4863,37 @@ html[data-theme="dark"] .filter-category-tabs button,
 html[data-theme="dark"] .filter-match-controls button{background:#101e30;color:#aec2dc;border-color:#36506c}
 html[data-theme="dark"] .filter-category-tabs button.active,
 html[data-theme="dark"] .filter-match-controls button.active{background:#163454;color:#80bbff;border-color:#419bff}
+
+/* Activity page skeleton: mirrors stats, search/filters, Recent Calls and Follow-Up Queue. */
+.page-activity .activity-skeleton{display:block;width:100%;min-width:0;padding-bottom:40px}
+.page-activity .activity-skeleton-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.page-activity .activity-skeleton-stat{min-width:0;min-height:104px;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:13px;display:flex;flex-direction:column;gap:9px}
+.page-activity .activity-skeleton-tools{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:12px;margin-bottom:20px}
+.page-activity .activity-skeleton-filters{display:flex;gap:8px;margin-top:12px;overflow:hidden}
+.page-activity .activity-skeleton-section{margin:16px 0 22px}
+.page-activity .activity-skeleton-title{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px}
+.page-activity .activity-skeleton-list{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.page-activity .activity-skeleton-row{display:grid;grid-template-columns:38px minmax(0,1fr) 90px;align-items:center;gap:11px;padding:14px 13px;min-height:83px;border-bottom:1px solid var(--line)}
+.page-activity .activity-skeleton-row:last-child{border-bottom:0}
+.page-activity .activity-skeleton-info,.page-activity .activity-skeleton-right{display:flex;flex-direction:column;gap:8px;min-width:0}
+.page-activity .activity-skeleton-right{align-items:flex-end}
+.page-activity .activity-sk{display:block;flex:none;border-radius:9px;background:linear-gradient(100deg,#e6ebf2 12%,#f5f7fa 47%,#e6ebf2 82%);background-size:210% 100%;animation:activitySkeletonWave 1.5s ease-in-out infinite}
+.page-activity .activity-sk-icon{height:30px;width:30px;border-radius:10px}
+.page-activity .activity-sk-number{width:55%;height:18px}
+.page-activity .activity-sk-label{width:75%;height:10px}
+.page-activity .activity-sk-search{width:100%;height:40px;border-radius:10px}
+.page-activity .activity-sk-filter{height:30px;border-radius:100px}
+.page-activity .activity-sk-heading{height:17px;width:130px}
+.page-activity .activity-sk-view{height:14px;width:58px}
+.page-activity .activity-sk-avatar{width:38px;height:38px;border-radius:11px}
+.page-activity .activity-sk-business{height:13px;width:80%;max-width:210px}
+.page-activity .activity-sk-detail{height:10px;width:68%;max-width:155px}
+.page-activity .activity-sk-detail.short{width:42%}
+.page-activity .activity-sk-date{height:10px;width:74px}
+.page-activity .activity-sk-status{height:22px;width:68px;border-radius:100px}
+@keyframes activitySkeletonWave{0%{background-position:190% 0}100%{background-position:-160% 0}}
+html[data-theme="dark"] .page-activity :is(.activity-skeleton-stat,.activity-skeleton-tools,.activity-skeleton-list){background:#111f33!important;border-color:#293c55!important}
+html[data-theme="dark"] .page-activity .activity-skeleton-row{border-bottom-color:#293c55!important}
+html[data-theme="dark"] .page-activity .activity-sk{background:linear-gradient(100deg,#192b43 12%,#29425e 47%,#192b43 82%)!important;background-size:210% 100%!important}
+@media(max-width:390px){.page-activity .activity-skeleton-stat{padding:9px}.page-activity .activity-skeleton-row{grid-template-columns:32px minmax(0,1fr) 70px;gap:8px;padding:11px 9px}.page-activity .activity-sk-avatar{height:32px;width:32px}.page-activity .activity-sk-date{width:60px}.page-activity .activity-sk-status{width:57px}}
+@media(prefers-reduced-motion:reduce){.page-activity .activity-sk{animation:none!important}}
