@@ -183,6 +183,46 @@
   let stateTimers = [];
   let questionnaireOpen = false;
   let leadBlockedNotInterested = false;
+  let leadLockHeld = false;
+  let leadLockHeartbeat = null;
+
+  async function claimLeadForCall(){
+    const client = window.steadyHandsCRMClient;
+    if (!client || !crmId) throw new Error('CRM connection is required to start a call.');
+    const { data, error } = await client.rpc('callcenter_claim_lead', { p_lead_id: String(crmId) });
+    if (error) throw new Error('Call safety setup is unavailable: ' + error.message);
+    if (data !== true) throw new Error('This lead is already being called, was contacted, or is unavailable. Refresh Outreach.');
+    leadLockHeld = true;
+    clearInterval(leadLockHeartbeat);
+    leadLockHeartbeat = setInterval(async () => {
+      if (!leadLockHeld) return;
+      const { data: renewed, error: renewalError } = await client.rpc('callcenter_renew_lead', { p_lead_id: String(crmId) });
+      if (error || renewed !== true) {
+        console.error('Lead reservation could not be renewed', renewalError);
+        clearInterval(leadLockHeartbeat);
+        leadLockHeartbeat = null;
+        // Fail safely: end an in-progress call if its reservation is lost.
+        if (['calling','ringing','connected'].includes(callState)) {
+          window.SteadyHandsTwilioVoice?.hangup();
+          stopCall();
+          if (!questionnaireOpen) openPostCallFlow();
+          alert('Lead reservation lost. The call was ended to prevent duplicate outreach.');
+        }
+        leadLockHeld = false;
+      }
+    }, 30000);
+  }
+
+  async function releaseLeadAfterCall(){
+    clearInterval(leadLockHeartbeat);
+    leadLockHeartbeat = null;
+    if (!leadLockHeld) return;
+    leadLockHeld = false;
+    try {
+      await window.steadyHandsCRMClient?.rpc('callcenter_release_lead', { p_lead_id: String(crmId) });
+    } catch (error) { console.warn('Lead lock will expire automatically:', error); }
+  }
+
   let holdActive = false;
   let userMuted = false;
 
@@ -458,6 +498,7 @@
         throw new Error('The browser phone is still loading. Try again in a second.');
       }
 
+      await claimLeadForCall();
       await window.SteadyHandsTwilioVoice.start(number, {
         crmId,
         company,
@@ -466,6 +507,7 @@
     } catch (error) {
       console.error('Unable to start Twilio call:', error);
       stopCall();
+      await releaseLeadAfterCall();
       syncMainCallButton();
       alert(error?.message || 'The call could not be started.');
     }
@@ -1767,6 +1809,7 @@
           window.callcenterClearResumeLocation?.();
         }
 
+        await releaseLeadAfterCall();
         overlay.remove();
         questionnaireOpen = false;
         setState('ended');
