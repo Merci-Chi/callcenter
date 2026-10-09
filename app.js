@@ -2656,6 +2656,18 @@ function startLeadCallTimeTicker() {
   window.__steadyHandsCallTimeTicker = window.setInterval(() => refreshLeadCallTimes(), 30000);
 }
 
+// Batch 1: only never-contacted leads belong in fresh Outreach.
+// A completed call is still visible in Activity and assigned follow-up workflows.
+function callcenterIsFreshLead(lead) {
+  if (!lead) return false;
+  if (lead.lastcalled) return false;
+  const stage = crmText(lead.stage).trim().toLowerCase().replace(/[\s_-]+/g, '');
+  if (['notinterested','callback','followup','retry','sold','client','donotcall','dnc'].includes(stage)) return false;
+  const outcome = crmText(lead.outcome).toLowerCase();
+  if (/not interested|do not call|call back|callback|follow.?up|sold|no answer|voicemail|busy|wrong number/i.test(outcome)) return false;
+  return true;
+}
+
 function makeCRMLinkCard(lead, siteURLs, searchMatch = null) {
 
   const company = crmEscape(lead.company || lead.name || 'Unnamed business');
@@ -2841,6 +2853,7 @@ async function crmFetchAllForPhoneSearch(client, selectedTags = []) {
     let page = client
       .from('crm')
       .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
+      .is('lastcalled', null)
       .neq('stage', 'notinterested')
       .range(from, from + PAGE_SIZE - 1);
 
@@ -2974,6 +2987,7 @@ async function crmRunGlobalSearch() {
     let db = client
       .from('crm')
       .select('id,company,name,phone,altphone,email,website,domain,notes,issue,concerns,origin,assigned,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,previewurl,sitekey,has_site_preview')
+      .is('lastcalled', null)
       .neq('stage', 'notinterested')
       .limit(100);
 
@@ -3019,7 +3033,7 @@ async function crmRunGlobalSearch() {
   let leads = (data || []).filter(lead => {
     const values = [lead.stage, lead.outcome, ...crmTags(lead)]
       .map(value => crmText(value).toLowerCase());
-    return !values.some(value => value === 'notinterested' || value.includes('not interested'));
+    return callcenterIsFreshLead(lead);
   });
 
   const matches = new Map();
@@ -3384,11 +3398,7 @@ async function loadApprovedPreviewCRM(options = {}) {
         ...crmTags(lead)
       ].map(value => crmText(value).toLowerCase());
 
-      return !values.some(value =>
-        value === 'notinterested' ||
-        value === 'not interested' ||
-        value.includes('not interested')
-      );
+      return callcenterIsFreshLead(lead);
     });
 
     box.replaceChildren(
