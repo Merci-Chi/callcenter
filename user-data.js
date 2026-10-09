@@ -1441,7 +1441,7 @@
         </div>
         <div class="activity-followup-side">
           <time>${esc(callbackTime || '')}</time>
-          ${row.crm_id ? '<a class="activity-call-btn" href="call.html?crm_id=' + encodeURIComponent(row.crm_id) + '">Open</a>' : ''}
+          ${row.crm_id && lead?.phone ? '<a class="activity-call-btn" href="call.html?' + new URLSearchParams({ crm_id: String(row.crm_id), number: lead.phone, company: lead.company || lead.name || 'Business', contact: lead.name || '', timezone: lead.timezone || '' }).toString() + '">Open</a>' : '<span class="cc-muted">No phone</span>'}
         </div>
       </div>`;
     }).join('') : '<div class="activity-empty">No upcoming call backs.</div>';
