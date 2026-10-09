@@ -276,7 +276,7 @@
     const state = {
       step: 0,
       name: profile.display_name || '',
-      phone: profile.phone || ''
+      phone: profile.phone || '',
       commissionOk: !!profile.commission_acknowledged
     };
 
