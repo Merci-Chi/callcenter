@@ -212,7 +212,7 @@
         </section>`;
 
     main.innerHTML = `
-      <section class="admin-summary-card">
+      <a href="company-analytics.html" class="settings-row" style="margin-bottom:14px;display:flex;align-items:center;gap:12px;padding:16px;border:1px solid rgba(142,159,181,.25);border-radius:14px;text-decoration:none;color:inherit"><i data-lucide="chart-no-axes-combined"></i><span class="settings-copy"><strong>Company Analytics</strong><small>All salespeople · conversions, weekly paying clients and subscription profit</small></span><i data-lucide="chevron-right" style="margin-left:auto"></i></a>\n      <section class="admin-summary-card">
         <div class="admin-summary-icon"><i data-lucide="shield-check"></i></div>
         <div>
           <strong>Admin Access</strong>
