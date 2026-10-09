@@ -4659,3 +4659,103 @@ html[data-theme="dark"] .login-foot{color:#768ba0 !important}
     flex-shrink: 0;
   }
 }
+
+
+/* Unified premium navy dark mode — all Outreach screens, 2026-10-09.
+   Light appearance remains unchanged. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --navy:#081522;--navy-2:#101e32;--navy-3:#eaf2ff;
+  --page:#070f1b;--card:#111f33;--text:#f1f6ff;
+  --muted:#a1b4d0;--line:#293c55;--blue:#419bff;
+  --blue-soft:#142e51;--green:#08d878;--green-soft:#0b3a30;
+  --shadow:0 12px 28px rgba(0,0,0,.24);
+}
+html[data-theme="dark"] body,
+html[data-theme="dark"] .app,
+html[data-theme="dark"] .content,
+html[data-theme="dark"] .call-content,
+html[data-theme="dark"] .call-app,
+html[data-theme="dark"] .login-page {background:#070f1b;color:#f1f6ff}
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .call-topbar,
+html[data-theme="dark"] .bottom-nav {
+  background:linear-gradient(140deg,#081524,#0d2035)!important;
+  border-color:#21324b;color:#f1f6ff;
+}
+html[data-theme="dark"] .desktop-outreach-heading h2,
+html[data-theme="dark"] .desktop-kicker,
+html[data-theme="dark"] .section-title,
+html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3 {color:#f3f7ff}
+html[data-theme="dark"] :is(
+ .card,.light-card,.lead-card,.selected-lead-card,.crm-leads > .lead-card,
+ .search-card,.search-panel,.filter-card,.crm-search-controls,.crm-filters,
+ .call-action-card,.call-transcript-card,.starter-script-card,.call-identity,
+ .call-detail-card,.call-info-card,.call-preview-card,.call-notes-card,
+ .settings-section,.settings-profile,.settings-sheet,.settings-status-card,.settings-group,
+ .skill-card,.skill-library-card,.skill-placeholder,.practice-card,
+ .earnings-card,.sales-stat,.ref-card,.payout-row,.activity-call-row,
+ .activity-followup-row,.activity-transcript-sheet,.activity-detail,
+ .cc-live-card,.cc-live-stat,.cc-sheet,.cc-question,.cc-overlay .cc-sheet,
+ .app-modal,.scheduled-call-alert,.device-notification-popup,.post-call-sheet,
+ .calendar-sheet,.call-keypad-sheet,.admin-summary-card,.admin-approval-card,
+ .admin-phone-card,.admin-add-phone,.admin-empty,.admin-access-denied,
+ .main-filter-menu,.main-filter-choice,.tag-filter-panel,.lead-sort-panel,
+ .crm-state,.settings-row,.settings-field,.modal-note,.modal-action,
+ .modal-input,.modal-textarea,.login-panel
+) {
+ background:#111f33!important;
+ color:#f1f6ff!important;
+ border-color:#293c55!important;
+ box-shadow:0 8px 24px rgba(0,0,0,.17);
+}
+html[data-theme="dark"] :is(
+ input,textarea,select,.search-input,.search-bar,.crm-search,
+ .mini-select,.settings-field input,.settings-field select,
+ .modal-input,.modal-textarea,.login-field,.login-field input,
+ .tag-filter-input,.call-note-input
+) {
+ background:#0c192a!important;
+ color:#f0f6ff!important;
+ border-color:#344963!important;
+ -webkit-text-fill-color:currentColor;
+}
+html[data-theme="dark"] :is(input,textarea)::placeholder {color:#8fa4c2!important;opacity:1}
+html[data-theme="dark"] :is(
+ .lead-title,.lead-title strong,.company-name,.lead-card strong,
+ .selected-lead-card strong,.selected-lead-card .lead-title,
+ .contact-line,.settings-row strong,.settings-profile-copy strong,
+ .activity-call-main strong,.call-company,.call-number,.call-phone,
+ .payout-row strong,.sales-stat strong,.skill-card strong,
+ .admin-phone-card-copy strong,.cc-sheet strong
+) {color:#eef5ff!important;opacity:1}
+html[data-theme="dark"] :is(
+ .muted,.cc-muted,.lead-meta,.lead-subtitle,.desktop-outreach-heading p,
+ .call-detail-label,.activity-call-main small,.settings-row small,
+ .settings-section-title,.filter-label,.lead-time,.call-time,.modal-help
+) {color:#a4b8d4!important}
+html[data-theme="dark"] :is(
+ .preview-link,.call-preview-link,.preview-button,
+ .call-round-btn,.call-control.small,.filter-btn,.tag-filter-btn,
+ .search-refresh,.refresh-btn,.lead-sort-control,.settings-edit-btn,
+ .settings-sheet-close,.app-modal-close,.icon-btn,.copy-btn
+) {
+ background:#10243b!important;
+ color:#acd0ff!important;
+ border-color:#345576!important;
+}
+html[data-theme="dark"] :is(.preview-link,.call-preview-link,.preview-button) {color:#55aaff!important;border-color:#318bfb!important}
+html[data-theme="dark"] :is(.lead-card.selected-lead,.lead-card.is-selected,.selected-lead-card.active) {border-color:#288aff!important;box-shadow:0 0 0 1px #288aff,0 10px 26px rgba(0,0,0,.24)!important}
+html[data-theme="dark"] :is(.call-time-good,.good-time,.call-time-good-now) {background:#0b3e34!important;color:#7bf5b4!important;border-color:#0e6a50!important}
+html[data-theme="dark"] :is(.nav-item.active,.admin-side-link.active) {background:#123b68!important;color:#66b3ff!important}
+html[data-theme="dark"] :is(.nav-item,.bottom-nav a) {color:#a8beda}
+html[data-theme="dark"] :is(.company-icon,.call-avatar,.settings-icon) {background:#173860!important;color:#54a8ff!important}
+html[data-theme="dark"] :is(.sk-shape,.skeleton-lead,.settings-skeleton-line,.settings-skeleton-circle) {
+ background:linear-gradient(95deg,#15253a 0%,#203650 48%,#15253a 100%)!important;
+}
+html[data-theme="dark"] :is(.cc-overlay,.app-modal-overlay,.settings-sheet-overlay,.activity-transcript-overlay,.post-call-overlay,.call-keypad-overlay) {background:rgba(2,7,15,.82)!important}
+html[data-theme="dark"] :is(.bar-wrap .bar,.sales-chart .bar) {border-color:#304761}
+html[data-theme="dark"] :is(hr,.divider) {border-color:#293c55!important}
+@media (min-width:900px) {
+ html[data-theme="dark"] .bottom-nav {background:#091727!important;border-right:1px solid #223653!important}
+}
