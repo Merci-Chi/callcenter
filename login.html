@@ -5,7 +5,7 @@
 <link rel="icon" href="https://onboard.steadyhandsop.com/images/logo.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png">
-<link rel="stylesheet" href="login-onboard.css?v=20261010-1">
+<link rel="stylesheet" href="login-onboard.css?v=20261010-controls-v2">
 <script src="https://unpkg.com/lucide@latest"></script>
 <script src="app-update.js" defer></script>
 </head><body>
@@ -44,12 +44,12 @@
 <form id="loginForm" class="login-form">
 <label for="loginEmail">Email address</label><input id="loginEmail" type="email" name="email" placeholder="you@company.com" autocomplete="username" required>
 <label for="loginPassword">Password</label><div class="password-wrap"><input id="loginPassword" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required><button id="showPassword" type="button" aria-label="Show password">Show</button></div>
-<div class="form-row"><label class="remember"><input type="checkbox" id="saveEmailToDevice"> Save email to this device</label><button class="text-btn" id="forgotPassword" type="button">Forgot password?</button></div>
-<label class="terms-row terms-option" for="agreeToTerms"><input id="agreeToTerms" type="checkbox"><span>I agree to the <a id="termsLink" href="terms.html">Terms &amp; Conditions</a>.</span></label>
+<div class="outreach-login-options"><label class="outreach-check-label"><input type="checkbox" id="saveEmailToDevice"><span class="outreach-check-box" aria-hidden="true">✓</span><span>Save email to this device</span></label>
+<label class="outreach-check-label terms-option" for="agreeToTerms"><input id="agreeToTerms" type="checkbox"><span class="outreach-check-box" aria-hidden="true">✓</span><span>I agree to the <a id="termsLink" href="terms.html">Terms &amp; Conditions</a>.</span></label>
 <div class="terms-validation" id="termsValidation" role="alert">This box must be checked to continue.</div>
 <div id="loginMessage" role="status" aria-live="polite"></div>
-<button id="signInButton" class="primary-button full" type="submit">Log In</button>
-</form><p class="foot">Secure access to Steady Hands.</p>
+</div><button id="signInButton" class="primary-button full outreach-login-submit" type="submit">Sign in <span aria-hidden="true">→</span></button><button class="text-btn outreach-forgot" id="forgotPassword" type="button">Forgot password?</button>
+</form><p class="foot outreach-login-foot">Authorized team access only</p>
 </div></main></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="login.js?v=20261003-terms-validation"></script>
