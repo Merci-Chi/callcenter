@@ -3505,8 +3505,8 @@ async function loadApprovedPreviewCRM(options = {}) {
   } catch (error) {
     finishInitialOutreachLoad();
     status.style.display = '';
-    status.textContent =
-      'Unable to load leads. Please try again.';
+    const detail = String(error?.message || 'Unknown error');
+    status.textContent = 'Unable to load leads: ' + detail;
 
     box.replaceChildren();
 
