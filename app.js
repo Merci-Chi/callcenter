@@ -3061,19 +3061,13 @@ async function crmRunGlobalSearch() {
 
     if (query) {
       const safe = crmSafeOrTerm(query);
+      // Keep the interactive search focused: a full 13-column ILIKE scan
+      // against the large CRM was exceeding the database statement timeout.
       const terms = [
         `company.ilike.%${safe}%`,
         `name.ilike.%${safe}%`,
         `phone.ilike.%${safe}%`,
         `altphone.ilike.%${safe}%`,
-        `email.ilike.%${safe}%`,
-        `website.ilike.%${safe}%`,
-        `domain.ilike.%${safe}%`,
-        `notes.ilike.%${safe}%`,
-        `issue.ilike.%${safe}%`,
-        `concerns.ilike.%${safe}%`,
-        `origin.ilike.%${safe}%`,
-        `assigned.ilike.%${safe}%`,
         `sitekey.ilike.%${safe}%`
       ];
       db = db.or(terms.join(','));
@@ -3090,7 +3084,7 @@ async function crmRunGlobalSearch() {
 
   if (error) {
     console.error('Full CRM search failed:', error);
-    status.textContent = 'Search failed. Try again.';
+    status.textContent = 'Search temporarily unavailable. Try a more specific name, phone number, or site key.';
     box.replaceChildren();
     return;
   }
@@ -3135,8 +3129,10 @@ function crmSetupGlobalSearchControls() {
     input.onfocus = () => { /* Keep the current scroll position and selected lead. */ };
 
     input.oninput = () => {
+      // Invalidate any in-flight response immediately, including on backspace.
+      ++crmSearchState.requestId;
       clearTimeout(crmSearchState.timer);
-      crmRunGlobalSearch();
+      crmSearchState.timer = setTimeout(() => crmRunGlobalSearch(), 260);
     };
   }
 
