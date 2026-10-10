@@ -2658,15 +2658,10 @@ function startLeadCallTimeTicker() {
 
 // Batch 1: only never-contacted leads belong in fresh Outreach.
 // A completed call is still visible in Activity and assigned follow-up workflows.
-// Batch 3: territories are explicitly assigned by admins; no fallback to all leads.
-let callcenterAssignedState = '';
-let callcenterAssignedTimeZone = '';
-async function callcenterLoadTerritory(client) {
-  const { data, error } = await client.rpc('callcenter_my_territory');
-  if (error) throw new Error('Territory configuration unavailable: ' + error.message);
-  callcenterAssignedState = String(data?.state_code || '').trim().toUpperCase();
-  callcenterAssignedTimeZone = String(data?.timezone || '').trim();
-  return true; // Territory is a preference, not a prerequisite for Outreach.
+// Every signed-in user can load the Outreach queue without a territory assignment.
+// Authentication and row access are still enforced by Supabase.
+async function callcenterLoadTerritory() {
+  return true;
 }
 
 function callcenterIsFreshLead(lead) {
@@ -3459,9 +3454,7 @@ async function loadApprovedPreviewCRM(options = {}) {
 
     // Keep Outreach fast: randomize the already-loaded leads in memory
     // instead of issuing extra database queries just to randomize their order.
-    const randomizedLeads = callcenterShuffle(leads).sort((a,b) =>
-      Number(String(b.state_code || '').toUpperCase() === callcenterAssignedState && !!callcenterAssignedState) -
-      Number(String(a.state_code || '').toUpperCase() === callcenterAssignedState && !!callcenterAssignedState));
+    const randomizedLeads = callcenterShuffle(leads);
     leads.splice(0, leads.length, ...randomizedLeads);
 
     if (forcedRandom?.crm_id) {
