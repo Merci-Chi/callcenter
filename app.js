@@ -3030,6 +3030,7 @@ async function crmRunGlobalSearch() {
   crmShowLiveSearchLoading(query);
 
   try {
+    await loadLiveCRMTotals(client);
     if (!await callcenterLoadTerritory(client)) {
       status.textContent = 'No calling territory assigned. Ask your administrator.';
       box.replaceChildren();
@@ -3209,6 +3210,38 @@ function crmSetupGlobalSearchControls() {
 
 function finishInitialOutreachLoad() {
   q('main.content')?.classList.remove('outreach-loading');
+}
+
+async function loadLiveCRMTotals(client) {
+  const panel = q('#crmLiveTotals');
+  if (!panel) return;
+  const format = count => new Intl.NumberFormat('en-US').format(count);
+  const totalNode = q('#crmTotalLeads');
+  const previewNode = q('#crmPreviewLeads');
+  const missingNode = q('#crmWithoutPreviewLeads');
+  const errorNode = q('#crmTotalsError');
+  panel.hidden = false;
+  try {
+    // HEAD requests retrieve exact database counts without downloading CRM records.
+    const [all, withPreview] = await Promise.all([
+      client.from('crm').select('id', { count: 'exact', head: true }),
+      client.from('crm').select('id', { count: 'exact', head: true }).eq('has_site_preview', true)
+    ]);
+    if (all.error) throw all.error;
+    if (withPreview.error) throw withPreview.error;
+    if (all.count == null || withPreview.count == null) throw new Error('CRM counts unavailable.');
+    totalNode.textContent = format(all.count);
+    previewNode.textContent = format(withPreview.count);
+    missingNode.textContent = format(Math.max(0, all.count - withPreview.count));
+    errorNode.hidden = true;
+  } catch (error) {
+    console.warn('CRM totals could not be fetched:', error);
+    totalNode.textContent = '—';
+    previewNode.textContent = '—';
+    missingNode.textContent = '—';
+    errorNode.textContent = 'Live totals unavailable. Contact your administrator if this continues.';
+    errorNode.hidden = false;
+  }
 }
 
 async function loadApprovedPreviewCRM(options = {}) {
