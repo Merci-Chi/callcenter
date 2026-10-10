@@ -653,10 +653,7 @@ function setupOutreach() {
   // Cards in selectedLeadTop must never become the parent for search results.
   const leadCards = qa('.lead-card', leadContainer);
 
-  if (!leadCards.length) {
-    if ((q('#crmSearch')?.value || '').trim()) selectedLeadTop?.replaceChildren();
-    return;
-  }
+  if (!leadCards.length) return;
 
   const originalOrder = [...leadCards];
   const isSearchMode = () => {
@@ -666,7 +663,7 @@ function setupOutreach() {
 
   let activeFilter = crmSearchState?.mainFilter || 'All';
 
-  let selectedCard = originalOrder.find(card => card.dataset.crmId === window.steadyHandsForcedCRMId) || null;
+  let selectedCard = originalOrder.find(card => card.dataset.crmId === window.steadyHandsForcedCRMId) || (selectedLeadTop?.querySelector('.lead-card') || null);
   window.steadyHandsForcedCRMId = null;
 
   let leadSort = 'hours';
@@ -807,10 +804,7 @@ function setupOutreach() {
 
     leadContainer.appendChild(overlay);
 
-    if (selectedLeadTop) {
-      selectedLeadTop.setAttribute('aria-busy', 'true');
-      selectedLeadTop.innerHTML = selectedLeadSkeletonMarkup();
-    }
+    // Never replace the selected lead during queue transitions.
 
     refreshIcons();
 
@@ -1162,16 +1156,9 @@ function setupOutreach() {
 
     const pool = rankedPool();
 
-    if (!pool.length) { selectedCard = null; return []; }
+    if (!pool.length) { if (!isSearchMode()) selectedCard = null; return []; }
 
-    if (isSearchMode()) {
-      if (selectedCard && !pool.includes(selectedCard)) selectedCard = null;
-      // Desktop always has a selected lead pane, including filtered search results.
-      if (!selectedCard && window.matchMedia('(min-width: 900px)').matches) selectedCard = pool[0];
-      return selectedCard
-        ? [selectedCard, ...pool.filter(card => card !== selectedCard)]
-        : pool;
-    }
+    if (isSearchMode()) return pool.filter(card => card.dataset.crmId !== selectedCard?.dataset.crmId);
 
     if (!selectedCard || !pool.includes(selectedCard)) selectedCard = pool[0];
 
@@ -1194,27 +1181,24 @@ function setupOutreach() {
       card.style.order = '';
     });
 
-    if (searching && !window.matchMedia('(min-width: 900px)').matches) {
-      if (selectedLeadTop) selectedLeadTop.replaceChildren();
-
-      visibleCards.forEach((card, index) => {
+    if (searching) {
+      // Searching only updates the ten queue cards. The selected pane is untouched.
+      orderedCards.slice(0, MAX_FOLLOWING).forEach((card, index) => {
         card.style.display = '';
         card.style.order = String(index + 1);
-        if (card === selectedCard) card.classList.add('selected-lead');
         leadContainer.appendChild(card);
       });
     } else {
-      const selected = visibleCards[0] || null;
-      const following = visibleCards.slice(1);
-
+      const preserved = selectedLeadTop?.querySelector('.lead-card');
+      const selected = selectedCard && selectedCard.dataset.crmId === preserved?.dataset.crmId
+        ? preserved : (visibleCards[0] || preserved || null);
+      const following = visibleCards.filter(card => card.dataset.crmId !== selected?.dataset.crmId).slice(0, MAX_FOLLOWING);
       if (selected && selectedLeadTop) {
         selected.style.display = '';
         selected.classList.add('selected-lead');
         selectedLeadTop.replaceChildren(selected);
-      } else if (selectedLeadTop) {
-        selectedLeadTop.replaceChildren();
+        selectedCard = selected;
       }
-
       following.forEach((card, index) => {
         card.style.display = '';
         card.style.order = String(index + 1);
@@ -2991,38 +2975,12 @@ async function crmFetchPreviewURLs(client, ids) {
   return map;
 }
 
-function crmKeepSearchControlsAtTop() {
-  const controls = q('.outreach-controls');
-  const search = q('#crmSearch');
-  if (!controls || !search) return;
-
-  const reposition = () => {
-    if (document.activeElement !== search) return;
-    const top = window.scrollY + controls.getBoundingClientRect().top - 8;
-    window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'auto' });
-  };
-
-  // Run after the selected-lead area collapses, then once more after
-  // iOS Safari finishes moving the viewport for the on-screen keyboard.
-  requestAnimationFrame(reposition);
-  setTimeout(reposition, 90);
-}
+function crmKeepSearchControlsAtTop() { /* Search does not scroll the page. */ }
 
 function crmShowLiveSearchLoading(query) {
   const box = q('#crmLeadCards');
   const status = q('#crmStatus');
-  const selectedLeadTop = q('#selectedLeadTop');
   if (!box || !status) return;
-
-  // While actively searching/filtering, keep the controls at the top.
-  // Do not insert the expanded selected-lead skeleton above the search bar.
-  const searching = Boolean(query) || crmSearchState.tags?.size > 0 || crmSearchState.sources?.size > 0;
-  if (searching) {
-    selectedLeadTop?.replaceChildren();
-    crmKeepSearchControlsAtTop();
-  } else {
-    showSelectedLeadSkeleton();
-  }
 
   status.style.display = '';
   status.textContent = query ? `Searching for “${query}”…` : 'Loading leads...';
@@ -3132,8 +3090,6 @@ async function crmRunGlobalSearch() {
     return;
   }
 
-  q('#selectedLeadTop')?.replaceChildren();
-
   let leads = (data || []).filter(lead => {
     const values = [lead.stage, lead.outcome, ...crmTags(lead)]
       .map(value => crmText(value).toLowerCase());
@@ -3154,8 +3110,7 @@ async function crmRunGlobalSearch() {
   const keySiteMap = await crmFetchSiteKeyPreviewURLs(client, leads);
   if (requestId !== crmSearchState.requestId) return;
 
-  q('#selectedLeadTop')?.replaceChildren();
-  box.replaceChildren(...leads.map(lead => {
+  box.replaceChildren(...leads.filter(lead => String(lead.id) !== String(q('#selectedLeadTop .lead-card')?.dataset.crmId || '')).slice(0, 10).map(lead => {
     const urls = siteMap.get(lead.id) || [crmUrl(lead.previewurl), keySiteMap.get(lead.sitekey)].filter(Boolean);
     return makeCRMLinkCard(lead, urls, matches.get(String(lead.id)) || null);
   }));
@@ -3172,24 +3127,7 @@ async function crmRunGlobalSearch() {
 function crmSetupGlobalSearchControls() {
   const input = q('#crmSearch');
   if (input) {
-    input.onfocus = () => {
-      const selectedLeadTop = q('#selectedLeadTop');
-      const controls = q('.outreach-controls');
-
-      // Collapse the selected lead immediately when Search is tapped,
-      // before iOS finishes opening the keyboard.
-      if (!window.matchMedia('(min-width: 900px)').matches) selectedLeadTop?.replaceChildren();
-
-      if (controls) {
-        const top = window.scrollY + controls.getBoundingClientRect().top - 8;
-        window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'auto' });
-      }
-
-      // Re-assert the position after Safari adjusts the visual viewport.
-      requestAnimationFrame(() => crmKeepSearchControlsAtTop());
-      setTimeout(() => crmKeepSearchControlsAtTop(), 40);
-      setTimeout(() => crmKeepSearchControlsAtTop(), 160);
-    };
+    input.onfocus = () => { /* Keep the current scroll position and selected lead. */ };
 
     input.oninput = () => {
       clearTimeout(crmSearchState.timer);
@@ -3262,7 +3200,7 @@ async function loadApprovedPreviewCRM(options = {}) {
 
   if (!status || !box) return;
 
-  showSelectedLeadSkeleton();
+  if (!options.preserveSearch || !q('#selectedLeadTop .lead-card')) showSelectedLeadSkeleton();
 
   q('#crmReload')?.addEventListener('click', () => location.reload());
   crmSetupGlobalSearchControls();
