@@ -2938,6 +2938,31 @@ async function crmFetchAllForPhoneSearch(client, selectedTags = [], selectedSour
   return rows;
 }
 
+
+function crmTemplatePreviewUrl(siteKey, templateKey) {
+  const key = String(siteKey || '').trim();
+  const slug = String(templateKey || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (!key || !slug) return '';
+  return 'https://steadyhandsop.com/Previews/' + encodeURIComponent(slug) + '.html?sitekey=' + encodeURIComponent(key);
+}
+
+async function crmFetchSiteKeyPreviewURLs(client, leads) {
+  const result = new Map();
+  const keys = [...new Set((leads || []).map(x => String(x.sitekey || '').trim()).filter(Boolean))];
+  for (let i=0; i<keys.length; i+=80) {
+    const {data,error} = await client.from('site_keys')
+      .select('site_key,template_key,active')
+      .in('site_key',keys.slice(i,i+80))
+      .eq('active',true);
+    if (error) { console.warn('Unable to resolve site key previews',error); continue; }
+    for (const record of data || []) {
+      const url = crmTemplatePreviewUrl(record.site_key,record.template_key);
+      if (url) result.set(record.site_key,url);
+    }
+  }
+  return result;
+}
+
 async function crmFetchPreviewURLs(client, ids) {
   const map = new Map();
   if (!ids.length) return map;
@@ -3085,7 +3110,8 @@ async function crmRunGlobalSearch() {
         `issue.ilike.%${safe}%`,
         `concerns.ilike.%${safe}%`,
         `origin.ilike.%${safe}%`,
-        `assigned.ilike.%${safe}%`
+        `assigned.ilike.%${safe}%`,
+        `sitekey.ilike.%${safe}%`
       ];
       db = db.or(terms.join(','));
     }
@@ -3118,18 +3144,19 @@ async function crmRunGlobalSearch() {
   if (query) {
     leads = leads.filter(lead => {
       const match = crmFindSearchMatch(lead, query);
-      if (!match) return false;
+      if (!match && !String(lead.sitekey || '').toLowerCase().includes(query.toLowerCase())) return false;
       matches.set(String(lead.id), match);
       return true;
     });
   }
 
   const siteMap = await crmFetchPreviewURLs(client, leads.map(lead => lead.id));
+  const keySiteMap = await crmFetchSiteKeyPreviewURLs(client, leads);
   if (requestId !== crmSearchState.requestId) return;
 
   q('#selectedLeadTop')?.replaceChildren();
   box.replaceChildren(...leads.map(lead => {
-    const urls = siteMap.get(lead.id) || [crmUrl(lead.previewurl)].filter(Boolean);
+    const urls = siteMap.get(lead.id) || [crmUrl(lead.previewurl), keySiteMap.get(lead.sitekey)].filter(Boolean);
     return makeCRMLinkCard(lead, urls, matches.get(String(lead.id)) || null);
   }));
 
@@ -3453,6 +3480,22 @@ async function loadApprovedPreviewCRM(options = {}) {
       }
     }
 
+    // Include template-based previews, even without preview_inventory entries.
+    const { data: keyLeads, error: keyLeadError } = await client.from('crm')
+      .select('id,sitekey,stage,outcome,lastcalled')
+      .not('sitekey','is',null)
+      .is('lastcalled',null)
+      .neq('stage','notinterested')
+      .order('created',{ascending:false})
+      .limit(80);
+    if (keyLeadError) console.warn('Site-key lead lookup failed',keyLeadError);
+    const activeKeyLeads = (keyLeads || []).filter(callcenterIsFreshLead);
+    const keyPreviewMap = await crmFetchSiteKeyPreviewURLs(client,activeKeyLeads);
+    for (const lead of activeKeyLeads) {
+      const url = keyPreviewMap.get(lead.sitekey);
+      if (url && !byCRM.has(lead.id)) byCRM.set(lead.id,[url]);
+    }
+
     const ids = [...byCRM.keys()]
       .slice(0, TARGET_LEADS);
 
@@ -3472,7 +3515,7 @@ async function loadApprovedPreviewCRM(options = {}) {
       const { data, error } = await client
         .from('crm')
         .select(
-          'id,company,name,phone,notes,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,state_code'
+          'id,company,name,phone,notes,tags,sources,stage,outcome,callbackdate,callbackat,lastcalled,timezone,leadpotential,tier,state_code,sitekey,previewurl'
         )
         .in(
           'id',
