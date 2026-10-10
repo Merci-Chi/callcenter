@@ -3256,6 +3256,28 @@ async function loadApprovedPreviewCRM(options = {}) {
 
     window.steadyHandsOutreachUserId = outreachSession.user.id;
 
+    // Check employee access before loading any leads or showing the queue.
+    const { data: permission, error: permissionError } = await client
+      .from('team_permissions')
+      .select('role,active')
+      .eq('user_id', outreachSession.user.id)
+      .maybeSingle();
+    if (permissionError) {
+      throw new Error('Unable to verify employee access: ' + permissionError.message);
+    }
+    const canViewLeads = permission?.active === true &&
+      ['SALES', 'BUILDER', 'MOD', 'ADMIN'].includes(permission.role);
+    if (!canViewLeads) {
+      status.style.display = '';
+      status.textContent = "You currently don't have access to view the leads. Please contact your administrator.";
+      box.replaceChildren();
+      q('#selectedLeadTop')?.replaceChildren();
+      q('#crmSearch')?.setAttribute('disabled', 'disabled');
+      q('#crmReload')?.removeAttribute('disabled');
+      finishInitialOutreachLoad();
+      return;
+    }
+
     const { data: callRows = [], error: callRowsError } = await client
       .from('callcenter_call_activity')
       .select('crm_id')
