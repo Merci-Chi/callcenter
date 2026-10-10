@@ -59,3 +59,19 @@ body{background:#edf4fd}
 .login-form .login-field input{flex:1;min-width:0;border:0;background:transparent;height:46px;color:#122e56;outline:none}
 .login-form .login-field button{border:0;background:transparent;color:#17498f;font-weight:800;font-size:12px}
 .login-form .login-field svg{width:17px;height:17px;color:#6d7e95}
+
+/* Keep both staff logins visually consistent. */
+.outreach-login-options{display:grid;gap:12px;margin:15px 0 23px}
+.outreach-check-label{display:flex;align-items:center;gap:11px;color:#173653;font-size:14px;font-weight:800;line-height:1.4;cursor:pointer;position:relative}
+.outreach-check-label>input{position:absolute;width:25px;height:25px;margin:0;opacity:0}
+.outreach-check-box{width:25px;height:25px;flex:0 0 25px;border:2px solid #c5d2df;border-radius:8px;display:grid;place-items:center;color:transparent;background:#fff;transition:background .15s,border-color .15s}
+.outreach-check-label>input:checked+.outreach-check-box{background:#1877e8;border-color:#1877e8;color:#fff}
+.outreach-check-label>input:focus-visible+.outreach-check-box{outline:3px solid #39b8ff;outline-offset:2px}
+.outreach-check-label.is-invalid .outreach-check-box{border-color:#bf323c}
+.outreach-check-label a{color:#1677e8;font-weight:900;text-decoration:underline;text-underline-offset:3px}
+.outreach-login-options .terms-validation{margin:-5px 0 0;font-size:12px}
+.outreach-login-submit{min-height:56px;background:#247bed;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:16px;font-size:19px;box-shadow:0 12px 24px #247bed22}
+.outreach-login-submit span{font-size:25px;font-weight:400}
+.outreach-forgot{display:block;margin:13px auto 0;color:#52657c;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.outreach-login-foot{font-weight:800;color:#98a9bf;margin-top:20px;display:flex;align-items:center;gap:13px}
+.outreach-login-foot::before,.outreach-login-foot::after{content:"";height:1px;background:#dbe3eb;flex:1}
