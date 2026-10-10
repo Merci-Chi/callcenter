@@ -1160,7 +1160,7 @@ function setupOutreach() {
 
     if (isSearchMode()) return pool.filter(card => card.dataset.crmId !== selectedCard?.dataset.crmId);
 
-    if (!selectedCard || !pool.includes(selectedCard)) selectedCard = pool[0];
+    if (!selectedCard) selectedCard = selectedLeadTop?.querySelector('.lead-card') || pool[0];
 
     const remaining = pool.filter(card => card !== selectedCard);
 
