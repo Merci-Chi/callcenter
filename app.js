@@ -3496,7 +3496,7 @@ async function loadApprovedPreviewCRM(options = {}) {
       if (url && !byCRM.has(lead.id)) byCRM.set(lead.id,[url]);
     }
 
-    const ids = [...byCRM.keys()]
+    const ids = [...new Set([...activeKeyLeads.filter(lead => keyPreviewMap.has(lead.sitekey)).map(lead => lead.id), ...byCRM.keys()])]
       .slice(0, TARGET_LEADS);
 
     if (!ids.length) {
