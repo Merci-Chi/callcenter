@@ -1176,6 +1176,8 @@ function setupOutreach() {
     const visibleCards = orderedCards.slice(0, MAX_FOLLOWING + 1);
 
     originalOrder.forEach(card => {
+      // Never hide or demote the intentionally selected lead.
+      if (card === selectedCard && card.parentElement === selectedLeadTop) return;
       card.classList.remove('selected-lead');
       card.style.display = 'none';
       card.style.order = '';
@@ -1208,6 +1210,12 @@ function setupOutreach() {
 
     originalOrder.filter(card => !visibleCards.includes(card) && card !== selectedCard)
       .forEach(card => leadContainer.appendChild(card));
+
+    // A selected search-result card lives only in the selected pane.
+    if (selectedCard && selectedCard.parentElement === selectedLeadTop) {
+      selectedCard.style.display = '';
+      selectedCard.classList.add('selected-lead');
+    }
 
     refreshIcons();
 
