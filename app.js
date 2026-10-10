@@ -1206,7 +1206,7 @@ function setupOutreach() {
       });
     }
 
-    originalOrder.filter(card => !visibleCards.includes(card))
+    originalOrder.filter(card => !visibleCards.includes(card) && card !== selectedCard)
       .forEach(card => leadContainer.appendChild(card));
 
     refreshIcons();
@@ -1220,6 +1220,11 @@ function setupOutreach() {
     changeLeads(() => {
 
     selectedCard = card;
+    // Selecting a result is explicit; only this action changes the selected pane.
+    if (selectedLeadTop) {
+      card.style.display = '';
+      selectedLeadTop.replaceChildren(card);
+    }
 
     renderQueue(false);
 
