@@ -3030,7 +3030,8 @@ async function crmRunGlobalSearch() {
   crmShowLiveSearchLoading(query);
 
   try {
-    await loadLiveCRMTotals(client);
+    // Fetch totals in parallel so a large CRM count never blocks the lead queue.
+    void loadLiveCRMTotals(client);
     if (!await callcenterLoadTerritory(client)) {
       status.textContent = 'No calling territory assigned. Ask your administrator.';
       box.replaceChildren();
