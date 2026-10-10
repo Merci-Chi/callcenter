@@ -76,15 +76,6 @@
       </div>
 
       <div class="outreach-controls-live">
-    <section id="crmLiveTotals" class="card" aria-label="CRM lead totals" aria-live="polite" hidden style="margin-bottom:12px;padding:10px 12px;">
-      <div style="display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center;">
-        <div><div style="font-size:12px;opacity:.75;">Total CRM Leads</div><strong id="crmTotalLeads" style="font-size:22px;font-variant-numeric:tabular-nums;">—</strong></div>
-        <div><div style="font-size:12px;opacity:.75;">With Site Preview</div><strong id="crmPreviewLeads" style="font-size:18px;font-variant-numeric:tabular-nums;">—</strong></div>
-        <div><div style="font-size:12px;opacity:.75;">Without Preview</div><strong id="crmWithoutPreviewLeads" style="font-size:18px;font-variant-numeric:tabular-nums;">—</strong></div>
-      </div>
-      <div id="crmTotalsError" style="font-size:12px;margin-top:6px;" hidden></div>
-    </section>
-
         <div class="crm-toolbar">
           <input
             type="search"
@@ -109,6 +100,9 @@
             <span>Tags &amp; Sources</span>
             <span class="tag-filter-count" id="crmTagFilterCount" hidden></span>
           </button>
+          <span id="crmLiveTotals" aria-live="polite" hidden style="margin-left:auto;white-space:nowrap;font-size:12px;color:inherit;opacity:.75;">
+            Total CRM Leads: <strong id="crmTotalLeads" style="font-variant-numeric:tabular-nums;font-weight:700;">—</strong>
+          </span>
         </div>
       </div>
     </div>
@@ -180,6 +174,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="auth-guard.js?v=20261005-dark-mode"></script>
 <script src="user-data.js?v=20261001-1930"></script>
-<script src="app.js?v=20261009-desktop-filter-selected-v2"></script>
+<script src="app.js?v=20261009-compact-crm-total-v1"></script>
 </body>
 </html>
