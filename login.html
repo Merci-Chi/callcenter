@@ -549,10 +549,65 @@
     border:0;
     background:#f3f6f9;
   }
+
+  /* One-time branded reveal when opening the sign-in page. */
+  .outreach-intro {
+    position:fixed; inset:0; z-index:99999;
+    display:grid; place-items:center;
+    background:radial-gradient(circle at -5% -5%,rgba(36,112,205,.22),transparent 34%),
+      radial-gradient(circle at 105% 100%,rgba(29,104,190,.16),transparent 34%),#102945;
+    opacity:1;
+    transition:opacity .48s ease;
+    pointer-events:none;
+  }
+  .outreach-intro::before {
+    content:""; position:absolute; inset:0;
+    background:#000; animation:outreachIntroBlack 1s ease forwards;
+  }
+  .outreach-intro-brand {
+    position:relative; z-index:1; display:flex; flex-direction:column;
+    align-items:center; gap:14px; color:#fff; opacity:0;
+    animation:outreachIntroBrand .65s ease .47s forwards;
+  }
+  .outreach-intro-brand img {
+    width:108px; height:108px; object-fit:cover;
+    border-radius:25px; box-shadow:0 18px 50px rgba(0,0,0,.25);
+  }
+  .outreach-intro-brand span {
+    font-size:16px; font-weight:900; letter-spacing:.25em;
+  }
+  .outreach-intro.is-leaving { opacity:0; }
+  @keyframes outreachIntroBlack { 0%{opacity:1} 100%{opacity:0} }
+  @keyframes outreachIntroBrand { to{opacity:1} }
+  @media (prefers-reduced-motion:reduce) {
+    .outreach-intro,.outreach-intro::before,.outreach-intro-brand{animation:none;transition:none}
+    .outreach-intro::before{opacity:0}
+    .outreach-intro-brand{opacity:1}
+  }
 </style>
   <script src="app-update.js" defer></script>
   <script src="theme.js?v=20261005-account-theme"></script>
 </head><body>
+<div id="outreachIntro" class="outreach-intro" aria-hidden="true">
+  <div class="outreach-intro-brand"><img src="images/icon-192.png" alt="" /><span>STEADY HANDS</span></div>
+</div>
+<script>
+(() => {
+  const layer = document.getElementById('outreachIntro');
+  if (!layer) return;
+  let skip = false;
+  try {
+    skip = sessionStorage.getItem('steadyhands-outreach-intro-shown') === '1';
+    sessionStorage.setItem('steadyhands-outreach-intro-shown', '1');
+  } catch {}
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (skip || reduceMotion) { layer.remove(); return; }
+  window.setTimeout(() => {
+    layer.classList.add('is-leaving');
+    window.setTimeout(() => layer.remove(), 520);
+  }, 1650);
+})();
+</script>
 <div class="login-page">
 <div class="login-brand"><div class="login-brand-icon"><img src="images/icon-192.png" alt="Steady Hands logo" /></div><span>STEADY HANDS</span></div>
 <div class="login-panel">
