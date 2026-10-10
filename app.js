@@ -1166,6 +1166,8 @@ function setupOutreach() {
 
     if (isSearchMode()) {
       if (selectedCard && !pool.includes(selectedCard)) selectedCard = null;
+      // Desktop always has a selected lead pane, including filtered search results.
+      if (!selectedCard && window.matchMedia('(min-width: 900px)').matches) selectedCard = pool[0];
       return selectedCard
         ? [selectedCard, ...pool.filter(card => card !== selectedCard)]
         : pool;
@@ -1192,7 +1194,7 @@ function setupOutreach() {
       card.style.order = '';
     });
 
-    if (searching) {
+    if (searching && !window.matchMedia('(min-width: 900px)').matches) {
       if (selectedLeadTop) selectedLeadTop.replaceChildren();
 
       visibleCards.forEach((card, index) => {
@@ -3149,7 +3151,7 @@ function crmSetupGlobalSearchControls() {
 
       // Collapse the selected lead immediately when Search is tapped,
       // before iOS finishes opening the keyboard.
-      selectedLeadTop?.replaceChildren();
+      if (!window.matchMedia('(min-width: 900px)').matches) selectedLeadTop?.replaceChildren();
 
       if (controls) {
         const top = window.scrollY + controls.getBoundingClientRect().top - 8;
