@@ -3030,8 +3030,6 @@ async function crmRunGlobalSearch() {
   crmShowLiveSearchLoading(query);
 
   try {
-    // Fetch totals in parallel so a large CRM count never blocks the lead queue.
-    void loadLiveCRMTotals(client);
     if (!await callcenterLoadTerritory(client)) {
       status.textContent = 'No calling territory assigned. Ask your administrator.';
       box.replaceChildren();
@@ -3311,6 +3309,9 @@ async function loadApprovedPreviewCRM(options = {}) {
       finishInitialOutreachLoad();
       return;
     }
+
+    // Count all CRM records after confirming employee access, without blocking lead loading.
+    void loadLiveCRMTotals(client);
 
     const { data: callRows = [], error: callRowsError } = await client
       .from('callcenter_call_activity')
